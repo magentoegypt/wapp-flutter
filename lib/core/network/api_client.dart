@@ -70,9 +70,34 @@ class ApiClient {
     }
 
     final int status = response.statusCode ?? 0;
-    if (status >= 200 && status < 300) return response.data;
+    if (status >= 200 && status < 300) return _unwrap(response.data);
 
     throw await _fromStatus(status, response.data);
+  }
+
+  /// Strips the API's `{"success": bool, "data": ...}` envelope.
+  ///
+  /// The backend wraps some responses and not others — a 401 comes back as
+  /// `{"success": false, "message": "Unauthenticated."}` while a 422 is bare
+  /// Laravel `{"message": ..., "errors": {...}}`. Normalising here means the
+  /// repositories only ever see the payload, and stay correct whether or not
+  /// a given endpoint wraps.
+  ///
+  /// Also catches `success: false` arriving on a 2xx, which would otherwise
+  /// sail through as a valid-looking empty result.
+  dynamic _unwrap(dynamic body) {
+    if (body is! Map<String, dynamic>) return body;
+    if (!body.containsKey('success')) return body;
+
+    if (body['success'] == false) {
+      throw ServerFailure(
+        (body['message'] as String?) ?? 'Request failed.',
+      );
+    }
+
+    // Unwrap only when there is a `data` key; some endpoints wrap the status
+    // flag around a flat payload with no nesting.
+    return body.containsKey('data') ? body['data'] : body;
   }
 
   Failure _fromDioException(DioException e) {
