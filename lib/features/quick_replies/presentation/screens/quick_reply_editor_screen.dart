@@ -84,6 +84,14 @@ class _QuickReplyEditorScreenState
   /// build phase, where it does take effect.
   void _prefill(QuickReply q) {
     if (_prefilled) return;
+    // The form is editable while the record is still in flight, so on a slow
+    // response the user can start typing before this fires. Overwriting then
+    // would silently discard their input with no undo — so anything already
+    // entered wins, and the fetched record is dropped instead.
+    if (_title.text.isNotEmpty || _body.text.isNotEmpty) {
+      _prefilled = true;
+      return;
+    }
     _prefilled = true;
     _title.text = q.title;
     _body.text = q.body;

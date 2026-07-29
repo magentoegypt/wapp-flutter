@@ -126,19 +126,31 @@ int _int(Object? v) => v is num ? v.round() : int.tryParse('${v ?? ''}') ?? 0;
 
 CampaignStatus _status(Object? raw) {
   if (raw is String) {
-    return CampaignStatus.values.firstWhere(
-      (CampaignStatus s) => s.name == raw,
-      orElse: () => CampaignStatus.draft,
-    );
+    // The detail endpoint sends a human-readable `statusText` ("Draft",
+    // "Running"), not the lowercase enum name. Matching case-sensitively made
+    // every campaign fall back to Draft — which is not a cosmetic mis-label:
+    // Campaign detail gates the Send button on `status == draft`, so an
+    // already-sent campaign would offer to send again.
+    final String key = raw.trim().toLowerCase();
+    for (final CampaignStatus s in CampaignStatus.values) {
+      if (s.name == key) return s;
+    }
+    // A numeric value arriving as a string must still reach the integer map
+    // below rather than being swallowed by the string branch.
+    final int? asInt = int.tryParse(key);
+    if (asInt != null) return _statusFromInt(asInt);
+    return CampaignStatus.draft;
   }
-  return switch (_int(raw)) {
-    1 => CampaignStatus.running,
-    2 => CampaignStatus.scheduled,
-    5 => CampaignStatus.completed,
-    6 => CampaignStatus.failed,
-    _ => CampaignStatus.draft,
-  };
+  return _statusFromInt(_int(raw));
 }
+
+CampaignStatus _statusFromInt(int value) => switch (value) {
+  1 => CampaignStatus.running,
+  2 => CampaignStatus.scheduled,
+  5 => CampaignStatus.completed,
+  6 => CampaignStatus.failed,
+  _ => CampaignStatus.draft,
+};
 
 Campaign campaignFromJson(Map<String, dynamic> j) {
   // The list and the detail endpoint disagree on shape. The list puts

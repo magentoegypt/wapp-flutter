@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_dimens.dart';
 import '../../../../core/error/failure.dart';
 import '../../../../core/widgets/app_header.dart';
+import '../../../../core/widgets/section_label.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../data/contact_repository.dart';
 import '../../domain/contact.dart';
@@ -29,6 +30,9 @@ class _AddContactScreenState extends ConsumerState<AddContactScreen> {
   bool _saving = false;
   ValidationFailure? _validation;
 
+  /// Contact groups the new contact will join, keyed by group uid.
+  final Set<String> _groupIds = <String>{};
+
   @override
   void dispose() {
     _name.dispose();
@@ -49,6 +53,7 @@ class _AddContactScreenState extends ConsumerState<AddContactScreen> {
             name: _name.text.trim(),
             phone: _phone.text.trim(),
             email: _email.text.trim().isEmpty ? null : _email.text.trim(),
+            groupIds: _groupIds.toList(),
           );
       ref.invalidate(contactListProvider);
       if (mounted) context.pop();
@@ -115,16 +120,69 @@ class _AddContactScreenState extends ConsumerState<AddContactScreen> {
                         errorText: _validation?.forField('email'),
                       ),
                     ),
-                    // Groups come from /contacts/meta. Surface a hint while it
-                    // loads rather than an empty area that looks broken.
-                    if (meta.isLoading) ...<Widget>[
-                      const SizedBox(height: 16),
-                      Text(
+                  ],
+                ),
+              ),
+
+              // Group assignment. `create()` has always accepted groupIds, but
+              // until now nothing populated it — the screen fetched
+              // /contacts/meta and rendered only a loading hint, so a contact
+              // could never be filed into a group. Mirrors the picker on
+              // Create campaign.
+              Flexible(
+                child: meta.when(
+                  loading: () => Padding(
+                    padding: const EdgeInsetsDirectional.only(
+                      start: AppDimens.gutter,
+                      bottom: 8,
+                    ),
+                    child: Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: Text(
                         l10n.acLoadingGroups,
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
-                    ],
-                  ],
+                    ),
+                  ),
+                  // Groups are optional metadata — if the lookup fails the
+                  // contact can still be created, so this stays silent rather
+                  // than blocking the form.
+                  error: (Object _, StackTrace __) => const SizedBox.shrink(),
+                  data: (ContactMeta m) {
+                    if (m.groups.isEmpty) return const SizedBox.shrink();
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        SectionLabel(l10n.acGroups),
+                        Flexible(
+                          child: ListView(
+                            shrinkWrap: true,
+                            padding: EdgeInsets.zero,
+                            children: <Widget>[
+                              for (final NamedRef g in m.groups)
+                                CheckboxListTile(
+                                  value: _groupIds.contains(g.id),
+                                  title: Text(g.name),
+                                  dense: true,
+                                  contentPadding:
+                                      const EdgeInsetsDirectional.symmetric(
+                                    horizontal: AppDimens.gutter,
+                                  ),
+                                  onChanged: (bool? on) => setState(() {
+                                    if (on ?? false) {
+                                      _groupIds.add(g.id);
+                                    } else {
+                                      _groupIds.remove(g.id);
+                                    }
+                                  }),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
               Padding(

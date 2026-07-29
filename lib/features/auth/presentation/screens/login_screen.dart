@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
-import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_dimens.dart';
 import '../../../../core/error/failure.dart';
@@ -36,11 +34,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
-    final bool ok = await ref.read(authControllerProvider.notifier).login(
+    // No navigation on success. The router's redirect owns post-login routing:
+    // it restores a deep link captured before the session resolved, falling
+    // back to Home. Calling context.go(home) here raced that and always won,
+    // so a link that sent the user to Login — the most common case — was
+    // consumed and then discarded, landing them on Home instead.
+    await ref.read(authControllerProvider.notifier).login(
           email: _email.text.trim(),
           password: _password.text,
         );
-    if (ok && mounted) context.go(AppRoutes.home);
   }
 
   @override

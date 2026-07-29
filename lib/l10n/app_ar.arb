@@ -184,5 +184,6 @@
   "dashboardOutbound": "المُرسلة",
   "dashboardNewContacts": "جهات اتصال جديدة",
   "dashboardTotalContacts": "إجمالي جهات الاتصال",
-  "dashboardOpenInbox": "فتح صندوق الوارد"
+  "dashboardOpenInbox": "فتح صندوق الوارد",
+  "acGroups": "المجموعات"
 }

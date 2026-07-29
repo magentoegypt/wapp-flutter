@@ -219,5 +219,6 @@
   "dashboardOutbound": "Sent",
   "dashboardNewContacts": "New contacts",
   "dashboardTotalContacts": "Total contacts",
-  "dashboardOpenInbox": "Open inbox"
+  "dashboardOpenInbox": "Open inbox",
+  "acGroups": "Groups"
 }
