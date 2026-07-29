@@ -22,7 +22,8 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   })  : searchHint = null,
         onSearchChanged = null,
         onSearchTap = null,
-        trailing = null;
+        trailing = null,
+        showBack = false;
 
   /// Title + search variant, used by the tab roots that own a list.
   ///
@@ -35,6 +36,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
     this.onSearchChanged,
     this.onSearchTap,
     this.trailing,
+    this.showBack = false,
     super.key,
   })  : subtitle = null,
         actions = null,
@@ -57,6 +59,11 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
 
   /// When set, the search field becomes a tap target rather than an input.
   final VoidCallback? onSearchTap;
+
+  /// Renders a back affordance on the search variant. Required whenever this
+  /// header is used on a **pushed** route - the tab roots don't need it, but
+  /// without it a pushed screen has no way back and strands the user.
+  final bool showBack;
 
   /// Trailing element on the search variant — the frames put the signed-in
   /// agent's avatar here.
@@ -141,6 +148,17 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
         const SizedBox(height: 8),
         Row(
           children: <Widget>[
+            if (showBack) ...<Widget>[
+              IconButton(
+                onPressed: () => Navigator.of(context).maybePop(),
+                icon: const Icon(Icons.arrow_back),
+                color: Colors.white,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+              ),
+              const SizedBox(width: 8),
+            ],
             Expanded(
               child: Text(
                 title,

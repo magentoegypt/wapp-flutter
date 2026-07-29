@@ -141,20 +141,27 @@ CampaignStatus _status(Object? raw) {
 }
 
 Campaign campaignFromJson(Map<String, dynamic> j) {
+  // The list and the detail endpoint disagree on shape. The list puts
+  // `targeted` and `status` at the top level; the detail nests everything
+  // under `stats` and renames two of them - `opened` for read receipts and
+  // `unreached` for failures - and carries `statusText` instead of `status`.
+  // Reading only the list's names made the detail screen show Read 0 when the
+  // real figure was 2, which is worse than showing nothing.
   final Map<String, dynamic> stats =
       (j['stats'] as Map<String, dynamic>?) ?? const <String, dynamic>{};
+
   return Campaign(
     uid: (j['uid'] ?? j['_uid'] ?? '').toString(),
     title: (j['title'] ?? '').toString(),
-    status: _status(j['status']),
+    status: _status(j['status'] ?? j['statusText']),
     templateName: (j['templateName'] ?? j['template_name']) as String?,
     scheduledAt: DateTime.tryParse('${j['scheduledAt'] ?? ''}')?.toLocal(),
     // `targeted` is the audience size; `allContacts` means the whole book.
-    totalContacts: _int(j['targeted'] ?? j['totalContacts']),
+    totalContacts: _int(j['targeted'] ?? stats['targeted'] ?? j['totalContacts']),
     sent: _int(stats['sent'] ?? j['sent']),
     delivered: _int(stats['delivered'] ?? j['delivered']),
-    read: _int(stats['read'] ?? j['read']),
-    failed: _int(stats['failed'] ?? j['failed']),
+    read: _int(stats['opened'] ?? stats['read'] ?? j['read']),
+    failed: _int(stats['unreached'] ?? stats['failed'] ?? j['failed']),
   );
 }
 

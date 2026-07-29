@@ -39,6 +39,8 @@ class SearchScreen extends ConsumerWidget {
       appBar: AppHeader.search(
         title: l10n.inboxSearchHint,
         searchHint: l10n.inboxSearchHint,
+        // Pushed route - without this there is no way back out.
+        showBack: true,
         onSearchChanged: (String q) =>
             ref.read(searchQueryProvider.notifier).state = q,
       ),

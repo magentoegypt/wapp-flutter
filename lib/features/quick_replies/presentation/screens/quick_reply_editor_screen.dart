@@ -74,19 +74,41 @@ class _QuickReplyEditorScreenState
     if (mounted) context.pop();
   }
 
+  /// Copies the loaded record into the fields exactly once.
+  ///
+  /// This deliberately does **not** happen during `build`. Assigning to a
+  /// TextEditingController mid-build does not schedule a repaint, so the text
+  /// landed in the controller but the fields stayed visually empty — and
+  /// because the guard flag was set at the same time, no later rebuild ever
+  /// corrected it. Prefilling from a listener keeps the mutation outside the
+  /// build phase, where it does take effect.
+  void _prefill(QuickReply q) {
+    if (_prefilled) return;
+    _prefilled = true;
+    _title.text = q.title;
+    _body.text = q.body;
+  }
+
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
 
-    // Prefill once when editing; guarded so a rebuild doesn't stomp on typing.
-    if (!_isNew && !_prefilled) {
-      final AsyncValue<QuickReply> existing =
-          ref.watch(quickReplyDetailProvider(widget.uid!));
-      final QuickReply? q = existing.valueOrNull;
-      if (q != null) {
-        _title.text = q.title;
-        _body.text = q.body;
-        _prefilled = true;
+    if (!_isNew) {
+      ref.listen<AsyncValue<QuickReply>>(
+        quickReplyDetailProvider(widget.uid!),
+        (AsyncValue<QuickReply>? _, AsyncValue<QuickReply> next) {
+          final QuickReply? q = next.valueOrNull;
+          if (q != null) _prefill(q);
+        },
+      );
+      // The listener only fires on change, so cover the case where the record
+      // is already cached and resolves before this screen first builds.
+      final QuickReply? cached =
+          ref.watch(quickReplyDetailProvider(widget.uid!)).valueOrNull;
+      if (cached != null && !_prefilled) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) setState(() => _prefill(cached));
+        });
       }
     }
 

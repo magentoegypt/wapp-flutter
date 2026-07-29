@@ -31,6 +31,14 @@ final GlobalKey<NavigatorState> _rootKey = GlobalKey<NavigatorState>(
   debugLabel: 'root',
 );
 
+/// Where the user was headed before the session finished resolving.
+///
+/// A cold start with a deep link - a push notification, a shared chat URL -
+/// arrives while auth is still `unknown`, so the redirect parks on the splash.
+/// Without remembering the destination the user is silently dropped on Home
+/// once auth lands, and the link is lost.
+String? _pendingDestination;
+
 // Auth changes are pushed into the router from ClickalizeApp, which calls
 // GoRouter.refresh() from a widget-level ref.listen. That was previously done
 // with a ChangeNotifier built inside this provider; the subscription did not
@@ -69,17 +77,27 @@ final Provider<GoRouter> routerProvider = Provider<GoRouter>((Ref ref) {
 
       switch (status) {
         // Still validating a stored token. Hold on the splash so the sign-in
-        // form never flashes for an already-authenticated user.
+        // form never flashes for an already-authenticated user, but remember
+        // where they were going.
         case AuthStatus.unknown:
+          if (!onSplash && !onLogin) {
+            _pendingDestination = state.uri.toString();
+          }
           return onSplash ? null : AppRoutes.splash;
 
         case AuthStatus.signedOut:
           return onLogin ? null : AppRoutes.login;
 
-        // Signed in. Leave splash and login behind; everything else is a
-        // legitimate destination, including a deep link.
+        // Signed in. Leave splash and login behind, honouring a deep link
+        // captured before the session resolved; everything else is already a
+        // legitimate destination.
         case AuthStatus.signedIn:
-          return (onSplash || onLogin) ? AppRoutes.home : null;
+          if (onSplash || onLogin) {
+            final String? pending = _pendingDestination;
+            _pendingDestination = null;
+            return pending ?? AppRoutes.home;
+          }
+          return null;
       }
     },
     routes: <RouteBase>[
