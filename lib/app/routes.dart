@@ -4,6 +4,12 @@
 /// inventory so a frame can be traced to a route and back.
 abstract final class AppRoutes {
   // Outside the shell entirely.
+
+  /// Shown while a stored token is being validated. Exists so "still
+  /// checking" is a distinct state from "signed out" — conflating the two
+  /// makes the app flash the sign-in form on every cold start, and strands
+  /// the user there if the resolved state never reaches the router.
+  static const String splash = '/splash';
   static const String login = '/login';
 
   // Tab roots — these live inside the StatefulShellRoute branches.

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/localization/locale_controller.dart';
+import '../features/auth/presentation/auth_controller.dart';
 import '../l10n/app_localizations.dart';
 import 'router.dart';
 import 'theme/app_theme.dart';
@@ -20,6 +21,15 @@ class ClickalizeApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final Locale locale = ref.watch(localeControllerProvider);
     final GoRouter router = ref.watch(routerProvider);
+
+    // Push auth transitions into the router. `redirect` reads auth state but
+    // go_router only re-evaluates it when something tells it to, so a session
+    // restoring in the background would otherwise leave the app sitting on the
+    // splash forever. Watching here would rebuild the GoRouter itself and
+    // discard navigation history, so listen and refresh instead.
+    ref.listen<AuthState>(authControllerProvider, (AuthState? prev, AuthState next) {
+      if (prev?.status != next.status) router.refresh();
+    });
 
     return MaterialApp.router(
       onGenerateTitle: (BuildContext c) => AppLocalizations.of(c).appTitle,

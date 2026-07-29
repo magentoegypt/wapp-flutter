@@ -18,6 +18,7 @@ import '../features/contacts/presentation/screens/add_contact_screen.dart';
 import '../features/contacts/presentation/screens/contact_detail_screen.dart';
 import '../features/contacts/presentation/screens/contacts_screen.dart';
 import '../features/auth/presentation/screens/login_screen.dart';
+import '../features/auth/presentation/screens/splash_screen.dart';
 import '../features/dashboard/presentation/screens/dashboard_screen.dart';
 import '../features/dev/presentation/component_gallery_screen.dart';
 import '../features/inbox/presentation/screens/chat_screen.dart';
@@ -30,20 +31,12 @@ final GlobalKey<NavigatorState> _rootKey = GlobalKey<NavigatorState>(
   debugLabel: 'root',
 );
 
-/// Bridges Riverpod auth changes into go_router's refresh mechanism.
-///
-/// The router deliberately does **not** `ref.watch` auth state — that would
-/// rebuild the GoRouter itself on every sign-in and throw away all navigation
-/// history. Instead the router is built once and simply re-evaluates its
-/// redirect when this notifier fires.
-class _AuthRefresh extends ChangeNotifier {
-  _AuthRefresh(Ref ref) {
-    ref.listen<AuthState>(
-      authControllerProvider,
-      (AuthState? _, AuthState __) => notifyListeners(),
-    );
-  }
-}
+// Auth changes are pushed into the router from ClickalizeApp, which calls
+// GoRouter.refresh() from a widget-level ref.listen. That was previously done
+// with a ChangeNotifier built inside this provider; the subscription did not
+// reliably fire, leaving the app parked on the sign-in screen after a cold
+// start even though the session had restored. A widget-level listen is the
+// supported place for side effects and does fire.
 
 /// App router.
 ///
@@ -61,9 +54,8 @@ class _AuthRefresh extends ChangeNotifier {
 final Provider<GoRouter> routerProvider = Provider<GoRouter>((Ref ref) {
   return GoRouter(
     navigatorKey: _rootKey,
-    initialLocation: AppRoutes.login,
+    initialLocation: AppRoutes.splash,
     debugLogDiagnostics: true,
-    refreshListenable: _AuthRefresh(ref),
     redirect: (BuildContext context, GoRouterState state) {
       final AuthStatus status = ref.read(authControllerProvider).status;
       final String location = state.matchedLocation;
@@ -72,18 +64,29 @@ final Provider<GoRouter> routerProvider = Provider<GoRouter>((Ref ref) {
       // without a session.
       if (location.startsWith('/dev/')) return null;
 
-      // Still resolving a stored token — hold on Login rather than flashing
-      // the dashboard and bouncing back.
-      if (status == AuthStatus.unknown) {
-        return location == AppRoutes.login ? null : AppRoutes.login;
-      }
-
+      final bool onSplash = location == AppRoutes.splash;
       final bool onLogin = location == AppRoutes.login;
-      if (status == AuthStatus.signedOut) return onLogin ? null : AppRoutes.login;
-      // Signed in but sitting on Login (fresh sign-in, or a stale deep link).
-      return onLogin ? AppRoutes.home : null;
+
+      switch (status) {
+        // Still validating a stored token. Hold on the splash so the sign-in
+        // form never flashes for an already-authenticated user.
+        case AuthStatus.unknown:
+          return onSplash ? null : AppRoutes.splash;
+
+        case AuthStatus.signedOut:
+          return onLogin ? null : AppRoutes.login;
+
+        // Signed in. Leave splash and login behind; everything else is a
+        // legitimate destination, including a deep link.
+        case AuthStatus.signedIn:
+          return (onSplash || onLogin) ? AppRoutes.home : null;
+      }
     },
     routes: <RouteBase>[
+      GoRoute(
+        path: AppRoutes.splash,
+        builder: (_, __) => const SplashScreen(),
+      ),
       GoRoute(
         path: AppRoutes.login,
         builder: (_, __) => const LoginScreen(),
