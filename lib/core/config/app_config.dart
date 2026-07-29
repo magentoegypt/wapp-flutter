@@ -17,12 +17,13 @@ class AppConfig {
 
   /// Root of the Laravel mobile API, including the `/api/v1` segment.
   ///
-  /// dev points at a local XAMPP install so the app can be built before the
-  /// API is deployed to the live host; staging and prod both point at
-  /// wapp.magento2.click.
+  /// All three flavors currently point at wapp.magento2.click — the local
+  /// XAMPP copy has no `/api/v1` layer, so there is nothing to develop
+  /// against locally. **This means a dev build reads and writes production
+  /// data.** Repoint dev at a local or staging install as soon as one exists.
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://localhost/whatsjet/public/api/v1',
+    defaultValue: 'https://wapp.magento2.click/api/v1',
   );
 
   /// Display name — differs per flavor so testers can tell builds apart.
