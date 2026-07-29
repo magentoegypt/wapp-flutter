@@ -1,0 +1,58 @@
+name: clickalize
+description: "Clickalize — WhatsApp Business vendor console for mobile."
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: any
+
+  # State management + DI
+  flutter_riverpod: ^2.5.0
+
+  # Routing
+  go_router: ^14.0.0
+
+  # Networking
+  dio: ^5.4.0
+
+  # Storage — secrets in the keychain, preferences in shared_preferences
+  flutter_secure_storage: ^9.0.0
+  shared_preferences: ^2.2.0
+
+  # Present only to satisfy the icon font manifest — the app draws Material
+  # icons exclusively. Tree-shaken out of release builds.
+  cupertino_icons: ^1.0.8
+
+  # Media + platform
+  cached_network_image: ^3.3.0
+  image_picker: ^1.2.3
+  url_launcher: ^6.3.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  generate: true
+  assets:
+    - assets/branding/
+  fonts:
+    # Variable fonts (all weights in one file). Inter carries the Latin/EN type
+    # ramp from the Figma handoff; Cairo is swapped in for Arabic by
+    # AppTheme.fontFor(). Deliberately no google_fonts — the bundled route
+    # matches zoonze-app and avoids a network dependency at first paint.
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter.ttf
+    - family: Cairo
+      fonts:
+        - asset: assets/fonts/Cairo.ttf

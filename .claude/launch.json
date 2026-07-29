@@ -1,0 +1,22 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "clickalize-web",
+      "runtimeExecutable": "flutter",
+      "runtimeArgs": [
+        "run",
+        "-d",
+        "web-server",
+        "--web-port",
+        "8088",
+        "--web-hostname",
+        "localhost",
+        "--dart-define-from-file=config/dev.json",
+        "-t",
+        "lib/main_dev.dart"
+      ],
+      "port": 8088
+    }
+  ]
+}

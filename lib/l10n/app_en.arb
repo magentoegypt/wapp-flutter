@@ -1,0 +1,219 @@
+{
+  "@@locale": "en",
+  "appTitle": "Clickalize",
+  "@appTitle": {
+    "description": "Application display name, shown in the task switcher."
+  },
+  "navHome": "Home",
+  "@navHome": {
+    "description": "Bottom tab label for the dashboard."
+  },
+  "navChats": "Chats",
+  "@navChats": {
+    "description": "Bottom tab label for the conversation inbox."
+  },
+  "navContacts": "Contacts",
+  "@navContacts": {
+    "description": "Bottom tab label for the contact directory."
+  },
+  "navMore": "More",
+  "@navMore": {
+    "description": "Bottom tab label for settings and secondary modules."
+  },
+  "loginTitle": "Sign in",
+  "@loginTitle": {
+    "description": "Login screen heading."
+  },
+  "loginSubtitle": "Use your own agent account — your replies are attributed to you.",
+  "@loginSubtitle": {
+    "description": "Explains that credentials are per-agent, not shared."
+  },
+  "loginEmailLabel": "Email",
+  "loginPasswordLabel": "Password",
+  "loginEmailRequired": "Enter your email address.",
+  "loginPasswordRequired": "Enter your password.",
+  "loginSubmit": "Sign in",
+  "actionRetry": "Retry",
+  "actionCancel": "Cancel",
+  "actionSave": "Save",
+  "actionDelete": "Delete",
+  "actionEdit": "Edit",
+  "actionSeeAll": "See all",
+  "commonToday": "Today",
+  "commonYesterday": "Yesterday",
+  "dashboardGreeting": "Good morning",
+  "@dashboardGreeting": {
+    "description": "Shown above the agent's name on the dashboard."
+  },
+  "dashboardOpen": "Open",
+  "dashboardResolvedToday": "Resolved today",
+  "dashboardAvgResponse": "Avg. response",
+  "dashboardCsat": "CSAT",
+  "dashboardWeeklyChart": "Conversations this week",
+  "dashboardMyQueue": "My queue",
+  "dashboardQueueEmpty": "Nothing waiting on you right now.",
+  "inboxTitle": "Inbox",
+  "inboxSearchHint": "Search conversations",
+  "inboxFilterAll": "All",
+  "inboxFilterNew": "New",
+  "inboxFilterUnassigned": "Unassigned",
+  "inboxEmptyTitle": "No conversations yet",
+  "inboxEmptyMessage": "New messages from customers will appear here.",
+  "chatComposerHint": "Message",
+  "chatServiceWindowOpen": "Service window closes in {duration} — reply to keep it open.",
+  "@chatServiceWindowOpen": {
+    "description": "Amber banner under the chat app bar while the 24h WhatsApp window is still open.",
+    "placeholders": {
+      "duration": {
+        "type": "String",
+        "example": "2h"
+      }
+    }
+  },
+  "chatServiceWindowClosed": "The 24-hour reply window has closed. Send an approved template to reopen it.",
+  "@chatServiceWindowClosed": {
+    "description": "Shown when isDirectMessageDeliveryWindowOpened is false."
+  },
+  "chatReplyLockOpen": "No one is replying now — reply first to lock this chat.",
+  "@chatReplyLockOpen": {
+    "description": "Neutral strip above the composer. Can appear at the same time as the service-window banner, so the two must not contradict each other."
+  },
+  "notesTitle": "Internal notes",
+  "notesPrivacyNotice": "Private to your team — never shared with customers.",
+  "@notesPrivacyNotice": {
+    "description": "Brand-wash banner. The sticky-note styling plus this line are what make note privacy legible at a glance."
+  },
+  "notesComposerHint": "Add an internal note… only your team can see this",
+  "notesAdd": "Add note",
+  "notesEmptyTitle": "No notes yet",
+  "notesCount": "{count, plural, =0{No notes} =1{1 note} other{{count} notes}}",
+  "@notesCount": {
+    "placeholders": {
+      "count": {
+        "type": "num",
+        "format": "compact"
+      }
+    }
+  },
+  "contactsTitle": "Contacts",
+  "contactsSearchHint": "Search contacts",
+  "contactsEmptyTitle": "No contacts yet",
+  "moreTitle": "More",
+  "moreQuickReplies": "Quick replies",
+  "moreCampaigns": "Campaigns",
+  "moreAgents": "Agents",
+  "moreProfile": "Profile",
+  "moreLanguage": "Language",
+  "moreSignOut": "Sign out",
+  "searchPrompt": "Search your conversations",
+  "searchMinChars": "Type at least two characters.",
+  "searchNoMatches": "No matches",
+  "searchNothingFor": "Nothing found for “{query}”.",
+  "@searchNothingFor": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "qrEmptyTitle": "No quick replies yet",
+  "qrEmptyMessage": "Save the answers you send most often.",
+  "qrNewTitle": "New quick reply",
+  "qrEditTitle": "Edit quick reply",
+  "qrShortcut": "Shortcut",
+  "qrMessage": "Message",
+  "qrShortcutRequired": "Give it a short name.",
+  "qrMessageRequired": "Enter the message to send.",
+  "caTitle": "Conversation actions",
+  "caInternalNote": "Internal note",
+  "caSnooze": "Snooze conversation",
+  "caTransfer": "Transfer conversation",
+  "caQualityReview": "Quality review",
+  "caSendTemplate": "Send template message",
+  "caCallHistory": "Call history",
+  "caRequestCall": "Request call permission",
+  "caHistoryAccess": "History access",
+  "caClearHistory": "Clear chat history",
+  "ciTitle": "Conversation info",
+  "ciServiceWindow": "Service window",
+  "ciOpen": "Open",
+  "ciClosed": "Closed",
+  "ciReopenHint": "Send an approved template to reopen.",
+  "ciAssignment": "Assignment",
+  "ciAssignedTo": "Assigned to",
+  "ciUnassigned": "Unassigned",
+  "ciReplyLock": "Reply lock",
+  "ciReplyLockFree": "Nobody is replying right now",
+  "ciReplyLockHeld": "Held by {name}",
+  "@ciReplyLockHeld": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "cdOpenConversation": "Open conversation",
+  "cdDetails": "Details",
+  "cdPhone": "Phone",
+  "cdEmail": "Email",
+  "cdLabels": "Labels",
+  "cdGroups": "Groups",
+  "cdBlocked": "Blocked",
+  "acTitle": "Add contact",
+  "acName": "Name",
+  "acPhone": "Phone (with country code)",
+  "acEmail": "Email (optional)",
+  "acNameRequired": "Enter a name.",
+  "acPhoneRequired": "Enter a phone number.",
+  "acLoadingGroups": "Loading groups…",
+  "campEmptyTitle": "No campaigns yet",
+  "campEmptyMessage": "Broadcast an approved template to a contact group.",
+  "campDraft": "Draft",
+  "campScheduled": "Scheduled",
+  "campRunning": "Running",
+  "campCompleted": "Completed",
+  "campFailed": "Failed",
+  "campContacts": "{count} contacts",
+  "@campContacts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ccTitle": "Create campaign",
+  "ccName": "Campaign name",
+  "ccTemplate": "Approved template",
+  "ccNameRequired": "Name this campaign.",
+  "ccChooseTemplate": "Choose an approved template.",
+  "ccAudience": "Audience",
+  "ccNoGroups": "No contact groups yet — the campaign will target all contacts.",
+  "cpDelivery": "Delivery",
+  "cpSent": "Sent",
+  "cpDelivered": "Delivered",
+  "cpRead": "Read",
+  "cpFailed": "Failed",
+  "cpSetup": "Setup",
+  "cpTemplate": "Template",
+  "cpAudience": "Audience",
+  "cpScheduled": "Scheduled",
+  "cpSend": "Send campaign",
+  "agEmptyTitle": "No teammates yet",
+  "agOnline": "Online",
+  "agAway": "Away",
+  "agPerformance": "Performance",
+  "agOpen": "Open",
+  "agResolvedToday": "Resolved today",
+  "agAvgResponse": "Avg. response",
+  "agCsat": "CSAT",
+  "agTeams": "Teams",
+  "agAssign": "Assign a conversation",
+  "prAccount": "Account",
+  "prEmail": "Email",
+  "prWorkspace": "Workspace",
+  "prPermissions": "Permissions",
+  "prAdmin": "Admin",
+  "prAgent": "Agent",
+  "prFullAccess": "Full access as a workspace admin.",
+  "prNoPermissions": "No additional permissions granted."
+}
