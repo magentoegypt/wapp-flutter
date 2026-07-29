@@ -28,7 +28,10 @@ class InboxScreen extends ConsumerWidget {
       appBar: AppHeader.search(
         title: l10n.inboxTitle,
         searchHint: l10n.inboxSearchHint,
-        onSearchChanged: (_) {},
+        // The field opens the dedicated Search screen rather than filtering in
+        // place — that screen is the handoff's `Chats → Search` edge, and
+        // without this entry point it was unreachable.
+        onSearchTap: () => context.push(AppRoutes.search),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push(AppRoutes.contactNew),

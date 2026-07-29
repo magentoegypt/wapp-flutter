@@ -78,8 +78,12 @@ class CampaignRepositoryImpl implements CampaignRepository {
   @override
   Future<Campaign> byUid(String uid) async {
     final dynamic body = await _api.get('/campaigns/$uid');
-    final Map<String, dynamic> m = body as Map<String, dynamic>;
-    return campaignFromJson((m['data'] as Map<String, dynamic>?) ?? m);
+    final Map<String, dynamic> m =
+        (body as Map<String, dynamic>?) ?? const <String, dynamic>{};
+    // Singular domain key, not `data`.
+    return campaignFromJson((m['campaign'] as Map<String, dynamic>?) ??
+        (m['data'] as Map<String, dynamic>?) ??
+        m);
   }
 
   @override

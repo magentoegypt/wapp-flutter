@@ -17,22 +17,30 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
     this.actions,
     this.leading,
     this.onBack,
+    this.onTitleTap,
     super.key,
   })  : searchHint = null,
         onSearchChanged = null,
+        onSearchTap = null,
         trailing = null;
 
   /// Title + search variant, used by the tab roots that own a list.
+  ///
+  /// Supply [onSearchTap] to turn the field into a button that opens a
+  /// dedicated search screen instead of filtering in place — that is what the
+  /// inbox does, matching the handoff's navigation graph (Chats → Search).
   const AppHeader.search({
     required this.title,
     required this.searchHint,
     this.onSearchChanged,
+    this.onSearchTap,
     this.trailing,
     super.key,
   })  : subtitle = null,
         actions = null,
         leading = null,
-        onBack = null;
+        onBack = null,
+        onTitleTap = null;
 
   final String title;
   final String? subtitle;
@@ -40,8 +48,15 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   final Widget? leading;
   final VoidCallback? onBack;
 
+  /// Opens the contact behind a back-nav header. The frames put the contact
+  /// name in the app bar and expect a tap there to reach conversation info.
+  final VoidCallback? onTitleTap;
+
   final String? searchHint;
   final ValueChanged<String>? onSearchChanged;
+
+  /// When set, the search field becomes a tap target rather than an input.
+  final VoidCallback? onSearchTap;
 
   /// Trailing element on the search variant — the frames put the signed-in
   /// agent's avatar here.
@@ -85,28 +100,33 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
             ),
         const SizedBox(width: 8),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-              ),
-              if (subtitle != null)
+          child: GestureDetector(
+            onTap: onTitleTap,
+            // Opaque so the whole title block is tappable, not just the glyphs.
+            behavior: HitTestBehavior.opaque,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
                 Text(
-                  subtitle!,
+                  title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 11.5, color: Colors.white70),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
                 ),
-            ],
+                if (subtitle != null)
+                  Text(
+                    subtitle!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 11.5, color: Colors.white70),
+                  ),
+              ],
+            ),
           ),
         ),
         ...?actions,
@@ -139,6 +159,8 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
         const SizedBox(height: 12),
         TextField(
           onChanged: onSearchChanged,
+          readOnly: onSearchTap != null,
+          onTap: onSearchTap,
           style: const TextStyle(fontSize: 14, color: AppColor.ink),
           decoration: InputDecoration(
             hintText: searchHint,

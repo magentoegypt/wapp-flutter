@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
+import '../../../core/util/message_text.dart';
 import '../domain/conversation.dart';
 
 /// Which slice of the inbox to load. Mirrors the filter chips on 36:1032.
@@ -102,7 +103,7 @@ Conversation conversationFromJson(Map<String, dynamic> j) {
   return Conversation(
     contactUid: (j['uid'] ?? j['contactUid'] ?? '').toString(),
     name: (j['name'] ?? j['waId'] ?? '').toString(),
-    lastMessage: (last['body'] ?? '').toString(),
+    lastMessage: MessageText.plain((last['body'] ?? '').toString()),
     lastMessageAt: _date(last['messagedAt']),
     unreadCount: _int(j['unread'] ?? j['unreadCount']),
     status: ConversationStatus.fromApi(j['status']),
@@ -148,7 +149,7 @@ ChatThread chatThreadFromJson(String contactUid, Map<String, dynamic> j) {
 ChatMessage chatMessageFromJson(Map<String, dynamic> j) {
   return ChatMessage(
     uid: (j['uid'] ?? '').toString(),
-    body: (j['body'] ?? j['message'] ?? '').toString(),
+    body: MessageText.plain((j['body'] ?? j['message'] ?? '').toString()),
     isIncoming: (j['isIncoming'] as bool?) ?? false,
     sentAt: _date(j['messagedAt']),
     status: j['status'] as String?,

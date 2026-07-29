@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import 'package:go_router/go_router.dart';
+
+import '../../../../app/routes.dart';
 import '../../../../core/util/duration_format.dart';
 import '../../../../core/widgets/app_banner.dart';
 import '../../../../core/widgets/app_header.dart';
@@ -48,6 +51,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       appBar: AppHeader.back(
         title: thread.valueOrNull?.name ?? '',
         subtitle: thread.valueOrNull?.phone,
+        // Tapping the contact in the app bar opens conversation info — the
+        // handoff's `Chat → Contact info` edge, and the only entry point to
+        // that screen.
+        onTitleTap: () => context.push(AppRoutes.chatInfo(widget.contactUid)),
         actions: <Widget>[
           IconButton(
             onPressed: () {},

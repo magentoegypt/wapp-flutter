@@ -49,8 +49,12 @@ class QuickReplyRepositoryImpl implements QuickReplyRepository {
   @override
   Future<QuickReply> byUid(String uid) async {
     final dynamic body = await _api.get('/quick-replies/$uid');
-    final Map<String, dynamic> m = (body as Map<String, dynamic>);
-    return quickReplyFromJson((m['data'] as Map<String, dynamic>?) ?? m);
+    final Map<String, dynamic> m =
+        (body as Map<String, dynamic>?) ?? const <String, dynamic>{};
+    // Singular domain key, not `data`.
+    return quickReplyFromJson((m['quickReply'] as Map<String, dynamic>?) ??
+        (m['data'] as Map<String, dynamic>?) ??
+        m);
   }
 
   @override

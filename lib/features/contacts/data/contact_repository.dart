@@ -34,13 +34,15 @@ class ContactRepositoryImpl implements ContactRepository {
   @override
   Future<Contact> byUid(String uid) async {
     final dynamic body = await _api.get('/contacts/$uid');
-    return contactFromJson(_unwrap(body));
+    return contactFromJson(_record(body, 'contact'));
   }
 
   @override
   Future<ContactMeta> meta() async {
     final dynamic body = await _api.get('/contacts/meta');
-    final Map<String, dynamic> j = _unwrap(body);
+    // meta is flat under the envelope - no singular record key.
+    final Map<String, dynamic> j =
+        (body as Map<String, dynamic>?) ?? const <String, dynamic>{};
     // `/contacts/meta` returns groups, labels, customFields and
     // assignableUsers. There is no country list, so that stays empty.
     return ContactMeta(
@@ -66,7 +68,7 @@ class ContactRepositoryImpl implements ContactRepository {
         if (groupIds.isNotEmpty) 'groups': groupIds,
       },
     );
-    return contactFromJson(_unwrap(body));
+    return contactFromJson(_record(body, 'contact'));
   }
 
   /// The API nests the list under a domain-named key (`contacts`), not
@@ -80,11 +82,15 @@ class ContactRepositoryImpl implements ContactRepository {
     return raw.whereType<Map<String, dynamic>>().toList();
   }
 
-  Map<String, dynamic> _unwrap(dynamic body) {
-    final Map<String, dynamic> m = (body as Map<String, dynamic>?) ??
-        const <String, dynamic>{};
-    // Laravel resources wrap single records in `data`.
-    return (m['data'] as Map<String, dynamic>?) ?? m;
+  /// Single records nest under a singular domain key - `contact`, not
+  /// `data`. Falls back to `data` and then the bare body so an envelope
+  /// change degrades instead of rendering an empty screen.
+  Map<String, dynamic> _record(dynamic body, String key) {
+    final Map<String, dynamic> m =
+        (body as Map<String, dynamic>?) ?? const <String, dynamic>{};
+    return (m[key] as Map<String, dynamic>?) ??
+        (m['data'] as Map<String, dynamic>?) ??
+        m;
   }
 
   List<NamedRef> _refs(dynamic raw) {

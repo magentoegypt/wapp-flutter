@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/error/failure.dart';
 import '../../../core/network/api_client.dart';
 
 /// A teammate in the workspace, plus the performance figures the backend
@@ -56,11 +57,16 @@ class AgentRepositoryImpl implements AgentRepository {
     return rows.whereType<Map<String, dynamic>>().map(agentFromJson).toList();
   }
 
+  /// There is no `GET /agents/{uid}` on the API - it returns 404 - so the
+  /// record is resolved from the list instead. Swap this for a direct fetch
+  /// if that endpoint is ever added; the signature will not change.
   @override
   Future<Agent> byUid(String uid) async {
-    final dynamic body = await _api.get('/agents/$uid');
-    final Map<String, dynamic> m = body as Map<String, dynamic>;
-    return agentFromJson((m['data'] as Map<String, dynamic>?) ?? m);
+    final List<Agent> all = await list();
+    return all.firstWhere(
+      (Agent a) => a.uid == uid,
+      orElse: () => throw const NotFoundFailure('That teammate no longer exists.'),
+    );
   }
 }
 
