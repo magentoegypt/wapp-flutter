@@ -39,6 +39,10 @@ class CampaignsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppHeader.back(title: l10n.moreCampaigns),
       floatingActionButton: FloatingActionButton(
+        // Distinct hero tag. Inbox and Contacts are both kept alive by
+        // StatefulShellRoute.indexedStack, so two FABs sharing Flutter's
+        // default tag collide and throw on every tab switch.
+        heroTag: 'fab-campaigns',
         onPressed: () => context.push(AppRoutes.campaignNew),
         child: const Icon(Icons.add),
       ),

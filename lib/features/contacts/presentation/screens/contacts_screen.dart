@@ -28,6 +28,10 @@ class ContactsScreen extends ConsumerWidget {
             ref.read(contactSearchProvider.notifier).state = q,
       ),
       floatingActionButton: FloatingActionButton(
+        // Distinct hero tag. Inbox and Contacts are both kept alive by
+        // StatefulShellRoute.indexedStack, so two FABs sharing Flutter's
+        // default tag collide and throw on every tab switch.
+        heroTag: 'fab-contacts',
         onPressed: () => context.push(AppRoutes.contactNew),
         child: const Icon(Icons.person_add_alt),
       ),

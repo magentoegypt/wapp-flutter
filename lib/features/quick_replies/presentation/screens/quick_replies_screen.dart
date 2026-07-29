@@ -22,6 +22,10 @@ class QuickRepliesScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppHeader.back(title: l10n.moreQuickReplies),
       floatingActionButton: FloatingActionButton(
+        // Distinct hero tag. Inbox and Contacts are both kept alive by
+        // StatefulShellRoute.indexedStack, so two FABs sharing Flutter's
+        // default tag collide and throw on every tab switch.
+        heroTag: 'fab-quick-replies',
         onPressed: () => context.push(AppRoutes.quickReplyNew),
         child: const Icon(Icons.add),
       ),

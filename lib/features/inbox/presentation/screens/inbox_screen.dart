@@ -34,6 +34,10 @@ class InboxScreen extends ConsumerWidget {
         onSearchTap: () => context.push(AppRoutes.search),
       ),
       floatingActionButton: FloatingActionButton(
+        // Distinct hero tag. Inbox and Contacts are both kept alive by
+        // StatefulShellRoute.indexedStack, so two FABs sharing Flutter's
+        // default tag collide and throw on every tab switch.
+        heroTag: 'fab-inbox',
         onPressed: () => context.push(AppRoutes.contactNew),
         child: const Icon(Icons.edit_outlined),
       ),
