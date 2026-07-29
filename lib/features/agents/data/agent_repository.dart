@@ -46,10 +46,13 @@ class AgentRepositoryImpl implements AgentRepository {
   @override
   Future<List<Agent>> list() async {
     final dynamic body = await _api.get('/agents');
-    final List<dynamic> rows = body is List
-        ? body
-        : ((body as Map<String, dynamic>)['data'] as List<dynamic>? ??
-            const <dynamic>[]);
+    if (body is List) {
+      return body.whereType<Map<String, dynamic>>().map(agentFromJson).toList();
+    }
+    final Map<String, dynamic> m =
+        (body as Map<String, dynamic>?) ?? const <String, dynamic>{};
+    final List<dynamic> rows =
+        (m['agents'] ?? m['data']) as List<dynamic>? ?? const <dynamic>[];
     return rows.whereType<Map<String, dynamic>>().map(agentFromJson).toList();
   }
 
@@ -70,18 +73,24 @@ Agent agentFromJson(Map<String, dynamic> j) {
     name: (j['name'] ?? '').toString(),
     email: (j['email'] ?? '').toString(),
     role: (j['role'] ?? 'agent').toString(),
+    // The API returns a single `team` string, not a list.
     teams: (j['teams'] is List)
         ? (j['teams'] as List<dynamic>)
             .map((dynamic e) =>
                 e is Map ? (e['title'] ?? e['name'] ?? '').toString() : e.toString())
             .where((String s) => s.isNotEmpty)
             .toList()
-        : const <String>[],
-    openConversations: _int(j['openConversations'] ?? j['open_conversations']),
-    resolvedToday: _int(j['resolvedToday'] ?? j['resolved_today']),
-    avgResponseSeconds: _int(j['avgResponseSecs'] ?? j['avg_response_secs']),
+        : <String>[
+            if ((j['team'] as String?)?.isNotEmpty ?? false) j['team'] as String,
+          ],
+    openConversations: _int(j['activeChats'] ?? j['openConversations']),
+    // Not exposed by /agents today — AgentTargetEngine computes CSAT and
+    // response time server-side but the mobile endpoint does not surface them.
+    resolvedToday: _int(j['resolvedToday']),
+    avgResponseSeconds: _int(j['avgResponseSecs']),
     csatPercent: csat == null ? null : _int(csat),
-    online: (j['online'] as bool?) ?? false,
+    // `active` is the account-enabled flag, the closest thing to presence.
+    online: (j['active'] as bool?) ?? false,
   );
 }
 

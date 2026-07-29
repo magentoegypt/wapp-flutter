@@ -52,16 +52,21 @@ class AuthController extends Notifier<AuthState> {
   AuthRepository get _repo => ref.read(authRepositoryProvider);
 
   Future<void> _restore() async {
-    if (!await _repo.hasStoredToken()) {
-      state = state.copyWith(status: AuthStatus.signedOut);
-      return;
-    }
     try {
+      if (!await _repo.hasStoredToken()) {
+        state = state.copyWith(status: AuthStatus.signedOut);
+        return;
+      }
       final Session session = await _repo.me();
       state = state.copyWith(status: AuthStatus.signedIn, session: session);
-    } on Failure {
-      // A stored token that no longer works is the same as none. The API
-      // client has already cleared it.
+    } catch (error, stack) {
+      // Catch **everything**, not just Failure. A parse or cast error escaping
+      // here would leave status on `unknown`, and the router's redirect treats
+      // `unknown` as "hold on Login" — stranding the app at the sign-in screen
+      // forever with a perfectly valid token and no visible error.
+      // Degrading to signedOut is recoverable; hanging in `unknown` is not.
+      debugPrint('[auth] session restore failed: $error');
+      debugPrintStack(stackTrace: stack, maxFrames: 8);
       state = state.copyWith(status: AuthStatus.signedOut);
     }
   }

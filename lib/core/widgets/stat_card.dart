@@ -35,6 +35,10 @@ class StatCard extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(14),
+      // Floor the height so two cards side by side stay level even when one
+      // label wraps. Doing it here rather than via the parent keeps the card
+      // safe inside any unbounded-height parent.
+      constraints: const BoxConstraints(minHeight: 86),
       decoration: BoxDecoration(
         color: isLight ? Colors.white : const Color(0xFF141C17),
         borderRadius: BorderRadius.circular(AppDimens.radiusCardLarge),
@@ -44,6 +48,8 @@ class StatCard extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           Row(
             children: <Widget>[
@@ -75,8 +81,17 @@ class StatCardRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Deliberately NOT CrossAxisAlignment.stretch, and deliberately not
+    // wrapped in IntrinsicHeight. These rows sit inside a ListView, so the
+    // vertical constraint is unbounded:
+    //   * `stretch` resolves to an infinite height and aborts layout for the
+    //     entire scroll view (blank screen, not an error);
+    //   * `IntrinsicHeight` cannot measure through the `Expanded` inside
+    //     StatCard's own Row and hangs the renderer.
+    // Equal heights come from StatCard's own minimum height instead, which
+    // needs no parent cooperation.
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         for (int i = 0; i < cards.length; i++) ...<Widget>[
           if (i > 0) SizedBox(width: spacing),

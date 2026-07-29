@@ -28,13 +28,18 @@ class AgentUser {
   final String name;
   final String email;
 
-  /// `admin` or `agent` — derived server-side from `user_roles__id`.
+  /// Role slug from the API. A vendor administrator comes back as `owner`
+  /// (with `roleTitle: "Vendor Admin"`), not `admin` — checking for the
+  /// latter alone would silently deny admins their own permissions.
   final String role;
 
-  /// Feature permissions from `vendor_users.__data.permissions`.
+  /// Feature permissions from `vendor_users.__data.permissions`. Empty for an
+  /// owner, who implicitly has everything.
   final List<String> permissions;
 
-  bool get isAdmin => role == 'admin';
+  static const Set<String> _adminRoles = <String>{'owner', 'admin'};
+
+  bool get isAdmin => _adminRoles.contains(role.toLowerCase());
   bool can(String permission) => isAdmin || permissions.contains(permission);
 }
 

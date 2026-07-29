@@ -65,10 +65,13 @@ class CampaignRepositoryImpl implements CampaignRepository {
   @override
   Future<List<Campaign>> list() async {
     final dynamic body = await _api.get('/campaigns');
-    final List<dynamic> rows = body is List
-        ? body
-        : ((body as Map<String, dynamic>)['data'] as List<dynamic>? ??
-            const <dynamic>[]);
+    if (body is List) {
+      return body.whereType<Map<String, dynamic>>().map(campaignFromJson).toList();
+    }
+    final Map<String, dynamic> m =
+        (body as Map<String, dynamic>?) ?? const <String, dynamic>{};
+    final List<dynamic> rows =
+        (m['campaigns'] ?? m['data']) as List<dynamic>? ?? const <dynamic>[];
     return rows.whereType<Map<String, dynamic>>().map(campaignFromJson).toList();
   }
 
@@ -88,8 +91,8 @@ class CampaignRepositoryImpl implements CampaignRepository {
         ? raw
             .whereType<Map<String, dynamic>>()
             .map((Map<String, dynamic> e) => NamedRef(
-                  id: (e['id'] ?? e['uid'] ?? e['name'] ?? '').toString(),
-                  name: (e['name'] ?? e['title'] ?? '').toString(),
+                  id: (e['uid'] ?? e['id'] ?? e['name'] ?? '').toString(),
+                  name: (e['title'] ?? e['name'] ?? '').toString(),
                 ))
             .toList()
         : const <NamedRef>[];
@@ -141,9 +144,9 @@ Campaign campaignFromJson(Map<String, dynamic> j) {
     title: (j['title'] ?? '').toString(),
     status: _status(j['status']),
     templateName: (j['templateName'] ?? j['template_name']) as String?,
-    scheduledAt:
-        DateTime.tryParse('${j['scheduledAt'] ?? j['scheduled_at'] ?? ''}')?.toLocal(),
-    totalContacts: _int(j['totalContacts'] ?? j['total_contacts']),
+    scheduledAt: DateTime.tryParse('${j['scheduledAt'] ?? ''}')?.toLocal(),
+    // `targeted` is the audience size; `allContacts` means the whole book.
+    totalContacts: _int(j['targeted'] ?? j['totalContacts']),
     sent: _int(stats['sent'] ?? j['sent']),
     delivered: _int(stats['delivered'] ?? j['delivered']),
     read: _int(stats['read'] ?? j['read']),

@@ -46,12 +46,6 @@
     "description": "Shown above the agent's name on the dashboard."
   },
   "dashboardOpen": "Open",
-  "dashboardResolvedToday": "Resolved today",
-  "dashboardAvgResponse": "Avg. response",
-  "dashboardCsat": "CSAT",
-  "dashboardWeeklyChart": "Conversations this week",
-  "dashboardMyQueue": "My queue",
-  "dashboardQueueEmpty": "Nothing waiting on you right now.",
   "inboxTitle": "Inbox",
   "inboxSearchHint": "Search conversations",
   "inboxFilterAll": "All",
@@ -215,5 +209,15 @@
   "prAdmin": "Admin",
   "prAgent": "Agent",
   "prFullAccess": "Full access as a workspace admin.",
-  "prNoPermissions": "No additional permissions granted."
+  "prNoPermissions": "No additional permissions granted.",
+  "dashboardConversations": "Conversations",
+  "dashboardUnassigned": "Unassigned",
+  "dashboardAssigned": "Assigned",
+  "dashboardQueued": "Queued",
+  "dashboardToday": "Today",
+  "dashboardInbound": "Received",
+  "dashboardOutbound": "Sent",
+  "dashboardNewContacts": "New contacts",
+  "dashboardTotalContacts": "Total contacts",
+  "dashboardOpenInbox": "Open inbox"
 }

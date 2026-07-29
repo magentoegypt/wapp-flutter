@@ -1,58 +1,40 @@
-/// Dashboard payload — the shape is pinned by the Figma frame (38:1032):
-/// four stat cards, a seven-day bar chart, and the agent's queue.
+/// Dashboard metrics, as the API actually provides them under `stats`.
+///
+/// This deliberately does **not** match the Figma frame (38:1032), which asked
+/// for Resolved today / Avg. response / CSAT plus a seven-day chart and an
+/// agent queue. None of those are exposed by `GET /dashboard` — the backend
+/// computes CSAT and response time per agent in `AgentTargetEngine` but does
+/// not surface them here, and there is no weekly series or queue endpoint.
+///
+/// Rather than render four cards that are permanently zero, the screen is
+/// built around the eight metrics that do exist. Restore the designed layout
+/// if and when the API grows those fields.
 class DashboardSummary {
   const DashboardSummary({
-    required this.open,
-    required this.resolvedToday,
-    required this.avgResponseSeconds,
-    required this.csatPercent,
-    required this.week,
-    required this.queue,
+    this.openConversations = 0,
+    this.unassigned = 0,
+    this.assigned = 0,
+    this.totalContacts = 0,
+    this.newContactsToday = 0,
+    this.inboundToday = 0,
+    this.outboundToday = 0,
+    this.queued = 0,
   });
 
-  final int open;
-  final int resolvedToday;
+  /// Threads currently open across the workspace.
+  final int openConversations;
 
-  /// Seconds; the UI formats to "2m 14s".
-  final int avgResponseSeconds;
+  /// Open threads with no agent — the most actionable number on the screen.
+  final int unassigned;
 
-  /// Already a percentage, 0–100.
-  ///
-  /// The backend stores `agent_quality_reviews.score` on a 1–5 scale, so
-  /// whoever builds `GET /dashboard` must convert (`avg / 5 * 100`) rather than
-  /// passing the raw average through — a 4.7 rendered into a "%" slot is a
-  /// silent, plausible-looking bug.
-  final int csatPercent;
+  final int assigned;
+  final int totalContacts;
+  final int newContactsToday;
+  final int inboundToday;
+  final int outboundToday;
 
-  final List<DayCount> week;
-  final List<QueueItem> queue;
+  /// Messages waiting in the send queue.
+  final int queued;
 
-  static const DashboardSummary empty = DashboardSummary(
-    open: 0,
-    resolvedToday: 0,
-    avgResponseSeconds: 0,
-    csatPercent: 0,
-    week: <DayCount>[],
-    queue: <QueueItem>[],
-  );
-}
-
-class DayCount {
-  const DayCount({required this.weekday, required this.count});
-
-  /// 1 = Monday … 7 = Sunday, matching DateTime.
-  final int weekday;
-  final int count;
-}
-
-class QueueItem {
-  const QueueItem({
-    required this.contactUid,
-    required this.name,
-    required this.waitingSeconds,
-  });
-
-  final String contactUid;
-  final String name;
-  final int waitingSeconds;
+  static const DashboardSummary empty = DashboardSummary();
 }

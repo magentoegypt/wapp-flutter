@@ -36,17 +36,21 @@ class ConversationRepositoryImpl implements ConversationRepository {
       },
     );
 
-    // Accept both a bare list and a paginated `{data: [...]}` envelope, since
-    // Laravel resources default to the latter.
-    final List<dynamic> rows = body is List
-        ? body
-        : ((body as Map<String, dynamic>)['data'] as List<dynamic>? ??
-            const <dynamic>[]);
-
-    return rows
-        .whereType<Map<String, dynamic>>()
+    return _rows(body, 'conversations')
         .map(conversationFromJson)
         .toList();
+  }
+
+  /// The API returns `{success, filter, conversations: [...]}` — the list lives
+  /// under a domain-named key, not `data`. Falls back to `data` and to a bare
+  /// list so a future envelope change doesn't silently empty the screen.
+  List<Map<String, dynamic>> _rows(dynamic body, String key) {
+    if (body is List) return body.whereType<Map<String, dynamic>>().toList();
+    final Map<String, dynamic> m =
+        (body as Map<String, dynamic>?) ?? const <String, dynamic>{};
+    final List<dynamic> raw =
+        (m[key] ?? m['data']) as List<dynamic>? ?? const <dynamic>[];
+    return raw.whereType<Map<String, dynamic>>().toList();
   }
 
   @override
@@ -75,7 +79,11 @@ class ConversationRepositoryImpl implements ConversationRepository {
   Future<int> unreadCount() async {
     final dynamic body = await _api.get('/conversations/unread-count');
     if (body is num) return body.round();
-    return ((body as Map<String, dynamic>)['count'] as num?)?.round() ?? 0;
+    // `{success, unread, conversations}` — `unread` is the message count,
+    // `conversations` the number of threads carrying them.
+    final Map<String, dynamic> m =
+        (body as Map<String, dynamic>?) ?? const <String, dynamic>{};
+    return _int(m['unread'] ?? m['count']);
   }
 }
 
@@ -87,15 +95,19 @@ DateTime? _date(Object? v) =>
 int _int(Object? v) => v is num ? v.round() : int.tryParse('${v ?? ''}') ?? 0;
 
 Conversation conversationFromJson(Map<String, dynamic> j) {
+  // `lastMessage` is an object — {body, isIncoming, messagedAt} — not a string.
+  final Map<String, dynamic> last =
+      (j['lastMessage'] as Map<String, dynamic>?) ?? const <String, dynamic>{};
+
   return Conversation(
-    contactUid: (j['contactUid'] ?? j['contact_uid'] ?? j['uid'] ?? '').toString(),
-    name: (j['name'] ?? '').toString(),
-    lastMessage: (j['lastMessage'] ?? j['last_message'] ?? '').toString(),
-    lastMessageAt: _date(j['lastMessageAt'] ?? j['last_message_at']),
-    unreadCount: _int(j['unreadCount'] ?? j['unread_count']),
-    status: ConversationStatus.fromValue((j['status'] as num?)?.toInt()),
-    assignedAgentName: (j['assignedAgent'] ?? j['assigned_agent']) as String?,
-    isIncomingLast: (j['isIncomingLast'] ?? j['is_incoming_last']) as bool? ?? true,
+    contactUid: (j['uid'] ?? j['contactUid'] ?? '').toString(),
+    name: (j['name'] ?? j['waId'] ?? '').toString(),
+    lastMessage: (last['body'] ?? '').toString(),
+    lastMessageAt: _date(last['messagedAt']),
+    unreadCount: _int(j['unread'] ?? j['unreadCount']),
+    status: ConversationStatus.fromApi(j['status']),
+    assignedAgentName: (j['assignedUserName'] ?? j['assignedAgent']) as String?,
+    isIncomingLast: (last['isIncoming'] as bool?) ?? true,
   );
 }
 
@@ -103,25 +115,33 @@ ChatThread chatThreadFromJson(String contactUid, Map<String, dynamic> j) {
   final Map<String, dynamic> contact =
       (j['contact'] as Map<String, dynamic>?) ?? const <String, dynamic>{};
 
+  // `replyLock` is an object; `locked == false` means the chat is unclaimed.
+  final Map<String, dynamic> lock =
+      (j['replyLock'] as Map<String, dynamic>?) ?? const <String, dynamic>{};
+  final bool locked = (lock['locked'] as bool?) ?? false;
+
   return ChatThread(
     contactUid: contactUid,
-    name: (contact['name'] ?? j['name'] ?? '').toString(),
-    phone: (contact['phone'] ?? contact['wa_id']) as String?,
+    name: (contact['name'] ?? contact['waId'] ?? '').toString(),
+    phone: (contact['waId'] ?? contact['phone']) as String?,
     messages: ((j['messages'] as List<dynamic>?) ?? const <dynamic>[])
         .whereType<Map<String, dynamic>>()
         .map(chatMessageFromJson)
         .toList(),
-    // Backend field names are passed through verbatim from the engine.
-    windowOpen: (j['isDirectMessageDeliveryWindowOpened'] as bool?) ?? false,
+    // The API renames the engine's isDirectMessageDeliveryWindowOpened to
+    // `windowOpen`, but passes conversationExpiresAt through verbatim.
+    windowOpen: (j['windowOpen'] as bool?) ?? false,
     windowExpiresAt: _date(j['conversationExpiresAt']),
-    quickReplies: ((j['quickReplies'] as List<dynamic>?) ?? const <dynamic>[])
-        .map((dynamic e) => e is Map ? (e['title'] ?? '').toString() : e.toString())
-        .where((String s) => s.isNotEmpty)
-        .toList(),
+    // Chat detail carries no canned replies; the composer chips are sourced
+    // from the quick-replies endpoint instead.
+    quickReplies: const <String>[],
     assignedAgentName:
-        (j['assigned'] as Map<String, dynamic>?)?['agentName'] as String?,
-    replyLockHeldBy:
-        (j['smartRoutingLock'] as Map<String, dynamic>?)?['heldBy'] as String?,
+        (j['chatOwnerName'] as String?)?.trim().isEmpty ?? true
+            ? null
+            : (j['chatOwnerName'] as String?),
+    replyLockHeldBy: locked
+        ? ((lock['lockedByName'] as String?) ?? 'another agent')
+        : null,
   );
 }
 
@@ -129,8 +149,8 @@ ChatMessage chatMessageFromJson(Map<String, dynamic> j) {
   return ChatMessage(
     uid: (j['uid'] ?? '').toString(),
     body: (j['body'] ?? j['message'] ?? '').toString(),
-    isIncoming: (j['isIncoming'] ?? j['is_incoming_message']) as bool? ?? false,
-    sentAt: _date(j['messagedAt'] ?? j['messaged_at']),
+    isIncoming: (j['isIncoming'] as bool?) ?? false,
+    sentAt: _date(j['messagedAt']),
     status: j['status'] as String?,
     agentName: (j['agent'] ?? j['agent_name']) as String?,
   );

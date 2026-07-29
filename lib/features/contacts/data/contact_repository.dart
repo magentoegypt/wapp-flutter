@@ -41,6 +41,8 @@ class ContactRepositoryImpl implements ContactRepository {
   Future<ContactMeta> meta() async {
     final dynamic body = await _api.get('/contacts/meta');
     final Map<String, dynamic> j = _unwrap(body);
+    // `/contacts/meta` returns groups, labels, customFields and
+    // assignableUsers. There is no country list, so that stays empty.
     return ContactMeta(
       groups: _refs(j['groups']),
       labels: _refs(j['labels']),
@@ -67,11 +69,14 @@ class ContactRepositoryImpl implements ContactRepository {
     return contactFromJson(_unwrap(body));
   }
 
+  /// The API nests the list under a domain-named key (`contacts`), not
+  /// `data`. Falls back so an envelope change doesn't silently empty the list.
   List<Map<String, dynamic>> _rows(dynamic body) {
-    final List<dynamic> raw = body is List
-        ? body
-        : ((body as Map<String, dynamic>)['data'] as List<dynamic>? ??
-            const <dynamic>[]);
+    if (body is List) return body.whereType<Map<String, dynamic>>().toList();
+    final Map<String, dynamic> m =
+        (body as Map<String, dynamic>?) ?? const <String, dynamic>{};
+    final List<dynamic> raw =
+        (m['contacts'] ?? m['data']) as List<dynamic>? ?? const <dynamic>[];
     return raw.whereType<Map<String, dynamic>>().toList();
   }
 
@@ -87,8 +92,8 @@ class ContactRepositoryImpl implements ContactRepository {
     return raw
         .whereType<Map<String, dynamic>>()
         .map((Map<String, dynamic> e) => NamedRef(
-              id: (e['id'] ?? e['uid'] ?? '').toString(),
-              name: (e['name'] ?? e['title'] ?? '').toString(),
+              id: (e['uid'] ?? e['id'] ?? '').toString(),
+              name: (e['title'] ?? e['name'] ?? '').toString(),
             ))
         .toList();
   }
@@ -103,16 +108,17 @@ Contact contactFromJson(Map<String, dynamic> j) {
       : const <String>[];
 
   return Contact(
-    uid: (j['uid'] ?? j['_uid'] ?? '').toString(),
-    name: (j['name'] ?? '').toString(),
-    phone: (j['phone'] ?? j['wa_id'] ?? '').toString(),
+    uid: (j['uid'] ?? '').toString(),
+    name: (j['name'] ?? j['waId'] ?? '').toString(),
+    // `waId` is the WhatsApp identifier and the conversation key; `phone` is
+    // the display form and may be absent.
+    phone: (j['phone'] ?? j['waId'] ?? '').toString(),
     email: j['email'] as String?,
-    countryCode: (j['countryCode'] ?? j['country_code']) as String?,
+    countryCode: (j['country'] ?? j['countryCode']) as String?,
     labels: strings(j['labels']),
     groups: strings(j['groups']),
-    lastSeenAt:
-        DateTime.tryParse('${j['lastSeenAt'] ?? j['last_seen_at'] ?? ''}')?.toLocal(),
-    isBlocked: (j['status'] as num?)?.toInt() == 3,
+    lastSeenAt: DateTime.tryParse('${j['createdAt'] ?? ''}')?.toLocal(),
+    isBlocked: '${j['status'] ?? ''}' == 'blocked',
   );
 }
 

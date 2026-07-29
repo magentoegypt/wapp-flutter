@@ -5,22 +5,22 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_dimens.dart';
-import '../../../../core/util/duration_format.dart';
-import '../../../../core/widgets/app_list_tile.dart';
 import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/initials_avatar.dart';
 import '../../../../core/widgets/section_label.dart';
 import '../../../../core/widgets/stat_card.dart';
-import '../../../../core/widgets/weekly_bar_chart.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../data/dashboard_repository.dart';
 import '../../domain/dashboard_summary.dart';
 
-/// Dashboard — Figma 38:1032.
+/// Dashboard — Figma 38:1032, adapted to the metrics the API exposes.
 ///
-/// Greeting header, a 2×2 stat grid, the weekly conversation chart, then the
-/// agent's own queue.
+/// The frame specified Resolved today / Avg. response / CSAT plus a seven-day
+/// chart and an agent queue. `GET /dashboard` provides none of those, so the
+/// screen is built from the eight metrics that do exist, keeping the frame's
+/// greeting header and 2×2 stat-card idiom. The unassigned count is given the
+/// warning tone because it is the one number an agent should act on.
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
@@ -41,12 +41,12 @@ class DashboardScreen extends ConsumerWidget {
             child: AsyncValueView<DashboardSummary>(
               value: summary,
               onRetry: () => ref.invalidate(dashboardSummaryProvider),
-              builder: (DashboardSummary data) => RefreshIndicator(
+              builder: (DashboardSummary d) => RefreshIndicator(
                 onRefresh: () async => ref.invalidate(dashboardSummaryProvider),
                 child: ListView(
-                  padding: const EdgeInsets.only(bottom: 24),
+                  padding: const EdgeInsets.only(bottom: 28),
                   children: <Widget>[
-                    const SizedBox(height: 16),
+                    SectionLabel(l10n.dashboardConversations),
                     Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: AppDimens.gutter,
@@ -56,14 +56,59 @@ class DashboardScreen extends ConsumerWidget {
                           StatCardRow(
                             cards: <StatCard>[
                               StatCard(
-                                value: '${data.open}',
+                                value: '${d.openConversations}',
                                 label: l10n.dashboardOpen,
                                 icon: Icons.forum_outlined,
                               ),
                               StatCard(
-                                value: '${data.resolvedToday}',
-                                label: l10n.dashboardResolvedToday,
-                                icon: Icons.check_circle_outline,
+                                value: '${d.unassigned}',
+                                label: l10n.dashboardUnassigned,
+                                icon: Icons.person_off_outlined,
+                                // Semantic, not decorative: work nobody owns.
+                                iconColor: AppColor.warning,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          StatCardRow(
+                            cards: <StatCard>[
+                              StatCard(
+                                value: '${d.assigned}',
+                                label: l10n.dashboardAssigned,
+                                icon: Icons.assignment_ind_outlined,
+                                iconColor: AppColor.success,
+                              ),
+                              StatCard(
+                                value: '${d.queued}',
+                                label: l10n.dashboardQueued,
+                                icon: Icons.schedule_send_outlined,
+                                iconColor: AppColor.info,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    SectionLabel(l10n.dashboardToday),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppDimens.gutter,
+                      ),
+                      child: Column(
+                        children: <Widget>[
+                          StatCardRow(
+                            cards: <StatCard>[
+                              StatCard(
+                                value: '${d.inboundToday}',
+                                label: l10n.dashboardInbound,
+                                icon: Icons.call_received,
+                                iconColor: AppColor.info,
+                              ),
+                              StatCard(
+                                value: '${d.outboundToday}',
+                                label: l10n.dashboardOutbound,
+                                icon: Icons.call_made,
                                 iconColor: AppColor.success,
                               ),
                             ],
@@ -72,60 +117,32 @@ class DashboardScreen extends ConsumerWidget {
                           StatCardRow(
                             cards: <StatCard>[
                               StatCard(
-                                value: DurationFormat.compact(
-                                  data.avgResponseSeconds,
-                                ),
-                                label: l10n.dashboardAvgResponse,
-                                icon: Icons.timer_outlined,
-                                iconColor: AppColor.info,
+                                value: '${d.newContactsToday}',
+                                label: l10n.dashboardNewContacts,
+                                icon: Icons.person_add_alt,
                               ),
                               StatCard(
-                                value: '${data.csatPercent}%',
-                                label: l10n.dashboardCsat,
-                                icon: Icons.star_outline,
-                                iconColor: AppColor.warning,
+                                value: '${d.totalContacts}',
+                                label: l10n.dashboardTotalContacts,
+                                icon: Icons.people_outline,
                               ),
                             ],
-                          ),
-                          const SizedBox(height: 18),
-                          ChartCard(
-                            title: l10n.dashboardWeeklyChart,
-                            child: WeeklyBarChart(
-                              data: _toBars(context, data.week),
-                              semanticsLabel: l10n.dashboardWeeklyChart,
-                            ),
                           ),
                         ],
                       ),
                     ),
-                    SectionHeader(
-                      title: l10n.dashboardMyQueue,
-                      actionLabel: data.queue.isEmpty ? null : l10n.actionSeeAll,
-                      onAction: () => context.go(AppRoutes.chats),
+
+                    const SizedBox(height: 20),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppDimens.gutter,
+                      ),
+                      child: FilledButton.icon(
+                        onPressed: () => context.go(AppRoutes.chats),
+                        icon: const Icon(Icons.forum_outlined, size: 18),
+                        label: Text(l10n.dashboardOpenInbox),
+                      ),
                     ),
-                    if (data.queue.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppDimens.gutter,
-                          vertical: 8,
-                        ),
-                        child: Text(
-                          l10n.dashboardQueueEmpty,
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                      )
-                    else
-                      for (final QueueItem item in data.queue)
-                        AppListTile(
-                          title: item.name,
-                          leading: InitialsAvatar(name: item.name),
-                          trailing: Text(
-                            DurationFormat.coarse(item.waitingSeconds),
-                            style: Theme.of(context).textTheme.labelMedium,
-                          ),
-                          onTap: () =>
-                              context.push(AppRoutes.chat(item.contactUid)),
-                        ),
                   ],
                 ),
               ),
@@ -134,21 +151,6 @@ class DashboardScreen extends ConsumerWidget {
         ],
       ),
     );
-  }
-
-  /// Maps weekday numbers to localized single-letter labels via the ambient
-  /// MaterialLocalizations, so Arabic gets Arabic initials for free.
-  List<BarDatum> _toBars(BuildContext context, List<DayCount> week) {
-    final MaterialLocalizations m = MaterialLocalizations.of(context);
-    return week
-        .map(
-          (DayCount d) => BarDatum(
-            // narrowWeekdays is Sunday-first; DateTime.weekday is Monday-first.
-            label: m.narrowWeekdays[d.weekday % 7],
-            value: d.count,
-          ),
-        )
-        .toList();
   }
 }
 

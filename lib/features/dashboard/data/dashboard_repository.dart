@@ -19,32 +19,23 @@ class DashboardRepositoryImpl implements DashboardRepository {
   }
 }
 
-/// Tolerant mapper: every field falls back to a zero value so a partial
-/// payload degrades to an honest-looking empty dashboard rather than throwing.
+/// Reads the `{success, stats: {...}}` envelope. Tolerates the metrics being
+/// hoisted to the top level, so a later API tidy-up doesn't blank the screen.
 DashboardSummary dashboardFromJson(Map<String, dynamic> json) {
-  int asInt(Object? v) => (v as num?)?.round() ?? 0;
+  final Map<String, dynamic> s =
+      (json['stats'] as Map<String, dynamic>?) ?? json;
+
+  int asInt(Object? v) => v is num ? v.round() : int.tryParse('${v ?? ''}') ?? 0;
 
   return DashboardSummary(
-    open: asInt(json['open']),
-    resolvedToday: asInt(json['resolvedToday'] ?? json['resolved_today']),
-    avgResponseSeconds:
-        asInt(json['avgResponseSecs'] ?? json['avg_response_secs']),
-    csatPercent: asInt(json['csat']),
-    week: ((json['week'] as List<dynamic>?) ?? const <dynamic>[])
-        .whereType<Map<String, dynamic>>()
-        .map((Map<String, dynamic> e) => DayCount(
-              weekday: asInt(e['weekday']),
-              count: asInt(e['count']),
-            ))
-        .toList(),
-    queue: ((json['queue'] as List<dynamic>?) ?? const <dynamic>[])
-        .whereType<Map<String, dynamic>>()
-        .map((Map<String, dynamic> e) => QueueItem(
-              contactUid: (e['contactUid'] ?? e['contact_uid'] ?? '').toString(),
-              name: (e['name'] ?? '').toString(),
-              waitingSeconds: asInt(e['waitingFor'] ?? e['waiting_for']),
-            ))
-        .toList(),
+    openConversations: asInt(s['openConversations']),
+    unassigned: asInt(s['unassigned']),
+    assigned: asInt(s['assigned']),
+    totalContacts: asInt(s['totalContacts']),
+    newContactsToday: asInt(s['newContactsToday']),
+    inboundToday: asInt(s['inboundToday']),
+    outboundToday: asInt(s['outboundToday']),
+    queued: asInt(s['queued']),
   );
 }
 

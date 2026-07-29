@@ -18,10 +18,13 @@ class NoteRepositoryImpl implements NoteRepository {
   @override
   Future<List<InternalNote>> list(String contactUid) async {
     final dynamic body = await _api.get('/contacts/$contactUid/notes');
-    final List<dynamic> rows = body is List
-        ? body
-        : ((body as Map<String, dynamic>)['data'] as List<dynamic>? ??
-            const <dynamic>[]);
+    if (body is List) {
+      return body.whereType<Map<String, dynamic>>().map(noteFromJson).toList();
+    }
+    final Map<String, dynamic> m =
+        (body as Map<String, dynamic>?) ?? const <String, dynamic>{};
+    final List<dynamic> rows =
+        (m['notes'] ?? m['data']) as List<dynamic>? ?? const <dynamic>[];
     return rows.whereType<Map<String, dynamic>>().map(noteFromJson).toList();
   }
 

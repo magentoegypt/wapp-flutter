@@ -36,10 +36,13 @@ class QuickReplyRepositoryImpl implements QuickReplyRepository {
   @override
   Future<List<QuickReply>> list() async {
     final dynamic body = await _api.get('/quick-replies');
-    final List<dynamic> rows = body is List
-        ? body
-        : ((body as Map<String, dynamic>)['data'] as List<dynamic>? ??
-            const <dynamic>[]);
+    if (body is List) {
+      return body.whereType<Map<String, dynamic>>().map(quickReplyFromJson).toList();
+    }
+    final Map<String, dynamic> m =
+        (body as Map<String, dynamic>?) ?? const <String, dynamic>{};
+    final List<dynamic> rows =
+        (m['quickReplies'] ?? m['data']) as List<dynamic>? ?? const <dynamic>[];
     return rows.whereType<Map<String, dynamic>>().map(quickReplyFromJson).toList();
   }
 
@@ -65,14 +68,13 @@ class QuickReplyRepositoryImpl implements QuickReplyRepository {
 }
 
 QuickReply quickReplyFromJson(Map<String, dynamic> j) {
-  final Map<String, dynamic> data =
-      (j['__data'] as Map<String, dynamic>?) ?? const <String, dynamic>{};
   return QuickReply(
-    uid: (j['uid'] ?? j['_uid'] ?? '').toString(),
+    uid: (j['uid'] ?? '').toString(),
     title: (j['title'] ?? '').toString(),
-    body: (j['template'] ?? j['body'] ?? data['template'] ?? '').toString(),
+    body: (j['body'] ?? j['template'] ?? '').toString(),
     language: (j['language'] ?? 'en').toString(),
-    active: (j['status'] as num?)?.toInt() != 0,
+    // The API exposes a boolean `active`, not the raw integer status column.
+    active: (j['active'] as bool?) ?? true,
   );
 }
 

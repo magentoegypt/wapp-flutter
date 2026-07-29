@@ -1,6 +1,8 @@
-/// Conversation state, mirroring `contacts.status` on the backend.
+/// Conversation state.
 ///
-/// The integer values are the persisted ones — do not reorder.
+/// The API serialises this as a **string** (`"pending"`, `"open"`, …) even
+/// though `contacts.status` is an integer column, so [fromApi] parses names
+/// and falls back to the integer form for safety.
 enum ConversationStatus {
   pending(0),
   open(1),
@@ -11,12 +13,20 @@ enum ConversationStatus {
 
   final int value;
 
-  static ConversationStatus fromValue(int? v) => switch (v) {
-    0 => ConversationStatus.pending,
-    2 => ConversationStatus.solved,
-    3 => ConversationStatus.blocked,
-    _ => ConversationStatus.open,
-  };
+  static ConversationStatus fromApi(Object? raw) {
+    if (raw is String) {
+      return ConversationStatus.values.firstWhere(
+        (ConversationStatus s) => s.name == raw.toLowerCase(),
+        orElse: () => ConversationStatus.open,
+      );
+    }
+    return switch ((raw as num?)?.toInt()) {
+      0 => ConversationStatus.pending,
+      2 => ConversationStatus.solved,
+      3 => ConversationStatus.blocked,
+      _ => ConversationStatus.open,
+    };
+  }
 }
 
 /// A row in the inbox list.

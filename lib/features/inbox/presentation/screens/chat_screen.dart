@@ -9,6 +9,7 @@ import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/message_bubble.dart';
 import '../../../../core/widgets/message_composer.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../quick_replies/data/quick_reply_repository.dart';
 import '../../data/conversation_repository.dart';
 import '../../domain/conversation.dart';
 import '../widgets/chat_actions_sheet.dart';
@@ -77,12 +78,32 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 message: l10n.chatReplyLockOpen,
                 tone: BannerTone.neutral,
               ),
-            if (data.quickReplies.isNotEmpty)
-              QuickReplyChips(
-                replies: data.quickReplies,
-                onSelected: (String r) =>
-                    _composerKey.currentState?.setText(r),
-              ),
+            // Chat detail carries no canned replies, so the chips come from
+            // the quick-replies endpoint. Failure is non-fatal — the chips
+            // simply don't render rather than taking the chat down.
+            Consumer(
+              builder: (BuildContext context, WidgetRef ref, _) {
+                final List<String> replies = ref
+                        .watch(quickReplyListProvider)
+                        .valueOrNull
+                        ?.where((QuickReply q) => q.active)
+                        .map((QuickReply q) => q.title)
+                        .toList() ??
+                    const <String>[];
+                if (replies.isEmpty) return const SizedBox.shrink();
+                return QuickReplyChips(
+                  replies: replies,
+                  onSelected: (String title) {
+                    final QuickReply? q = ref
+                        .read(quickReplyListProvider)
+                        .valueOrNull
+                        ?.firstWhere((QuickReply e) => e.title == title);
+                    // Insert the message body, not the shortcut label.
+                    _composerKey.currentState?.setText(q?.body ?? title);
+                  },
+                );
+              },
+            ),
             MessageComposer(
               key: _composerKey,
               hintText: l10n.chatComposerHint,

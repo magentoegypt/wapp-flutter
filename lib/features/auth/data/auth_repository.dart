@@ -96,7 +96,8 @@ Session sessionFromJson(Map<String, dynamic> json) {
     ),
     vendor: Vendor(
       uid: (vendor['uid'] as String?) ?? '',
-      name: (vendor['name'] as String?) ?? '',
+      // `/me` returns only uid and status for the vendor — no display name.
+      name: (vendor['name'] ?? vendor['title'] ?? '') as String,
       status: (vendor['status'] as num?)?.toInt() ?? 1,
     ),
   );
