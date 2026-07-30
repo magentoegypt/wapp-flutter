@@ -5,6 +5,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_dimens.dart';
 import '../../../../core/error/failure.dart';
 import '../../../../core/widgets/brand_mark.dart';
+import '../../../../core/widgets/text_prompt_dialog.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../data/auth_repository.dart';
 import '../auth_controller.dart';
@@ -46,43 +47,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   /// the endpoint answers 200 either way to avoid being an enumeration oracle,
   /// and a UI that said "we found you" would give away exactly what the API is
   /// withholding.
+  /// Requests a reset link for whatever address is in the email field.
+  ///
+  /// The confirmation deliberately does not say whether an account was found:
+  /// the endpoint answers 200 either way to avoid being an enumeration oracle,
+  /// and a UI that said "we found you" would give away exactly what the API is
+  /// withholding.
   Future<void> _forgotPassword() async {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    final TextEditingController field =
-        TextEditingController(text: _email.text.trim());
-
-    final String? email = await showDialog<String>(
-      context: context,
-      builder: (BuildContext c) => AlertDialog(
-        title: Text(l10n.loginForgotPassword),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(l10n.loginResetPrompt),
-            const SizedBox(height: 12),
-            TextField(
-              controller: field,
-              autofocus: true,
-              keyboardType: TextInputType.emailAddress,
-              decoration: InputDecoration(hintText: l10n.loginEmailHint),
-            ),
-          ],
-        ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(c).pop(),
-            child: Text(l10n.actionCancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(c).pop(field.text.trim()),
-            child: Text(l10n.loginResetSend),
-          ),
-        ],
-      ),
+    final String? email = await showTextPromptDialog(
+      context,
+      title: l10n.loginForgotPassword,
+      message: l10n.loginResetPrompt,
+      confirmLabel: l10n.loginResetSend,
+      hintText: l10n.loginEmailHint,
+      initialValue: _email.text.trim(),
+      keyboardType: TextInputType.emailAddress,
     );
-    field.dispose();
-    if (email == null || email.isEmpty) return;
+    if (email == null) return;
 
     try {
       await ref.read(authRepositoryProvider).forgotPassword(email);

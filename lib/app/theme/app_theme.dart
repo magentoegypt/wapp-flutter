@@ -83,6 +83,27 @@ abstract final class AppTheme {
         centerTitle: false,
       ),
 
+      // Dialogs were unthemed, so an AlertDialog title fell through to the M3
+      // default derived from a green seed and rendered near-white on the light
+      // dialog surface — the "Forgot password?" heading was barely readable.
+      dialogTheme: DialogThemeData(
+        backgroundColor: isLight ? Colors.white : AppColor.surfaceDark,
+        surfaceTintColor: Colors.transparent,
+        titleTextStyle: TextStyle(
+          fontFamily: fontFor(languageCode),
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+          color: isLight ? AppColor.ink : Colors.white,
+        ),
+        contentTextStyle: TextStyle(
+          fontFamily: fontFor(languageCode),
+          fontSize: 13.5,
+          color: isLight ? AppColor.inkMuted : Colors.white70,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppDimens.radiusCardLarge),
+        ),
+      ),
       cardTheme: CardThemeData(
         elevation: 0,
         color: isLight ? Colors.white : AppColor.surfaceDark,

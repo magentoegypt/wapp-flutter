@@ -10,6 +10,7 @@ import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/initials_avatar.dart';
 import '../../../../core/widgets/message_composer.dart';
 import '../../../../core/widgets/note_card.dart';
+import '../../../../core/widgets/text_prompt_dialog.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../data/conversation_repository.dart';
 import '../../data/note_repository.dart';
@@ -34,42 +35,27 @@ class InternalNotesScreen extends ConsumerWidget {
   /// Edits a note in place. The frame puts an edit glyph on every card beside
   /// delete; without it a typo could only be fixed by deleting and retyping,
   /// which also loses the note's original timestamp and author line.
+  /// Edits a note in place. The frame puts an edit glyph on every card beside
+  /// delete; without it a typo could only be fixed by deleting and retyping,
+  /// which also loses the note's original author and timestamp.
   Future<void> _edit(
     BuildContext context,
     WidgetRef ref,
     InternalNote note,
   ) async {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    final TextEditingController controller =
-        TextEditingController(text: note.body);
-    final String? body = await showDialog<String>(
-      context: context,
-      builder: (BuildContext c) => AlertDialog(
-        title: Text(l10n.notesEditTitle),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          maxLines: 5,
-          minLines: 3,
-          decoration: InputDecoration(hintText: l10n.notesComposerHint),
-        ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(c).pop(),
-            child: Text(l10n.actionCancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(c).pop(controller.text.trim()),
-            child: Text(l10n.actionSave),
-          ),
-        ],
-      ),
+    final String? body = await showTextPromptDialog(
+      context,
+      title: l10n.notesEditTitle,
+      confirmLabel: l10n.actionSave,
+      hintText: l10n.notesComposerHint,
+      initialValue: note.body,
+      maxLines: 5,
     );
-    controller.dispose();
 
-    // Unchanged or emptied — an empty note would read as a deletion the user
+    // Unchanged, or emptied — an empty note would read as a deletion the user
     // did not ask for.
-    if (body == null || body.isEmpty || body == note.body) return;
+    if (body == null || body == note.body) return;
     await ref.read(noteRepositoryProvider).update(note.uid, body);
     ref.invalidate(notesProvider(contactUid));
   }
