@@ -27,7 +27,9 @@ class CampaignDetailScreen extends ConsumerWidget {
     final String locale = Localizations.localeOf(context).toLanguageTag();
 
     return Scaffold(
-      appBar: AppHeader.back(title: campaign.valueOrNull?.title ?? ''),
+      // Static, per the frame. Bound to the campaign it left the header
+      // blank while loading and on error, and repeated the title block below.
+      appBar: AppHeader.back(title: l10n.cpTitle),
       body: AsyncValueView<Campaign>(
         value: campaign,
         onRetry: () => ref.invalidate(campaignDetailProvider(uid)),
@@ -41,19 +43,48 @@ class CampaignDetailScreen extends ConsumerWidget {
                     children: <Widget>[
                       Padding(
                         padding: const EdgeInsets.all(AppDimens.gutter),
-                        child: Row(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            Expanded(
-                              child: Text(
-                                c.title,
-                                style: Theme.of(context).textTheme.displayLarge,
-                              ),
+                            Text(
+                              c.title,
+                              style: Theme.of(context).textTheme.displayLarge,
                             ),
-                            StatusPill(label: badge.label, tone: badge.tone),
+                            const SizedBox(height: 8),
+                            // The frame's meta line: status, schedule and
+                            // audience on one row under the name. This was
+                            // scattered into a "Setup" list further down, so the
+                            // three facts that identify a campaign were not
+                            // visible with its name.
+                            Row(
+                              children: <Widget>[
+                                StatusPill(
+                                  label: badge.label,
+                                  tone: badge.tone,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    <String>[
+                                      if (c.scheduledAt != null)
+                                        DateFormat.yMMMd(locale)
+                                            .format(c.scheduledAt!)
+                                      else
+                                        l10n.campNotScheduled,
+                                      l10n.campContacts(c.totalContacts),
+                                    ].join(' · '),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style:
+                                        Theme.of(context).textTheme.bodyMedium,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ],
                         ),
                       ),
-                      SectionLabel(l10n.cpDelivery),
+                      SectionLabel(l10n.cpPerformance),
                       Padding(
                         padding: const EdgeInsets.symmetric(
                           horizontal: AppDimens.gutter,
@@ -68,7 +99,7 @@ class CampaignDetailScreen extends ConsumerWidget {
                                   icon: Icons.send_outlined,
                                 ),
                                 StatCard(
-                                  value: '${c.delivered}',
+                                  value: _pct(c.delivered, c.sent),
                                   label: l10n.cpDelivered,
                                   icon: Icons.done_all,
                                   iconColor: AppColor.success,
@@ -79,13 +110,13 @@ class CampaignDetailScreen extends ConsumerWidget {
                             StatCardRow(
                               cards: <StatCard>[
                                 StatCard(
-                                  value: '${c.read}',
+                                  value: _pct(c.read, c.sent),
                                   label: l10n.cpRead,
                                   icon: Icons.mark_email_read_outlined,
                                   iconColor: AppColor.info,
                                 ),
                                 StatCard(
-                                  value: '${c.failed}',
+                                  value: _pct(c.failed, c.sent),
                                   label: l10n.cpFailed,
                                   icon: Icons.error_outline,
                                   iconColor: AppColor.danger,
@@ -95,6 +126,40 @@ class CampaignDetailScreen extends ConsumerWidget {
                           ],
                         ),
                       ),
+                      // The frame's DELIVERY BREAKDOWN. Same three rates as the
+                      // cards above, but as bars — the cards give the number,
+                      // the bars give the shape at a glance, which is what tells
+                      // you whether a send went well.
+                      if (c.sent > 0) ...<Widget>[
+                        SectionLabel(l10n.cpBreakdown),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppDimens.gutter,
+                          ),
+                          child: Column(
+                            children: <Widget>[
+                              _BreakdownBar(
+                                label: l10n.cpDelivered,
+                                value: c.delivered,
+                                total: c.sent,
+                                tint: AppColor.success,
+                              ),
+                              _BreakdownBar(
+                                label: l10n.cpRead,
+                                value: c.read,
+                                total: c.sent,
+                                tint: AppColor.info,
+                              ),
+                              _BreakdownBar(
+                                label: l10n.cpFailed,
+                                value: c.failed,
+                                total: c.sent,
+                                tint: AppColor.danger,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                       SectionLabel(l10n.cpSetup),
                       AppListTile(
                         title: l10n.cpTemplate,
@@ -142,6 +207,67 @@ class CampaignDetailScreen extends ConsumerWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+
+/// A rate of [total] as a whole-number percentage, or an em dash when there is
+/// nothing to divide by — "0%" would claim a measurement that was never taken.
+String _pct(int value, int total) =>
+    total <= 0 ? '—' : '${(value * 100 / total).round()}%';
+
+/// One labelled progress row in the delivery breakdown.
+class _BreakdownBar extends StatelessWidget {
+  const _BreakdownBar({
+    required this.label,
+    required this.value,
+    required this.total,
+    required this.tint,
+  });
+
+  final String label;
+  final int value;
+  final int total;
+  final Color tint;
+
+  @override
+  Widget build(BuildContext context) {
+    final double fraction = total <= 0 ? 0 : (value / total).clamp(0.0, 1.0);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  label,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
+              Text(
+                _pct(value, total),
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: fraction,
+              minHeight: 7,
+              backgroundColor: AppColor.surfaceAlt,
+              valueColor: AlwaysStoppedAnimation<Color>(tint),
+            ),
+          ),
+        ],
       ),
     );
   }

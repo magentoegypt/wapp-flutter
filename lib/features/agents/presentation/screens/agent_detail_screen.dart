@@ -11,6 +11,7 @@ import '../../../../core/widgets/section_label.dart';
 import '../../../../core/widgets/stat_card.dart';
 import '../../../../core/widgets/status_pill.dart';
 import '../../data/agent_repository.dart';
+import 'agents_screen.dart' show AgentPresence, presenceOf;
 import '../../../../l10n/app_localizations.dart';
 
 /// Agent detail — Figma 291:147. Bottom-pinned CTA.
@@ -25,7 +26,9 @@ class AgentDetailScreen extends ConsumerWidget {
     final AsyncValue<Agent> agent = ref.watch(agentDetailProvider(uid));
 
     return Scaffold(
-      appBar: AppHeader.back(title: agent.valueOrNull?.name ?? ''),
+      // Static, per the frame — the name is the hero immediately below, and
+      // binding the bar to it left the header blank while loading.
+      appBar: AppHeader.back(title: l10n.agTitle),
       body: AsyncValueView<Agent>(
         value: agent,
         onRetry: () => ref.invalidate(agentDetailProvider(uid)),
@@ -37,7 +40,10 @@ class AgentDetailScreen extends ConsumerWidget {
                   children: <Widget>[
                     const SizedBox(height: 20),
                     Center(
-                      child: InitialsAvatar(
+                      // The frame's hero avatar is a filled deep-green disc
+                      // with light initials, not one of the hash-tinted list
+                      // pastels.
+                      child: InitialsAvatar.onBrand(
                         name: a.name,
                         size: AppDimens.avatarHero,
                       ),
@@ -51,20 +57,38 @@ class AgentDetailScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 4),
                     Center(
+                      // "role · team", per the frame. The email is in the
+                      // ACCOUNT rows further down; up here the role and team are
+                      // what identify a teammate.
                       child: Text(
-                        a.email,
+                        <String>[
+                          a.role,
+                          if (a.teams.isNotEmpty) a.teams.join(', '),
+                        ].join(' · '),
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Center(
+                      // Same three-way presence as the roster, via the shared
+                      // presenceOf — a binary online/away could not express the
+                      // frame's amber "handling N chats".
                       child: StatusPill(
-                        label: a.online ? l10n.agOnline : l10n.agAway,
-                        tone: a.online ? StatusTone.success : StatusTone.neutral,
+                        label: switch (presenceOf(a)) {
+                          AgentPresence.available => l10n.agAvailable,
+                          AgentPresence.handling =>
+                            l10n.agHandling(a.openConversations),
+                          AgentPresence.away => l10n.agAway,
+                        },
+                        tone: switch (presenceOf(a)) {
+                          AgentPresence.available => StatusTone.success,
+                          AgentPresence.handling => StatusTone.warning,
+                          AgentPresence.away => StatusTone.neutral,
+                        },
                       ),
                     ),
 
-                    SectionLabel(l10n.agPerformance),
+                    SectionLabel(l10n.agPerformanceToday),
                     Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: AppDimens.gutter,
@@ -75,12 +99,12 @@ class AgentDetailScreen extends ConsumerWidget {
                             cards: <StatCard>[
                               StatCard(
                                 value: '${a.openConversations}',
-                                label: l10n.agOpen,
+                                label: l10n.agActiveChats,
                                 icon: Icons.forum_outlined,
                               ),
                               StatCard(
                                 value: '${a.resolvedToday}',
-                                label: l10n.agResolvedToday,
+                                label: l10n.agRepliesToday,
                                 icon: Icons.check_circle_outline,
                                 iconColor: AppColor.success,
                               ),
