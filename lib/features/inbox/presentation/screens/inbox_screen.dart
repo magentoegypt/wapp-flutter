@@ -15,6 +15,28 @@ import '../../../../l10n/app_localizations.dart';
 import '../../data/conversation_repository.dart';
 import '../../domain/conversation.dart';
 
+/// Chip count, or null when it cannot be derived honestly.
+///
+/// Only the unfiltered response contains every conversation, so that is the only
+/// state where a client-side count is a true total. Under any other filter the
+/// chips carry no numbers rather than wrong ones.
+int? _countFor(
+  AsyncValue<List<Conversation>> rows,
+  InboxFilter active,
+  InboxFilter chip,
+) {
+  if (active != InboxFilter.all) return null;
+  final List<Conversation>? items = rows.valueOrNull;
+  if (items == null) return null;
+  return switch (chip) {
+    InboxFilter.all => items.length,
+    InboxFilter.unread =>
+      items.where((Conversation c) => c.unreadCount > 0).length,
+    // No assignee on the list row, so this one cannot be counted client-side.
+    InboxFilter.unassigned => null,
+  };
+}
+
 /// Inbox — Figma 36:1032.
 class InboxScreen extends ConsumerWidget {
   const InboxScreen({super.key});
@@ -46,12 +68,25 @@ class InboxScreen extends ConsumerWidget {
       body: Column(
         children: <Widget>[
           FilterChipBar(
+            // Counts, per the frame. Derived from the loaded page, so they are
+            // only shown on the unfiltered view where that page is the whole
+            // inbox — a count taken from an already-filtered response would be
+            // a subset masquerading as a total.
             options: <FilterOption>[
-              FilterOption(id: InboxFilter.all.name, label: l10n.inboxFilterAll),
-              FilterOption(id: InboxFilter.unread.name, label: l10n.inboxFilterNew),
+              FilterOption(
+                id: InboxFilter.all.name,
+                label: l10n.inboxFilterAll,
+                count: _countFor(rows, filter, InboxFilter.all),
+              ),
+              FilterOption(
+                id: InboxFilter.unread.name,
+                label: l10n.inboxFilterNew,
+                count: _countFor(rows, filter, InboxFilter.unread),
+              ),
               FilterOption(
                 id: InboxFilter.unassigned.name,
                 label: l10n.inboxFilterUnassigned,
+                count: _countFor(rows, filter, InboxFilter.unassigned),
               ),
             ],
             selectedId: filter.name,
@@ -73,9 +108,10 @@ class InboxScreen extends ConsumerWidget {
                 }
                 return RefreshIndicator(
                   onRefresh: () async => ref.invalidate(inboxListProvider),
-                  child: ListView.separated(
+                  // Whitespace between rows, per the frame — the hairline made
+                  // the list read as a settings table rather than a feed.
+                  child: ListView.builder(
                     itemCount: items.length,
-                    separatorBuilder: (_, __) => const Divider(indent: 76),
                     itemBuilder: (BuildContext context, int i) =>
                         _ConversationRow(item: items[i]),
                   ),
@@ -108,7 +144,14 @@ class _ConversationRow extends StatelessWidget {
         children: <Widget>[
           Text(
             _stamp(context, item.lastMessageAt),
-            style: Theme.of(context).textTheme.labelMedium,
+            // Brand-tinted on a row with unread messages, as the frame has it —
+            // the timestamp is the only part of the row that says "recent", so
+            // it carries the emphasis alongside the count pill.
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: item.unreadCount > 0 ? AppColor.brandDeep : null,
+                  fontWeight:
+                      item.unreadCount > 0 ? FontWeight.w700 : null,
+                ),
           ),
           const SizedBox(height: 4),
           if (item.unreadCount > 0)

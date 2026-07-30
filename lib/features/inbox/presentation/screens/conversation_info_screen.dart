@@ -87,11 +87,18 @@ class ConversationInfoScreen extends ConsumerWidget {
             ],
 
             SectionLabel(l10n.ciServiceWindow),
+            // Open/Closed once, in the pill. It used to be both the title and
+            // the trailing pill, so the row read "Closed ... Closed"; the title
+            // now carries the deadline, which is the fact the pill cannot show.
             AppListTile(
-              title: t.windowOpen ? l10n.ciOpen : l10n.ciClosed,
-              subtitle: t.windowExpiresAt == null
-                  ? (t.windowOpen ? null : l10n.ciReopenHint)
-                  : DateFormat.yMMMd(locale).add_jm().format(t.windowExpiresAt!),
+              title: t.windowExpiresAt == null
+                  ? (t.windowOpen ? l10n.ciOpen : l10n.ciReopenHint)
+                  : DateFormat.yMMMd(locale)
+                      .add_jm()
+                      .format(t.windowExpiresAt!),
+              subtitle: t.windowExpiresAt != null && !t.windowOpen
+                  ? l10n.ciReopenHint
+                  : null,
               leading: IconTile(
                 icon: Icons.schedule_outlined,
                 color: t.windowOpen ? AppColor.success : AppColor.warning,

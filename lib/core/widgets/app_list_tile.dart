@@ -155,6 +155,10 @@ class ActionSheetRow extends StatelessWidget {
       onTap: onTap,
       showChevron: !destructive,
       dense: true,
+      // The frame prints a destructive row's label in danger red, not just its
+      // icon — tinting only the tile left "Clear chat history" reading like any
+      // other row.
+      titleColor: destructive ? AppColor.danger : null,
       leading: IconTile(icon: icon, color: color),
     );
   }

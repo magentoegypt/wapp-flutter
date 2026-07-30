@@ -136,7 +136,10 @@ class MessageComposerState extends State<MessageComposer> {
             if (widget.onAttach != null)
               IconButton(
                 onPressed: widget.onAttach,
-                icon: const Icon(Icons.attach_file, size: 20),
+                // The frame's leading affordance is an outlined emoji face, not
+                // a paperclip — it opens the attach sheet either way, but the
+                // frame leads with expression rather than files.
+                icon: const Icon(Icons.emoji_emotions_outlined, size: 21),
                 color: AppColor.inkMuted,
                 tooltip: MaterialLocalizations.of(context).moreButtonTooltip,
               ),

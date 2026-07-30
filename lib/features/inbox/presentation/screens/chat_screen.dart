@@ -230,7 +230,14 @@ class _MessageList extends StatelessWidget {
             if (startsDay && m.sentAt != null)
               ChatDayDivider(label: _dayLabel(context, m.sentAt!)),
             MessageBubble(
-              text: m.body,
+              // An empty body renders as a bubble containing only a timestamp,
+              // which reads as a rendering fault. Almost always this is a media
+              // message, but ChatMessage carries no type, so the placeholder
+              // says what is certain — there is no text — rather than claiming
+              // an attachment we cannot see.
+              text: m.body.trim().isEmpty
+                  ? AppLocalizations.of(context).chatNoTextBody
+                  : m.body,
               timeLabel: m.sentAt == null
                   ? ''
                   : DateFormat.Hm(locale).format(m.sentAt!),

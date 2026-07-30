@@ -320,6 +320,7 @@
   "moreAccount": "Account",
   "moreViewProfile": "View profile",
   "moreSearchHint": "Search",
+  "chatNoTextBody": "(no text)",
   "notesEditTitle": "Edit note",
   "cvStatusOpen": "Open",
   "cvStatusPending": "Pending",
