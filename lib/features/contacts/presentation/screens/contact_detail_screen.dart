@@ -8,11 +8,14 @@ import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_dimens.dart';
 import '../../../../core/widgets/app_header.dart';
+import '../../../../core/widgets/app_list_tile.dart';
 import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/initials_avatar.dart';
 import '../../../../core/widgets/section_label.dart';
 import '../../../../core/widgets/status_pill.dart';
 import '../../data/contact_repository.dart';
+import '../../../inbox/data/conversation_repository.dart';
+import '../../../inbox/domain/conversation.dart';
 import '../../domain/contact.dart';
 import 'contacts_screen.dart' show stageBadge;
 import '../../../../l10n/app_localizations.dart';
@@ -172,10 +175,62 @@ class ContactDetailScreen extends ConsumerWidget {
                 ),
               ),
             ],
+            _RecentConversation(contactUid: c.uid),
+
             const SizedBox(height: 28),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// The frame's RECENT CONVERSATIONS section.
+///
+/// WhatsApp gives a contact exactly one thread, so "conversations" is a single
+/// row here rather than a list — inventing multiple entries would misrepresent
+/// the product. Sourced from [chatThreadProvider] rather than the inbox list so
+/// it also works when this screen is reached by deep link, and it renders
+/// nothing at all while loading or on error: a contact page is still useful
+/// without it, and an error strip here would imply the contact itself failed.
+class _RecentConversation extends ConsumerWidget {
+  const _RecentConversation({required this.contactUid});
+
+  final String contactUid;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final ChatThread? t = ref.watch(chatThreadProvider(contactUid)).valueOrNull;
+    if (t == null || t.messages.isEmpty) return const SizedBox.shrink();
+
+    final ChatMessage last = t.messages.last;
+    final String locale = Localizations.localeOf(context).toLanguageTag();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        SectionHeader(
+          title: l10n.cdRecentConversations,
+          actionLabel: l10n.actionSeeAll,
+          onAction: () => context.push(AppRoutes.chat(contactUid)),
+        ),
+        AppListTile(
+          title: t.name.isEmpty ? contactUid : t.name,
+          subtitle: last.body,
+          leading: const IconTile(
+            icon: Icons.forum_outlined,
+            color: AppColor.brandDeep,
+          ),
+          trailing: last.sentAt == null
+              ? null
+              : Text(
+                  DateFormat.MMMd(locale).format(last.sentAt!),
+                  style: Theme.of(context).textTheme.labelMedium,
+                ),
+          onTap: () => context.push(AppRoutes.chat(contactUid)),
+        ),
+      ],
     );
   }
 }

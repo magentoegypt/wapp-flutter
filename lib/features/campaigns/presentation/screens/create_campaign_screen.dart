@@ -7,6 +7,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_dimens.dart';
 import '../../../../core/error/failure.dart';
 import '../../../../core/widgets/app_header.dart';
+import '../../../../core/widgets/app_list_tile.dart';
 import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/section_label.dart';
 import '../../../../l10n/app_localizations.dart';
@@ -42,6 +43,116 @@ class _CreateCampaignScreenState extends ConsumerState<CreateCampaignScreen> {
   void dispose() {
     _title.dispose();
     super.dispose();
+  }
+
+
+  /// Comma-joined names of the chosen groups, or null for "all contacts".
+  String? _audienceLabel(List<NamedRef> groups) {
+    if (_groupIds.isEmpty) return null;
+    final List<String> names = groups
+        .where((NamedRef g) => _groupIds.contains(g.id))
+        .map((NamedRef g) => g.name)
+        .toList();
+    return names.isEmpty ? null : names.join(', ');
+  }
+
+  Future<void> _pickTemplate(List<NamedRef> templates) async {
+    final String? picked = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (BuildContext c) {
+        final AppLocalizations l10n = AppLocalizations.of(c);
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              SectionLabel(l10n.ccTemplate),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: <Widget>[
+                    // A plain tile rather than a radio: the sheet closes on the
+                    // first tap, so there is no intermediate state for a radio
+                    // group to represent.
+                    for (final NamedRef t in templates)
+                      ListTile(
+                        title: Text(t.name),
+                        trailing: t.name == _templateName
+                            ? const Icon(
+                                Icons.check,
+                                size: 18,
+                                color: AppColor.brandDeep,
+                              )
+                            : null,
+                        onTap: () => Navigator.of(c).pop(t.name),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    if (picked != null) setState(() => _templateName = picked);
+  }
+
+  /// Multi-select, so the sheet edits a local copy and only commits on close —
+  /// otherwise dismissing it would silently keep half-made changes.
+  Future<void> _pickAudience(List<NamedRef> groups) async {
+    final Set<String> draft = <String>{..._groupIds};
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (BuildContext c) {
+        final AppLocalizations l10n = AppLocalizations.of(c);
+        return SafeArea(
+          child: StatefulBuilder(
+            builder: (BuildContext c, void Function(void Function()) setSheet) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  SectionLabel(l10n.ccAudience),
+                  Flexible(
+                    child: ListView(
+                      shrinkWrap: true,
+                      children: <Widget>[
+                        for (final NamedRef g in groups)
+                          CheckboxListTile(
+                            value: draft.contains(g.id),
+                            title: Text(g.name),
+                            onChanged: (bool? on) => setSheet(() {
+                              if (on ?? false) {
+                                draft.add(g.id);
+                              } else {
+                                draft.remove(g.id);
+                              }
+                            }),
+                          ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(AppDimens.gutter),
+                    child: FilledButton(
+                      onPressed: () => Navigator.of(c).pop(),
+                      child: Text(l10n.actionSave),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+      },
+    );
+    setState(() {
+      _groupIds
+        ..clear()
+        ..addAll(draft);
+    });
   }
 
   Future<void> _save() async {
@@ -104,26 +215,17 @@ class _CreateCampaignScreenState extends ConsumerState<CreateCampaignScreen> {
                         ),
                       ),
                       SectionLabel(l10n.cpTemplate),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppDimens.gutter,
-                        ),
-                        child: DropdownButtonFormField<String>(
-                          initialValue: _templateName,
-                          isExpanded: true,
-                          decoration: InputDecoration(
-                            labelText: l10n.ccTemplate,
-                          ),
-                          items: <DropdownMenuItem<String>>[
-                            for (final NamedRef t in m.templates)
-                              DropdownMenuItem<String>(
-                                value: t.name,
-                                child: Text(t.name, overflow: TextOverflow.ellipsis),
-                              ),
-                          ],
-                          onChanged: (String? v) =>
-                              setState(() => _templateName = v),
-                        ),
+                      // A summary card with Change, per the frame, rather than
+                      // an inline dropdown. Only approved templates can be
+                      // broadcast, so the list can be long and is worth a sheet
+                      // of its own instead of a cramped menu.
+                      _SummaryCard(
+                        icon: Icons.description_outlined,
+                        tint: AppColor.info,
+                        label: l10n.ccTemplate,
+                        value: _templateName,
+                        placeholder: l10n.ccChooseTemplate,
+                        onChange: () => _pickTemplate(m.templates),
                       ),
                       SectionLabel(l10n.ccAudience),
                       if (m.groups.isEmpty)
@@ -137,21 +239,19 @@ class _CreateCampaignScreenState extends ConsumerState<CreateCampaignScreen> {
                           ),
                         )
                       else
-                        for (final NamedRef g in m.groups)
-                          CheckboxListTile(
-                            value: _groupIds.contains(g.id),
-                            title: Text(g.name),
-                            contentPadding: const EdgeInsetsDirectional.symmetric(
-                              horizontal: AppDimens.gutter,
-                            ),
-                            onChanged: (bool? on) => setState(() {
-                              if (on ?? false) {
-                                _groupIds.add(g.id);
-                              } else {
-                                _groupIds.remove(g.id);
-                              }
-                            }),
-                          ),
+                        _SummaryCard(
+                          icon: Icons.groups_outlined,
+                          tint: AppColor.warning,
+                          label: l10n.ccAudience,
+                          value: _audienceLabel(m.groups),
+                          placeholder: l10n.ccAllContacts,
+                          // No recipient count. The frame shows one, but
+                          // CampaignMeta's groups carry only id and name, and
+                          // counting the loaded contacts page would understate
+                          // it — a number that undersells a broadcast's reach is
+                          // worse than no number at all.
+                          onChange: () => _pickAudience(m.groups),
+                        ),
                       SectionLabel(l10n.ccSchedule),
                       Padding(
                         padding: const EdgeInsets.symmetric(
@@ -299,6 +399,49 @@ class _ScheduleChoice extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// Selected-value card with a Change action, as the frame renders template and
+/// audience. Shows [placeholder] in muted ink until something is chosen, so an
+/// unset required field is visibly unset rather than looking like a default.
+class _SummaryCard extends StatelessWidget {
+  const _SummaryCard({
+    required this.icon,
+    required this.tint,
+    required this.label,
+    required this.value,
+    required this.placeholder,
+    required this.onChange,
+  });
+
+  final IconData icon;
+  final Color tint;
+  final String label;
+  final String? value;
+  final String placeholder;
+  final VoidCallback onChange;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final bool chosen = value != null && value!.isNotEmpty;
+
+    return AppListTile(
+      title: chosen ? value! : placeholder,
+      subtitle: label,
+      leading: IconTile(icon: icon, color: tint),
+      showChevron: false,
+      trailing: Text(
+        l10n.ccChange,
+        style: const TextStyle(
+          fontSize: 12.5,
+          fontWeight: FontWeight.w600,
+          color: AppColor.brandDeep,
+        ),
+      ),
+      onTap: onChange,
     );
   }
 }
