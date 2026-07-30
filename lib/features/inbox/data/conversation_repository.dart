@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/error/failure.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/util/message_text.dart';
 import '../domain/conversation.dart';
@@ -115,6 +117,30 @@ Conversation conversationFromJson(Map<String, dynamic> j) {
 ChatThread chatThreadFromJson(String contactUid, Map<String, dynamic> j) {
   final Map<String, dynamic> contact =
       (j['contact'] as Map<String, dynamic>?) ?? const <String, dynamic>{};
+
+  // Guard against the endpoint answering with a *different* contact's thread.
+  //
+  // Observed on device: GET /conversations/{contactUid} returned the same
+  // conversation for several different contact uids. The mapper used to stamp
+  // the requested uid onto whatever came back, so the wrong customer's history
+  // rendered under the right customer's name — and because sendMessage posts to
+  // the uid in the URL, an agent could read one conversation and reply into
+  // another. Refusing to show a thread we cannot vouch for is the safer failure.
+  //
+  // Only enforced when the payload actually echoes an identifier, so a response
+  // without one behaves as before rather than failing spuriously.
+  final Object? echoed =
+      contact['uid'] ?? contact['contactUid'] ?? contact['contact_uid'];
+  if (echoed != null &&
+      '$echoed'.isNotEmpty &&
+      '$echoed' != contactUid) {
+    debugPrint(
+      '[chat] contact mismatch: asked for $contactUid, got $echoed',
+    );
+    throw const ServerFailure(
+      'This conversation could not be verified as belonging to this contact.',
+    );
+  }
 
   // `replyLock` is an object; `locked == false` means the chat is unclaimed.
   final Map<String, dynamic> lock =
