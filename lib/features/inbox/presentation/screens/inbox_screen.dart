@@ -134,7 +134,12 @@ class _ConversationRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppListTile(
       title: item.name,
-      subtitle: item.lastMessage,
+      // A tick when we spoke last, per the frame. Conversation.isIncomingLast
+      // was parsed and documented as driving exactly this, then read by no
+      // widget — the field has been dead since it was added.
+      subtitle: item.isIncomingLast || item.lastMessage.isEmpty
+          ? item.lastMessage
+          : '${item.lastMessage}  ✓',
       leading: InitialsAvatar(name: item.name),
       showChevron: false,
       onTap: () => context.push(AppRoutes.chat(item.contactUid)),

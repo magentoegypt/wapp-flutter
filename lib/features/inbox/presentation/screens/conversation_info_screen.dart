@@ -91,6 +91,30 @@ class ConversationInfoScreen extends ConsumerWidget {
                 _DetailRow(label: l10n.ciReceivedOn, value: _receivedOn(t)!),
             ],
 
+            // The frame's LABELS chips. Read-only: ContactRepository has no
+            // label mutation, so the frame's "+ Add" chip is not here — an add
+            // affordance that cannot add is worse than none.
+            if ((contact?.labels ?? const <String>[]).isNotEmpty) ...<Widget>[
+              SectionLabel(l10n.cdLabels),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppDimens.gutter,
+                ),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: <Widget>[
+                    for (final String label in contact!.labels)
+                      StatusPill(
+                        label: label,
+                        tone: StatusTone.info,
+                        showDot: false,
+                      ),
+                  ],
+                ),
+              ),
+            ],
+
             SectionLabel(l10n.ciServiceWindow),
             // Open/Closed once, in the pill. It used to be both the title and
             // the trailing pill, so the row read "Closed ... Closed"; the title
@@ -175,10 +199,11 @@ class ConversationInfoScreen extends ConsumerWidget {
   /// The CONTACT DETAILS block, restricted to fields the customer record
   /// actually carries.
   ///
-  /// The frame also lists Channel, Customer status and Language.
-  /// None of them exist on [Contact] or in the conversation payload, and a
-  /// row rendered from nothing reads as a fact — so they are left out until
-  /// the API carries them.
+  /// The frame also lists Channel and Customer status. Neither exists on
+  /// [Contact] or in the conversation payload, and a row rendered from nothing
+  /// reads as a fact — so they are left out until the API carries them.
+  /// Language is here: it was listed as absent by a stale comment, but the
+  /// field has existed since contacts gained city/language.
   List<Widget> _detailRows(
     AppLocalizations l10n,
     Contact? contact,
@@ -196,6 +221,8 @@ class ConversationInfoScreen extends ConsumerWidget {
         _DetailRow(label: l10n.ciEmail, value: email),
       if (country != null && country.isNotEmpty)
         _DetailRow(label: l10n.ciCountry, value: country),
+      if ((contact.language ?? '').isNotEmpty)
+        _DetailRow(label: l10n.cdLanguage, value: contact.language!),
       if (firstSeen != null)
         _DetailRow(
           label: l10n.ciFirstSeen,

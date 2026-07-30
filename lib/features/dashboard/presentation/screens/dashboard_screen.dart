@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_dimens.dart';
+import '../../../../core/util/duration_format.dart';
 import '../../../../core/widgets/app_list_tile.dart';
 import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/initials_avatar.dart';
@@ -149,6 +150,29 @@ class DashboardScreen extends ConsumerWidget {
                         ],
                       ),
                     ),
+
+                    // Avg response, full width: it is the one performance
+                    // number here and there is no natural partner to pair it
+                    // with, so a single wide card reads as a summary rather
+                    // than as an orphan in a 2-up grid.
+                    if (d.avgFirstResponseSeconds > 0)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppDimens.gutter,
+                        ),
+                        child: StatCardRow(
+                          cards: <StatCard>[
+                            StatCard(
+                              value: DurationFormat.coarse(
+                                d.avgFirstResponseSeconds,
+                              ),
+                              label: l10n.agAvgResponse,
+                              icon: Icons.timer_outlined,
+                              iconColor: AppColor.info,
+                            ),
+                          ],
+                        ),
+                      ),
 
                     // The frame's weekly chart. Drawn only when the API sent a
                     // series — an all-zero chart reads as "a quiet week" rather
