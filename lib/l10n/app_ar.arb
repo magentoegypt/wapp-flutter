@@ -250,6 +250,9 @@
       }
     }
   },
+  "ccSchedule": "الجدولة",
+  "ccSendNow": "إرسال الآن",
+  "ccScheduleLater": "جدولة",
   "notesEditTitle": "تعديل الملاحظة",
   "cvStatusOpen": "مفتوحة",
   "cvStatusPending": "معلّقة",

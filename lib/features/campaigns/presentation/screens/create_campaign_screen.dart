@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_dimens.dart';
 import '../../../../core/error/failure.dart';
 import '../../../../core/widgets/app_header.dart';
@@ -31,6 +33,11 @@ class _CreateCampaignScreenState extends ConsumerState<CreateCampaignScreen> {
   final Set<String> _groupIds = <String>{};
   bool _saving = false;
 
+  /// Null means send now. The repository has always accepted `scheduledAt`;
+  /// there was simply no way to set it, so every campaign created from the app
+  /// went out immediately whether or not that was the intent.
+  DateTime? _scheduledAt;
+
   @override
   void dispose() {
     _title.dispose();
@@ -52,6 +59,7 @@ class _CreateCampaignScreenState extends ConsumerState<CreateCampaignScreen> {
             title: _title.text.trim(),
             templateName: _templateName!,
             groupIds: _groupIds.toList(),
+            scheduledAt: _scheduledAt,
           );
       ref.invalidate(campaignListProvider);
       if (mounted) context.pop();
@@ -144,6 +152,17 @@ class _CreateCampaignScreenState extends ConsumerState<CreateCampaignScreen> {
                               }
                             }),
                           ),
+                      SectionLabel(l10n.ccSchedule),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppDimens.gutter,
+                        ),
+                        child: _ScheduleChoice(
+                          scheduledAt: _scheduledAt,
+                          onChanged: (DateTime? at) =>
+                              setState(() => _scheduledAt = at),
+                        ),
+                      ),
                       const SizedBox(height: 12),
                     ],
                   ),
@@ -169,6 +188,117 @@ class _CreateCampaignScreenState extends ConsumerState<CreateCampaignScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Send now / Schedule, plus the chosen time once scheduling is picked.
+///
+/// A campaign that goes out the instant you tap Save is a one-way door, so the
+/// frame puts this choice in front of the user rather than defaulting silently.
+/// The date picker is bounded to the next year — a broadcast scheduled beyond
+/// that is far more likely a mis-tap than an intent.
+class _ScheduleChoice extends StatelessWidget {
+  const _ScheduleChoice({required this.scheduledAt, required this.onChanged});
+
+  final DateTime? scheduledAt;
+  final ValueChanged<DateTime?> onChanged;
+
+  Future<void> _pick(BuildContext context) async {
+    final DateTime now = DateTime.now();
+    final DateTime? day = await showDatePicker(
+      context: context,
+      initialDate: scheduledAt ?? now.add(const Duration(hours: 1)),
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 365)),
+    );
+    if (day == null) return;
+
+    if (!context.mounted) return;
+    final TimeOfDay? time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(
+        scheduledAt ?? now.add(const Duration(hours: 1)),
+      ),
+    );
+    if (time == null) return;
+
+    onChanged(
+      DateTime(day.year, day.month, day.day, time.hour, time.minute),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final String locale = Localizations.localeOf(context).toLanguageTag();
+    final bool later = scheduledAt != null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        SegmentedButton<bool>(
+          segments: <ButtonSegment<bool>>[
+            ButtonSegment<bool>(value: false, label: Text(l10n.ccSendNow)),
+            ButtonSegment<bool>(value: true, label: Text(l10n.ccScheduleLater)),
+          ],
+          selected: <bool>{later},
+          showSelectedIcon: false,
+          onSelectionChanged: (Set<bool> s) {
+            if (s.first) {
+              _pick(context);
+            } else {
+              onChanged(null);
+            }
+          },
+        ),
+        if (later) ...<Widget>[
+          const SizedBox(height: 10),
+          // Tapping the chosen time reopens the picker — the segment is already
+          // selected, so it cannot serve as the edit affordance too.
+          InkWell(
+            onTap: () => _pick(context),
+            borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColor.brandWash,
+                borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+              ),
+              child: Row(
+                children: <Widget>[
+                  const Icon(
+                    Icons.schedule_outlined,
+                    size: 18,
+                    color: AppColor.brandDeep,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      DateFormat.yMMMEd(locale)
+                          .add_jm()
+                          .format(scheduledAt!),
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppColor.brandDeep,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    l10n.actionEdit,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppColor.brandDeep,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
