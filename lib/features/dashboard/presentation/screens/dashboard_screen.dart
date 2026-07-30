@@ -251,7 +251,12 @@ class _GreetingHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: AppColor.brand,
+      // The frame rounds the header's bottom edge into the page rather than
+      // cutting it square.
+      decoration: const BoxDecoration(
+        color: AppColor.brand,
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+      ),
       child: SafeArea(
         bottom: false,
         child: Padding(

@@ -14,7 +14,19 @@ abstract final class AppDimens {
   /// App bar variants: a plain back-nav header, and the taller header that
   /// carries a title plus an inline search field (Inbox, Contacts).
   static const double headerBack = 96;
-  static const double headerSearch = 182;
+  /// Title + search header.
+  ///
+  /// The handoff's table says 182, but that number leaves ~60 logical px of
+  /// dead green under the search field on a device whose status-bar inset the
+  /// header also has to absorb — the frames put the field about 20px above the
+  /// green's bottom edge, measured across inbox, contacts and agents. 152 is
+  /// content (title row + 12 + field) plus that 20, plus a typical inset.
+  /// Bracketed on device against the frames, which put the search field about
+  /// 18-24 logical px above the green's bottom edge. The handoff's 182 left 82,
+  /// 165 left 61, 124 left 48; 96 overflowed by 4px, so the content floor is 98.
+  /// 100 clears it with 2px to spare and lands at ~24 — the contacts and agents
+  /// frames measure 23.6.
+  static const double headerSearch = 100;
 
   /// Title-only header: the search variant's 182 minus the field and its gap.
   /// Used by a tab root that has a title but nothing to search.

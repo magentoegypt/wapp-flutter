@@ -38,7 +38,7 @@ class StatCard extends StatelessWidget {
       // Floor the height so two cards side by side stay level even when one
       // label wraps. Doing it here rather than via the parent keeps the card
       // safe inside any unbounded-height parent.
-      constraints: const BoxConstraints(minHeight: 86),
+      constraints: const BoxConstraints(minHeight: 118),
       decoration: BoxDecoration(
         color: isLight ? Colors.white : AppColor.surfaceDark,
         borderRadius: BorderRadius.circular(AppDimens.radiusCardLarge),
@@ -46,23 +46,32 @@ class StatCard extends StatelessWidget {
           color: isLight ? AppColor.hairline : AppColor.hairlineDark,
         ),
       ),
+      // Icon, then value, then label — top to bottom, all left-aligned, as the
+      // frame stacks them. The icon used to sit trailing on the value's line,
+      // which competed with the number for the eye and squeezed long values
+      // like "2m 14s" into an ellipsis.
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: Text(
-                  value,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: text.displayLarge?.copyWith(fontSize: 24),
-                ),
-              ),
-              Icon(icon, size: 18, color: iconColor),
-            ],
+          // Tinted wash behind the glyph, per the frame — the icon is a marker
+          // for the metric, not a decoration floating on the card.
+          Container(
+            width: 30,
+            height: 30,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Icon(icon, size: 17, color: iconColor),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: text.displayLarge?.copyWith(fontSize: 24),
           ),
           const SizedBox(height: 2),
           Text(label, style: text.bodyMedium, maxLines: 1, overflow: TextOverflow.ellipsis),

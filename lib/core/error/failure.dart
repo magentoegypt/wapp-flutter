@@ -13,9 +13,21 @@ sealed class Failure implements Exception {
   String toString() => '$runtimeType: $message';
 }
 
-/// No usable connection, DNS failure, or the request timed out.
+/// No usable connection or DNS failure — the request never reached the server.
 class NetworkFailure extends Failure {
   const NetworkFailure([super.message = 'No connection. Check your network and try again.']);
+}
+
+/// The server was reached but did not answer in time.
+///
+/// Kept separate from [NetworkFailure] because the remedy is different and the
+/// old shared copy actively misled: a slow endpoint told the user to check
+/// their network while the network was fine and every other screen was loading.
+class TimeoutFailure extends Failure {
+  const TimeoutFailure([
+    super.message =
+        'The server took too long to respond. It may be busy — try again.',
+  ]);
 }
 
 /// 401/419 — the token is missing, expired or revoked. The API client clears

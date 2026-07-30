@@ -102,9 +102,12 @@ class ApiClient {
 
   Failure _fromDioException(DioException e) {
     return switch (e.type) {
+      // Reached the server, no answer in time. Distinct from being offline:
+      // telling someone to check their network when the network is fine sends
+      // them to fix the wrong thing.
       DioExceptionType.connectionTimeout ||
       DioExceptionType.sendTimeout ||
-      DioExceptionType.receiveTimeout ||
+      DioExceptionType.receiveTimeout => const TimeoutFailure(),
       DioExceptionType.connectionError => const NetworkFailure(),
       _ => const ServerFailure(),
     };
