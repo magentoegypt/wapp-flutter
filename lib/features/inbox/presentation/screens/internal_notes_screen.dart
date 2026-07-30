@@ -2,14 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_dimens.dart';
 import '../../../../core/widgets/app_banner.dart';
 import '../../../../core/widgets/app_header.dart';
 import '../../../../core/widgets/async_value_view.dart';
+import '../../../../core/widgets/initials_avatar.dart';
 import '../../../../core/widgets/message_composer.dart';
 import '../../../../core/widgets/note_card.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../data/conversation_repository.dart';
 import '../../data/note_repository.dart';
+import '../../domain/conversation.dart';
 import '../../domain/internal_note.dart';
 
 /// Internal notes — Figma 321:6.
@@ -24,6 +28,49 @@ class InternalNotesScreen extends ConsumerWidget {
 
   Future<void> _add(WidgetRef ref, String body) async {
     await ref.read(noteRepositoryProvider).add(contactUid, body);
+    ref.invalidate(notesProvider(contactUid));
+  }
+
+  /// Edits a note in place. The frame puts an edit glyph on every card beside
+  /// delete; without it a typo could only be fixed by deleting and retyping,
+  /// which also loses the note's original timestamp and author line.
+  Future<void> _edit(
+    BuildContext context,
+    WidgetRef ref,
+    InternalNote note,
+  ) async {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final TextEditingController controller =
+        TextEditingController(text: note.body);
+    final String? body = await showDialog<String>(
+      context: context,
+      builder: (BuildContext c) => AlertDialog(
+        title: Text(l10n.notesEditTitle),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLines: 5,
+          minLines: 3,
+          decoration: InputDecoration(hintText: l10n.notesComposerHint),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(c).pop(),
+            child: Text(l10n.actionCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(c).pop(controller.text.trim()),
+            child: Text(l10n.actionSave),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+
+    // Unchanged or emptied — an empty note would read as a deletion the user
+    // did not ask for.
+    if (body == null || body.isEmpty || body == note.body) return;
+    await ref.read(noteRepositoryProvider).update(note.uid, body);
     ref.invalidate(notesProvider(contactUid));
   }
 
@@ -67,6 +114,13 @@ class InternalNotesScreen extends ConsumerWidget {
       appBar: AppHeader.back(title: l10n.notesTitle),
       body: Column(
         children: <Widget>[
+          // Whose notes these are. Without it the screen gave no indication of
+          // which contact you were annotating — a real hazard on a shared inbox
+          // where an agent arrives here from a sheet two screens deep.
+          _ContactBand(
+            contactUid: contactUid,
+            noteCount: notes.valueOrNull?.length,
+          ),
           AppBanner(
             message: l10n.notesPrivacyNotice,
             tone: BannerTone.brand,
@@ -96,6 +150,7 @@ class InternalNotesScreen extends ConsumerWidget {
                           : DateFormat.yMMMd(locale).add_jm().format(n.createdAt!),
                       body: n.body,
                       edited: n.edited,
+                      onEdit: () => _edit(context, ref, n),
                       onDelete: () => _confirmDelete(context, ref, n),
                     );
                   },
@@ -108,6 +163,80 @@ class InternalNotesScreen extends ConsumerWidget {
             sendLabel: l10n.notesAdd,
             onSend: (String body) => _add(ref, body),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Contact identity band under the app bar, with a note count.
+///
+/// Reads the chat thread for the name and phone rather than taking them as
+/// parameters: the notes route is reachable from the chat actions sheet and
+/// from conversation info, and threading two strings through both call sites
+/// would let them drift out of sync with the thread the user is actually in.
+class _ContactBand extends ConsumerWidget {
+  const _ContactBand({required this.contactUid, this.noteCount});
+
+  final String contactUid;
+  final int? noteCount;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final ChatThread? t = ref.watch(chatThreadProvider(contactUid)).valueOrNull;
+    if (t == null) return const SizedBox.shrink();
+
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.all(AppDimens.gutter),
+      child: Row(
+        children: <Widget>[
+          InitialsAvatar(name: t.name),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  t.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+                if (t.phone != null)
+                  Text(
+                    t.phone!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+              ],
+            ),
+          ),
+          if (noteCount != null) ...<Widget>[
+            const SizedBox(width: 8),
+            // The note palette, not a semantic tone — the count describes this
+            // screen's own content rather than any state of the conversation.
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColor.noteFill,
+                border: Border.all(color: AppColor.noteLine),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                l10n.notesCount(noteCount!),
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                  color: AppColor.noteInk,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

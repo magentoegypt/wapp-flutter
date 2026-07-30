@@ -109,16 +109,19 @@ class _ChatActionsSheet extends StatelessWidget {
               tint: AppColor.info,
               onTap: () => Navigator.of(context).pop(),
             ),
+            // The three call/history rows are one neutral group in the frame.
+            // Tinting two of them green and blue implied a state or severity
+            // they do not carry, and split a group the frame reads as one.
             ActionSheetRow(
               label: l10n.caCallHistory,
               icon: Icons.call_outlined,
-              tint: AppColor.success,
+              tint: AppColor.inkMuted,
               onTap: () => Navigator.of(context).pop(),
             ),
             ActionSheetRow(
               label: l10n.caRequestCall,
               icon: Icons.perm_phone_msg_outlined,
-              tint: AppColor.info,
+              tint: AppColor.inkMuted,
               onTap: () => Navigator.of(context).pop(),
             ),
             ActionSheetRow(

@@ -196,6 +196,17 @@
   "loginEmailHint": "you@company.com",
   "loginPasswordHint": "كلمة المرور",
 
+  "ctFilterAll": "الكل",
+  "ctStageCustomer": "عميل",
+  "ctStageLead": "عميل محتمل",
+  "ctStageVip": "مميّز",
+  "notesEditTitle": "تعديل الملاحظة",
+  "cvStatusOpen": "مفتوحة",
+  "cvStatusPending": "معلّقة",
+  "cvStatusSolved": "تم الحل",
+  "cvStatusBlocked": "محظورة",
+  "cvChangeStatus": "تغيير الحالة",
+
   "ciContactInfo": "معلومات جهة الاتصال",
   "ciContactDetails": "تفاصيل جهة الاتصال",
   "ciEmail": "البريد الإلكتروني",

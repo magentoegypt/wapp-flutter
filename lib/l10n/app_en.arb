@@ -237,6 +237,17 @@
   "loginEmailHint": "you@company.com",
   "loginPasswordHint": "Your password",
 
+  "ctFilterAll": "All",
+  "ctStageCustomer": "Customer",
+  "ctStageLead": "Lead",
+  "ctStageVip": "VIP",
+  "notesEditTitle": "Edit note",
+  "cvStatusOpen": "Open",
+  "cvStatusPending": "Pending",
+  "cvStatusSolved": "Solved",
+  "cvStatusBlocked": "Blocked",
+  "cvChangeStatus": "Change status",
+
   "ciContactInfo": "Contact info",
   "ciContactDetails": "Contact details",
   "ciEmail": "Email",

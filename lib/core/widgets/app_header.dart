@@ -14,6 +14,8 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   const AppHeader.back({
     required this.title,
     this.subtitle,
+    this.subtitleTrailing,
+    this.avatar,
     this.actions,
     this.leading,
     this.onBack,
@@ -39,6 +41,8 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
     this.showBack = false,
     super.key,
   })  : subtitle = null,
+        subtitleTrailing = null,
+        avatar = null,
         actions = null,
         leading = null,
         onBack = null,
@@ -46,6 +50,16 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
 
   final String title;
   final String? subtitle;
+
+  /// Sits beside [subtitle] on the back variant. Chat puts the conversation
+  /// status pill here, which the frame shows on the same line as the presence
+  /// text rather than in the actions slot.
+  final Widget? subtitleTrailing;
+
+  /// Between the back affordance and the title on the back variant — the
+  /// contact's avatar, per the chat frame.
+  final Widget? avatar;
+
   final List<Widget>? actions;
   final Widget? leading;
   final VoidCallback? onBack;
@@ -105,7 +119,11 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
               constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
               tooltip: MaterialLocalizations.of(context).backButtonTooltip,
             ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 4),
+        if (avatar != null) ...<Widget>[
+          avatar!,
+          const SizedBox(width: 10),
+        ],
         Expanded(
           child: GestureDetector(
             onTap: onTitleTap,
@@ -125,12 +143,26 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                     color: Colors.white,
                   ),
                 ),
-                if (subtitle != null)
-                  Text(
-                    subtitle!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 11.5, color: Colors.white70),
+                if (subtitle != null || subtitleTrailing != null)
+                  Row(
+                    children: <Widget>[
+                      if (subtitle != null)
+                        Flexible(
+                          child: Text(
+                            subtitle!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              color: Colors.white70,
+                            ),
+                          ),
+                        ),
+                      if (subtitleTrailing != null) ...<Widget>[
+                        const SizedBox(width: 8),
+                        subtitleTrailing!,
+                      ],
+                    ],
                   ),
               ],
             ),
@@ -175,41 +207,109 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
           ],
         ),
         const SizedBox(height: 12),
-        TextField(
+        _SearchField(
+          hint: searchHint!,
           onChanged: onSearchChanged,
-          readOnly: onSearchTap != null,
           onTap: onSearchTap,
-          style: const TextStyle(fontSize: 14, color: AppColor.ink),
-          decoration: InputDecoration(
-            hintText: searchHint,
-            isDense: true,
-            filled: true,
-            fillColor: Colors.white,
-            prefixIcon: const Icon(
-              Icons.search,
-              size: 18,
-              color: AppColor.inkFaint,
-            ),
-            prefixIconConstraints: const BoxConstraints(
-              minWidth: 38,
-              minHeight: 38,
-            ),
-            contentPadding: const EdgeInsets.symmetric(vertical: 11),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-              borderSide: BorderSide.none,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-              borderSide: BorderSide.none,
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-              borderSide: BorderSide.none,
-            ),
-          ),
         ),
       ],
+    );
+  }
+}
+
+/// The header's search input.
+///
+/// Split out of [AppHeader] so the header itself can stay stateless: the clear
+/// affordance has to appear and disappear as the user types, which needs local
+/// state. Without it a typed query could only be cleared by backspacing, and on
+/// the tab roots the filter stays applied until you do.
+class _SearchField extends StatefulWidget {
+  const _SearchField({required this.hint, this.onChanged, this.onTap});
+
+  final String hint;
+  final ValueChanged<String>? onChanged;
+  final VoidCallback? onTap;
+
+  @override
+  State<_SearchField> createState() => _SearchFieldState();
+}
+
+class _SearchFieldState extends State<_SearchField> {
+  final TextEditingController _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _clear() {
+    _controller.clear();
+    // Notify the owner too, or the list stays filtered by a query that is no
+    // longer on screen.
+    widget.onChanged?.call('');
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // A tap-to-navigate field never holds text, so it never needs the clear
+    // button.
+    final bool showClear =
+        widget.onTap == null && _controller.text.isNotEmpty;
+
+    return TextField(
+      controller: _controller,
+      onChanged: (String v) {
+        widget.onChanged?.call(v);
+        setState(() {});
+      },
+      readOnly: widget.onTap != null,
+      onTap: widget.onTap,
+      textInputAction: TextInputAction.search,
+      style: const TextStyle(fontSize: 14, color: AppColor.ink),
+      decoration: InputDecoration(
+        hintText: widget.hint,
+        isDense: true,
+        filled: true,
+        fillColor: Colors.white,
+        prefixIcon: const Icon(
+          Icons.search,
+          size: 18,
+          color: AppColor.inkFaint,
+        ),
+        prefixIconConstraints: const BoxConstraints(
+          minWidth: 38,
+          minHeight: 38,
+        ),
+        suffixIcon: showClear
+            ? IconButton(
+                onPressed: _clear,
+                icon: const Icon(Icons.close, size: 17),
+                color: AppColor.inkFaint,
+                tooltip: MaterialLocalizations.of(context).deleteButtonTooltip,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+              )
+            : null,
+        suffixIconConstraints: const BoxConstraints(
+          minWidth: 38,
+          minHeight: 38,
+        ),
+        contentPadding: const EdgeInsets.symmetric(vertical: 11),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+          borderSide: BorderSide.none,
+        ),
+      ),
     );
   }
 }

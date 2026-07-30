@@ -5,12 +5,15 @@ import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/routes.dart';
+import '../../../../app/theme/app_colors.dart';
 import '../../../../core/util/duration_format.dart';
 import '../../../../core/widgets/app_banner.dart';
 import '../../../../core/widgets/app_header.dart';
 import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/message_bubble.dart';
+import '../../../../core/widgets/initials_avatar.dart';
 import '../../../../core/widgets/message_composer.dart';
+import '../../../../core/widgets/status_pill.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../quick_replies/data/quick_reply_repository.dart';
 import '../../data/conversation_repository.dart';
@@ -41,6 +44,27 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     ref.invalidate(chatThreadProvider(widget.contactUid));
   }
 
+  /// Conversation status for [contactUid] from the loaded inbox list, or null
+  /// if that list has no entry for it.
+  ConversationStatus? _statusOf(String contactUid) {
+    final List<Conversation>? rows = ref.watch(inboxListProvider).valueOrNull;
+    if (rows == null) return null;
+    for (final Conversation c in rows) {
+      if (c.contactUid == contactUid) return c.status;
+    }
+    return null;
+  }
+
+  Future<void> _setStatus(ConversationStatus status) async {
+    await ref
+        .read(conversationRepositoryProvider)
+        .setStatus(widget.contactUid, status);
+    ref.invalidate(chatThreadProvider(widget.contactUid));
+    // The inbox rows carry the status too, so a change made here has to
+    // invalidate that list or the two screens disagree until a manual refresh.
+    ref.invalidate(inboxListProvider);
+  }
+
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
@@ -51,6 +75,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       appBar: AppHeader.back(
         title: thread.valueOrNull?.name ?? '',
         subtitle: thread.valueOrNull?.phone,
+        avatar: thread.valueOrNull == null
+            ? null
+            : InitialsAvatar(name: thread.valueOrNull!.name, size: 30),
+        // The chat detail payload carries no conversation status — only
+        // per-message delivery state — so it is read from the inbox row for
+        // this contact, which does have it. When that row isn't loaded (deep
+        // link straight into a chat) the pill is omitted rather than guessed.
+        subtitleTrailing: _statusOf(widget.contactUid) == null
+            ? null
+            : _StatusMenu(
+                status: _statusOf(widget.contactUid)!,
+                onSelected: _setStatus,
+              ),
         // Tapping the contact in the app bar opens conversation info — the
         // handoff's `Chat → Contact info` edge, and the only entry point to
         // that screen.
@@ -225,4 +262,64 @@ class _MessageList extends StatelessWidget {
     null => null,
     _ => MessageStatus.pending,
   };
+}
+
+/// Conversation status as a pill that is also the control for changing it.
+///
+/// The frame puts the status beside the presence line in the app bar. It is a
+/// pill rather than a menu button because status is mostly *read* here; the
+/// menu is the same target so there is no second affordance to find.
+/// `setStatus` is a real endpoint, so unlike the removed campaign/agent CTAs
+/// this one does something.
+class _StatusMenu extends StatelessWidget {
+  const _StatusMenu({required this.status, required this.onSelected});
+
+  final ConversationStatus status;
+  final ValueChanged<ConversationStatus> onSelected;
+
+  static ({String label, StatusTone tone}) _badge(
+    AppLocalizations l10n,
+    ConversationStatus s,
+  ) =>
+      switch (s) {
+        ConversationStatus.open =>
+          (label: l10n.cvStatusOpen, tone: StatusTone.success),
+        ConversationStatus.pending =>
+          (label: l10n.cvStatusPending, tone: StatusTone.warning),
+        ConversationStatus.solved =>
+          (label: l10n.cvStatusSolved, tone: StatusTone.info),
+        ConversationStatus.blocked =>
+          (label: l10n.cvStatusBlocked, tone: StatusTone.danger),
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final badge = _badge(l10n, status);
+
+    return PopupMenuButton<ConversationStatus>(
+      onSelected: onSelected,
+      tooltip: l10n.cvChangeStatus,
+      padding: EdgeInsets.zero,
+      position: PopupMenuPosition.under,
+      itemBuilder: (BuildContext context) => <PopupMenuEntry<ConversationStatus>>[
+        for (final ConversationStatus s in ConversationStatus.values)
+          PopupMenuItem<ConversationStatus>(
+            value: s,
+            child: Row(
+              children: <Widget>[
+                Icon(
+                  s == status ? Icons.check : null,
+                  size: 16,
+                  color: AppColor.brandDeep,
+                ),
+                const SizedBox(width: 8),
+                Text(_badge(l10n, s).label),
+              ],
+            ),
+          ),
+      ],
+      child: StatusPill(label: badge.label, tone: badge.tone),
+    );
+  }
 }

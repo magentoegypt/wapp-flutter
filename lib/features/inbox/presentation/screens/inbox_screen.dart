@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/widgets/agent_avatar.dart';
 import '../../../../core/widgets/app_header.dart';
 import '../../../../core/widgets/app_list_tile.dart';
 import '../../../../core/widgets/async_value_view.dart';
@@ -32,6 +33,7 @@ class InboxScreen extends ConsumerWidget {
         // place — that screen is the handoff's `Chats → Search` edge, and
         // without this entry point it was unreachable.
         onSearchTap: () => context.push(AppRoutes.search),
+        trailing: const AgentAvatar(),
       ),
       floatingActionButton: FloatingActionButton(
         // Distinct hero tag. Inbox and Contacts are both kept alive by
