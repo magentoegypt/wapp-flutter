@@ -200,6 +200,35 @@
   "ctStageCustomer": "عميل",
   "ctStageLead": "عميل محتمل",
   "ctStageVip": "مميّز",
+  "agSearchHint": "ابحث عن الوكلاء",
+  "agAvailable": "متاح",
+  "agHandling": "{count, plural, zero{لا محادثات} one{يتابع محادثة} two{يتابع محادثتين} few{يتابع {count} محادثات} many{يتابع {count} محادثة} other{يتابع {count} محادثة}}",
+  "@agHandling": {
+    "placeholders": {
+      "count": {
+        "type": "num",
+        "format": "compact"
+      }
+    }
+  },
+  "agActiveCount": "{count, plural, zero{لا نشطة} one{نشطة واحدة} two{نشطتان} few{{count} نشطة} many{{count} نشطة} other{{count} نشطة}}",
+  "@agActiveCount": {
+    "placeholders": {
+      "count": {
+        "type": "num",
+        "format": "compact"
+      }
+    }
+  },
+  "agTeamCount": "{count, plural, zero{الفريق · 0} one{الفريق · 1} other{الفريق · {count}}}",
+  "@agTeamCount": {
+    "placeholders": {
+      "count": {
+        "type": "num",
+        "format": "compact"
+      }
+    }
+  },
   "notesEditTitle": "تعديل الملاحظة",
   "cvStatusOpen": "مفتوحة",
   "cvStatusPending": "معلّقة",

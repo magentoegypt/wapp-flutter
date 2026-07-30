@@ -241,6 +241,35 @@
   "ctStageCustomer": "Customer",
   "ctStageLead": "Lead",
   "ctStageVip": "VIP",
+  "agSearchHint": "Search agents",
+  "agAvailable": "Available",
+  "agHandling": "{count, plural, =1{Handling 1 chat} other{Handling {count} chats}}",
+  "@agHandling": {
+    "placeholders": {
+      "count": {
+        "type": "num",
+        "format": "compact"
+      }
+    }
+  },
+  "agActiveCount": "{count, plural, =1{1 active} other{{count} active}}",
+  "@agActiveCount": {
+    "placeholders": {
+      "count": {
+        "type": "num",
+        "format": "compact"
+      }
+    }
+  },
+  "agTeamCount": "{count, plural, =1{Team · 1} other{Team · {count}}}",
+  "@agTeamCount": {
+    "placeholders": {
+      "count": {
+        "type": "num",
+        "format": "compact"
+      }
+    }
+  },
   "notesEditTitle": "Edit note",
   "cvStatusOpen": "Open",
   "cvStatusPending": "Pending",
