@@ -121,9 +121,15 @@ Contact contactFromJson(Map<String, dynamic> j) {
     phone: (j['phone'] ?? j['waId'] ?? '').toString(),
     email: j['email'] as String?,
     countryCode: (j['country'] ?? j['countryCode']) as String?,
+    city: j['city'] as String?,
+    language: (j['language'] ?? j['languageCode']) as String?,
     labels: strings(j['labels']),
     groups: strings(j['groups']),
-    lastSeenAt: DateTime.tryParse('${j['createdAt'] ?? ''}')?.toLocal(),
+    // The backend packs the lifecycle stage into the same `status` string that
+    // carries `blocked`, so both are read from it. An unrecognised value maps
+    // to null and the pill is simply omitted.
+    lifecycleStage: LifecycleStage.fromApi(j['status'] ?? j['lifecycleStage']),
+    createdAt: DateTime.tryParse('${j['createdAt'] ?? ''}')?.toLocal(),
     isBlocked: '${j['status'] ?? ''}' == 'blocked',
   );
 }

@@ -96,10 +96,10 @@ class ChartCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isLight ? Colors.white : const Color(0xFF141C17),
+        color: isLight ? Colors.white : AppColor.surfaceDark,
         borderRadius: BorderRadius.circular(AppDimens.radiusCardLarge),
         border: Border.all(
-          color: isLight ? AppColor.hairline : const Color(0xFF243029),
+          color: isLight ? AppColor.hairline : AppColor.hairlineDark,
         ),
       ),
       child: Column(

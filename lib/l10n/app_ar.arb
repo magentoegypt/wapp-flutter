@@ -20,7 +20,9 @@
   "actionSeeAll": "عرض الكل",
   "commonToday": "اليوم",
   "commonYesterday": "أمس",
-  "dashboardGreeting": "صباح الخير",
+  "dashboardGreetingMorning": "صباح الخير 👋",
+  "dashboardGreetingAfternoon": "مساء الخير 👋",
+  "dashboardGreetingEvening": "مساء الخير 👋",
   "dashboardOpen": "مفتوحة",
   "inboxTitle": "صندوق الوارد",
   "inboxSearchHint": "ابحث في المحادثات",
@@ -192,5 +194,45 @@
   "loginNoAccount": "ليس لديك حساب؟ تواصل مع مدير مساحة العمل.",
   "loginTagline": "منصة واتساب للأعمال",
   "loginEmailHint": "you@company.com",
-  "loginPasswordHint": "كلمة المرور"
+  "loginPasswordHint": "كلمة المرور",
+
+  "ciContactInfo": "معلومات جهة الاتصال",
+  "ciContactDetails": "تفاصيل جهة الاتصال",
+  "ciEmail": "البريد الإلكتروني",
+  "ciCountry": "الدولة",
+  "ciFirstSeen": "أول ظهور",
+  "ciActionMessage": "رسالة",
+  "ciActionCall": "اتصال",
+  "ciActionNote": "ملاحظة",
+
+  "prPresence": "الحالة",
+  "prAvailable": "متاح",
+  "prBusy": "مشغول",
+  "prAway": "غير متواجد",
+  "prPreferences": "التفضيلات",
+
+  "qrSearchHint": "ابحث في الردود السريعة",
+  "qrCategory": "الفئة",
+  "qrCategoryAll": "الكل",
+  "qrCategoryNone": "بدون",
+  "qrCategoryGreetings": "التحيات",
+  "qrCategoryOrders": "الطلبات",
+  "qrCategorySupport": "الدعم",
+  "qrPreview": "معاينة",
+  "qrDelete": "حذف الرد السريع",
+  "qrDeleteConfirm": "حذف هذا الرد السريع؟ لا يمكن التراجع عن هذا الإجراء.",
+  "qrSampleName": "أميرة",
+  "qrSampleOrder": "#10482",
+  "qrSampleLink": "example.com/track",
+
+  "searchTitle": "بحث",
+  "searchResultsCount": "{count, plural, zero{لا نتائج} one{نتيجة واحدة} two{نتيجتان} few{{count} نتائج} many{{count} نتيجة} other{{count} نتيجة}}",
+  "@searchResultsCount": {
+    "placeholders": {
+      "count": {
+        "type": "num",
+        "format": "compact"
+      }
+    }
+  }
 }

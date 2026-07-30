@@ -41,9 +41,17 @@
   "actionSeeAll": "See all",
   "commonToday": "Today",
   "commonYesterday": "Yesterday",
-  "dashboardGreeting": "Good morning",
-  "@dashboardGreeting": {
-    "description": "Shown above the agent's name on the dashboard."
+  "dashboardGreetingMorning": "Good morning 👋",
+  "@dashboardGreetingMorning": {
+    "description": "Dashboard greeting before 12:00. Shown above the agent's name."
+  },
+  "dashboardGreetingAfternoon": "Good afternoon 👋",
+  "@dashboardGreetingAfternoon": {
+    "description": "Dashboard greeting from 12:00 to 17:00."
+  },
+  "dashboardGreetingEvening": "Good evening 👋",
+  "@dashboardGreetingEvening": {
+    "description": "Dashboard greeting from 17:00."
   },
   "dashboardOpen": "Open",
   "inboxTitle": "Inbox",
@@ -227,5 +235,57 @@
   "loginNoAccount": "Don't have an account? Contact your workspace admin.",
   "loginTagline": "WhatsApp Business Platform",
   "loginEmailHint": "you@company.com",
-  "loginPasswordHint": "Your password"
+  "loginPasswordHint": "Your password",
+
+  "ciContactInfo": "Contact info",
+  "ciContactDetails": "Contact details",
+  "ciEmail": "Email",
+  "ciCountry": "Country",
+  "ciFirstSeen": "First seen",
+  "@ciFirstSeen": {
+    "description": "Label for the date the contact first appeared. Sourced from the contact's createdAt — the API exposes no dedicated first-seen field."
+  },
+  "ciActionMessage": "Message",
+  "ciActionCall": "Call",
+  "ciActionNote": "Note",
+
+  "prPresence": "Presence",
+  "prAvailable": "Available",
+  "prBusy": "Busy",
+  "prAway": "Away",
+  "prPreferences": "Preferences",
+
+  "qrSearchHint": "Search quick replies",
+  "qrCategory": "Category",
+  "qrCategoryAll": "All",
+  "qrCategoryNone": "None",
+  "qrCategoryGreetings": "Greetings",
+  "qrCategoryOrders": "Orders",
+  "qrCategorySupport": "Support",
+  "qrPreview": "Preview",
+  "qrDelete": "Delete quick reply",
+  "qrDeleteConfirm": "Delete this quick reply? This can't be undone.",
+  "qrSampleName": "Amira",
+  "@qrSampleName": {
+    "description": "Sample value substituted for the name placeholder in the quick-reply preview bubble. Not a label."
+  },
+  "qrSampleOrder": "#10482",
+  "@qrSampleOrder": {
+    "description": "Sample order number for the quick-reply preview bubble."
+  },
+  "qrSampleLink": "example.com/track",
+  "@qrSampleLink": {
+    "description": "Sample link for the quick-reply preview bubble."
+  },
+
+  "searchTitle": "Search",
+  "searchResultsCount": "{count, plural, =0{No results} =1{1 result} other{{count} results}}",
+  "@searchResultsCount": {
+    "placeholders": {
+      "count": {
+        "type": "num",
+        "format": "compact"
+      }
+    }
+  }
 }

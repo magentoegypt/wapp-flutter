@@ -3,14 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_dimens.dart';
-import '../../../../core/widgets/app_header.dart';
+import '../../../../core/localization/locale_controller.dart';
 import '../../../../core/widgets/app_list_tile.dart';
+import '../../../../core/widgets/filter_chip_bar.dart';
 import '../../../../core/widgets/initials_avatar.dart';
 import '../../../../core/widgets/section_label.dart';
 import '../../../../core/widgets/status_pill.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../auth/domain/session.dart';
 import '../../../auth/presentation/auth_controller.dart';
+import '../presence_controller.dart';
 
 /// Profile — Figma 289:111.
 ///
@@ -23,32 +25,38 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final Session? session = ref.watch(authControllerProvider).session;
+    final Presence presence = ref.watch(presenceProvider);
+    final bool isArabic = ref.watch(isRtlProvider);
+    final List<String> permissions =
+        session?.user.permissions ?? const <String>[];
 
     return Scaffold(
-      appBar: AppHeader.back(title: l10n.moreProfile),
       body: ListView(
+        // The identity hero runs edge to edge under the status bar, so the list
+        // cannot carry an inset of its own.
+        padding: EdgeInsets.zero,
         children: <Widget>[
-          const SizedBox(height: 20),
-          Center(
-            child: InitialsAvatar(
-              name: session?.user.name ?? '?',
-              size: AppDimens.avatarHero,
-            ),
+          _ProfileHero(
+            name: session?.user.name ?? '',
+            // The frame reads "Admin · Support agent", but the login response
+            // carries a role slug and no role title, so the subtitle stops at
+            // the role rather than inventing a job title.
+            roleLabel: session == null
+                ? ''
+                : (session.user.isAdmin ? l10n.prAdmin : l10n.prAgent),
           ),
-          const SizedBox(height: 12),
-          Center(
-            child: Text(
-              session?.user.name ?? '',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Center(
-            child: StatusPill(
-              label: (session?.user.isAdmin ?? false) ? l10n.prAdmin : l10n.prAgent,
-              tone: StatusTone.success,
-              showDot: false,
-            ),
+
+          SectionLabel(l10n.prPresence),
+          FilterChipBar(
+            options: <FilterOption>[
+              FilterOption(id: Presence.available.name, label: l10n.prAvailable),
+              FilterOption(id: Presence.busy.name, label: l10n.prBusy),
+              FilterOption(id: Presence.away.name, label: l10n.prAway),
+            ],
+            selectedId: presence.name,
+            onSelected: (String id) => ref
+                .read(presenceProvider.notifier)
+                .state = Presence.values.byName(id),
           ),
 
           SectionLabel(l10n.prAccount),
@@ -59,6 +67,8 @@ class ProfileScreen extends ConsumerWidget {
               icon: Icons.mail_outline,
               color: AppColor.info,
             ),
+            // Read-only: there is no edit-profile destination, and a chevron
+            // would promise one.
             showChevron: false,
           ),
           AppListTile(
@@ -71,8 +81,43 @@ class ProfileScreen extends ConsumerWidget {
             showChevron: false,
           ),
 
+          SectionLabel(l10n.prPreferences),
+          Padding(
+            padding: const EdgeInsetsDirectional.only(
+              start: AppDimens.gutter,
+              end: AppDimens.gutter,
+              bottom: 4,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                // Named like a list-row title so the control below it reads as
+                // that row's value, the way the frame's "Language · English"
+                // does.
+                Text(
+                  l10n.moreLanguage,
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyLarge
+                      ?.copyWith(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+                _LanguageChoice(
+                  isArabic: isArabic,
+                  onSelect: (bool arabic) {
+                    if (arabic != isArabic) {
+                      ref.read(localeControllerProvider.notifier).toggle();
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+
+          // Below preferences, not above them: the frame leads with what the
+          // agent can change, and permissions are a read-only footnote.
           SectionLabel(l10n.prPermissions),
-          if ((session?.user.permissions ?? const <String>[]).isEmpty)
+          if (permissions.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: AppDimens.gutter,
@@ -95,13 +140,170 @@ class ProfileScreen extends ConsumerWidget {
                 spacing: 8,
                 runSpacing: 8,
                 children: <Widget>[
-                  for (final String p in session!.user.permissions)
+                  for (final String p in permissions)
                     StatusPill(label: p, tone: StatusTone.info, showDot: false),
                 ],
               ),
             ),
           const SizedBox(height: 24),
         ],
+      ),
+    );
+  }
+}
+
+/// The brand-green identity block the frame opens with.
+///
+/// Not an [AppHeader]: the frame centres the avatar, name and role over the
+/// green rather than running them along a title bar, and the back affordance
+/// has to sit above that stack instead of beside it.
+class _ProfileHero extends StatelessWidget {
+  const _ProfileHero({required this.name, required this.roleLabel});
+
+  final String name;
+  final String roleLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AppColor.brand,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsetsDirectional.only(
+            start: AppDimens.gutter,
+            end: AppDimens.gutter,
+            bottom: 22,
+          ),
+          child: Column(
+            children: <Widget>[
+              // The frame omits it, but Profile is pushed inside the More
+              // branch: without a back affordance the only way out is the tab
+              // bar, which strands anyone who arrived from the More list.
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: IconButton(
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  // Directional: points left in LTR, right in RTL.
+                  icon: const Icon(Icons.arrow_back),
+                  color: Colors.white,
+                  tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                ),
+              ),
+              InitialsAvatar.onBrand(
+                name: name.isEmpty ? '?' : name,
+                size: AppDimens.avatarHero,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+              if (roleLabel.isNotEmpty) ...<Widget>[
+                const SizedBox(height: 2),
+                Text(
+                  roleLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 12.5, color: Colors.white70),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Two-option language selector.
+///
+/// With exactly two locales a segmented control beats both a toggle (which
+/// hides what it switches to) and a picker sheet (a whole route for one
+/// choice): the alternative is on screen, named in its own script, and one tap
+/// away. `Cairo` is forced on the Arabic label so it reads correctly even while
+/// the app is still in English.
+class _LanguageChoice extends StatelessWidget {
+  const _LanguageChoice({required this.isArabic, required this.onSelect});
+
+  final bool isArabic;
+  final ValueChanged<bool> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: AppColor.surfaceAlt,
+        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+      ),
+      child: Row(
+        children: <Widget>[
+          _Segment(
+            label: 'English',
+            fontFamily: 'Inter',
+            selected: !isArabic,
+            onTap: () => onSelect(false),
+          ),
+          _Segment(
+            label: 'العربية',
+            fontFamily: 'Cairo',
+            selected: isArabic,
+            onTap: () => onSelect(true),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Segment extends StatelessWidget {
+  const _Segment({
+    required this.label,
+    required this.fontFamily,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final String fontFamily;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Semantics(
+        selected: selected,
+        button: true,
+        child: GestureDetector(
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 140),
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: selected ? Colors.white : Colors.transparent,
+              borderRadius: BorderRadius.circular(AppDimens.radiusCard - 3),
+              border: selected ? Border.all(color: AppColor.hairline) : null,
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontFamily: fontFamily,
+                fontSize: 14,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: selected ? AppColor.brandDeep : AppColor.inkMuted,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

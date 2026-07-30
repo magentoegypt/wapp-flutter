@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_dimens.dart';
 
 /// Circular avatar showing a contact's initials on a tinted ground.
@@ -13,10 +14,23 @@ class InitialsAvatar extends StatelessWidget {
     required this.name,
     this.size = AppDimens.avatarList,
     super.key,
-  });
+  }) : onBrand = false;
+
+  /// For an avatar sitting **on** the brand-green header rather than in a list.
+  ///
+  /// The hash-tinted pastels are chosen to sit on white; on green a name can
+  /// hash to pink or purple, which the frames never show. This variant is a
+  /// fixed deep-green disc with light initials, so the header reads as one
+  /// piece regardless of whose name it is.
+  const InitialsAvatar.onBrand({
+    required this.name,
+    this.size = AppDimens.avatarList,
+    super.key,
+  }) : onBrand = true;
 
   final String name;
   final double size;
+  final bool onBrand;
 
   /// Muted, mid-saturation hues that stay legible under dark ink in light mode
   /// and don't compete with brand green.
@@ -55,13 +69,16 @@ class InitialsAvatar extends StatelessWidget {
       width: size,
       height: size,
       alignment: Alignment.center,
-      decoration: BoxDecoration(color: _tint, shape: BoxShape.circle),
+      decoration: BoxDecoration(
+        color: onBrand ? AppColor.brandDeep : _tint,
+        shape: BoxShape.circle,
+      ),
       child: Text(
         initialsOf(name),
         style: TextStyle(
           fontSize: size * 0.34,
           fontWeight: FontWeight.w700,
-          color: const Color(0xFF14532D),
+          color: onBrand ? Colors.white : AppColor.brandDeep,
         ),
       ),
     );

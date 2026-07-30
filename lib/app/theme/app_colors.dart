@@ -19,6 +19,15 @@ abstract final class AppColor {
   static const Color brandDeep = Color(0xFF00703A); // ~6.2:1 on white
   static const Color brandWash = Color(0xFFEBFAF3);
 
+  // Dark-mode grounds. These were repeated as raw literals across eight call
+  // sites in seven files, so a dark-theme tweak meant hunting hex. They are
+  // deliberately named for their role, not their lightness, and pair with the
+  // light-mode `Colors.white` / [hairline] / [surfaceAlt] they stand in for.
+  static const Color surfaceDark = Color(0xFF141C17);
+  static const Color hairlineDark = Color(0xFF243029);
+  static const Color groundLight = Color(0xFFF6F9F6);
+  static const Color groundDark = Color(0xFF0D1310);
+
   static const Color ink = Color(0xFF101828);
   static const Color inkMuted = Color(0xFF667085);
   static const Color inkFaint = Color(0xFF98A2B3);

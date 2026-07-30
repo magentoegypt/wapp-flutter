@@ -68,20 +68,24 @@ class MoreScreen extends ConsumerWidget {
           ),
 
           SectionLabel(l10n.moreLanguage),
-          AppListTile(
-            title: l10n.moreLanguage,
-            subtitle: isArabic ? 'العربية' : 'English',
-            leading: const IconTile(
-              icon: Icons.translate,
-              color: AppColor.inkMuted,
+          // A Switch was the wrong affordance here: language is a choice
+          // between two named options, not an on/off state, and "Language /
+          // English" beside an unlabelled toggle gave no clue what enabling it
+          // would do. Both options are now visible with the active one marked.
+          Padding(
+            padding: const EdgeInsetsDirectional.only(
+              start: AppDimens.gutter,
+              end: AppDimens.gutter,
+              bottom: 4,
             ),
-            showChevron: false,
-            trailing: Switch(
-              value: isArabic,
-              onChanged: (_) =>
-                  ref.read(localeControllerProvider.notifier).toggle(),
+            child: _LanguageChoice(
+              isArabic: isArabic,
+              onSelect: (bool arabic) {
+                if (arabic != isArabic) {
+                  ref.read(localeControllerProvider.notifier).toggle();
+                }
+              },
             ),
-            onTap: () => ref.read(localeControllerProvider.notifier).toggle(),
           ),
 
           const SizedBox(height: 12),
@@ -128,7 +132,7 @@ class _AccountHeader extends StatelessWidget {
             padding: const EdgeInsets.all(AppDimens.gutter),
             child: Row(
               children: <Widget>[
-                InitialsAvatar(
+                InitialsAvatar.onBrand(
                   name: name.isEmpty ? '?' : name,
                   size: AppDimens.avatarHero,
                 ),
@@ -162,6 +166,95 @@ class _AccountHeader extends StatelessWidget {
                 ),
                 const Icon(Icons.chevron_right, color: Colors.white70),
               ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Two-option language selector.
+///
+/// With exactly two locales a segmented control beats both a toggle (which
+/// hides what it switches to) and a picker sheet (a whole route for one
+/// choice): the alternative is on screen, named in its own script, and one tap
+/// away. `Cairo` is forced on the Arabic label so it reads correctly even while
+/// the app is still in English.
+class _LanguageChoice extends StatelessWidget {
+  const _LanguageChoice({required this.isArabic, required this.onSelect});
+
+  final bool isArabic;
+  final ValueChanged<bool> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: AppColor.surfaceAlt,
+        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+      ),
+      child: Row(
+        children: <Widget>[
+          _Segment(
+            label: 'English',
+            fontFamily: 'Inter',
+            selected: !isArabic,
+            onTap: () => onSelect(false),
+          ),
+          _Segment(
+            label: 'العربية',
+            fontFamily: 'Cairo',
+            selected: isArabic,
+            onTap: () => onSelect(true),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Segment extends StatelessWidget {
+  const _Segment({
+    required this.label,
+    required this.fontFamily,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final String fontFamily;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Semantics(
+        selected: selected,
+        button: true,
+        child: GestureDetector(
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 140),
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: selected ? Colors.white : Colors.transparent,
+              borderRadius: BorderRadius.circular(AppDimens.radiusCard - 3),
+              border: selected
+                  ? Border.all(color: AppColor.hairline)
+                  : null,
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontFamily: fontFamily,
+                fontSize: 14,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: selected ? AppColor.brandDeep : AppColor.inkMuted,
+              ),
             ),
           ),
         ),

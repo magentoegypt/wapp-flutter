@@ -71,7 +71,7 @@ abstract final class AppTheme {
     );
 
     return base.copyWith(
-      scaffoldBackgroundColor: isLight ? const Color(0xFFF6F9F6) : const Color(0xFF0D1310),
+      scaffoldBackgroundColor: isLight ? AppColor.groundLight : AppColor.groundDark,
       textTheme: _textTheme(brightness).apply(fontFamily: fontFor(languageCode)),
 
       // The app bar is brand green with white content on every screen that has
@@ -85,7 +85,7 @@ abstract final class AppTheme {
 
       cardTheme: CardThemeData(
         elevation: 0,
-        color: isLight ? Colors.white : const Color(0xFF141C17),
+        color: isLight ? Colors.white : AppColor.surfaceDark,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppDimens.radiusCardLarge),
         ),
@@ -123,7 +123,7 @@ abstract final class AppTheme {
       ),
 
       dividerTheme: DividerThemeData(
-        color: isLight ? AppColor.hairline : const Color(0xFF243029),
+        color: isLight ? AppColor.hairline : AppColor.hairlineDark,
         thickness: 1,
         space: 1,
       ),
@@ -134,7 +134,7 @@ abstract final class AppTheme {
       ),
 
       bottomSheetTheme: BottomSheetThemeData(
-        backgroundColor: isLight ? Colors.white : const Color(0xFF141C17),
+        backgroundColor: isLight ? Colors.white : AppColor.surfaceDark,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(
             top: Radius.circular(AppDimens.radiusCardLarge),

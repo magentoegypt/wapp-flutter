@@ -129,13 +129,15 @@ class CampaignDetailScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(AppDimens.gutter),
-                  child: FilledButton(
-                    onPressed: c.status == CampaignStatus.draft ? () {} : null,
-                    child: Text(l10n.cpSend),
-                  ),
-                ),
+                // No bottom CTA on purpose. This slot held a "Send campaign"
+                // button whose onPressed was `() {}` — it looked live on a
+                // draft and did nothing. There is no send endpoint to wire it
+                // to (campaign_repository exposes only list/byUid/meta/create),
+                // and the frame's own CTA here is "View full report", which has
+                // no endpoint either. A control that cannot work is worse than
+                // no control, especially one a user would read as "broadcast to
+                // my customers". The `cpSend` string is kept for when the API
+                // gains the endpoint.
               ],
             ),
           );

@@ -35,7 +35,7 @@ class MessageBubble extends StatelessWidget {
 
     final Color background = isOutgoing
         ? (isLight ? AppColor.bubbleOut : const Color(0xFF1F3A26))
-        : (isLight ? Colors.white : const Color(0xFF141C17));
+        : (isLight ? Colors.white : AppColor.surfaceDark);
 
     return Align(
       alignment: isOutgoing

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_dimens.dart';
 
 /// The uppercase group heading that repeats on 14 of the 20 screens.
@@ -75,7 +76,11 @@ class SectionHeader extends StatelessWidget {
                     .textTheme
                     .labelMedium
                     ?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
+                      // brandDeep, not the scheme primary: primary is the
+                      // fill-only brand green, which does not reach AA as text
+                      // on white. The palette documents brandDeep for exactly
+                      // this case.
+                      color: AppColor.brandDeep,
                       fontWeight: FontWeight.w600,
                     ),
               ),

@@ -123,10 +123,10 @@ class MessageComposerState extends State<MessageComposer> {
           vertical: 8,
         ),
         decoration: BoxDecoration(
-          color: isLight ? Colors.white : const Color(0xFF141C17),
+          color: isLight ? Colors.white : AppColor.surfaceDark,
           border: Border(
             top: BorderSide(
-              color: isLight ? AppColor.hairline : const Color(0xFF243029),
+              color: isLight ? AppColor.hairline : AppColor.hairlineDark,
             ),
           ),
         ),

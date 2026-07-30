@@ -135,13 +135,11 @@ class AgentDetailScreen extends ConsumerWidget {
                   ],
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.all(AppDimens.gutter),
-                child: FilledButton(
-                  onPressed: () {},
-                  child: Text(l10n.agAssign),
-                ),
-              ),
+              // No bottom CTA on purpose — see campaign_detail_screen for the
+              // same call. This was an "Assign a conversation" button with an
+              // empty onPressed; agent_repository has no assign method and the
+              // API exposes no such endpoint, so it could never do anything.
+              // `agAssign` is kept for when it can.
             ],
           ),
         ),

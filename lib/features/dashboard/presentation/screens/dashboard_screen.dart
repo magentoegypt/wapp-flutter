@@ -24,6 +24,16 @@ import '../../domain/dashboard_summary.dart';
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
+  /// The greeting was a single hardcoded "Good morning", so it was wrong for
+  /// most of the working day. Boundaries follow the usual English reading:
+  /// afternoon from noon, evening from 17:00.
+  static String _greetingFor(AppLocalizations l10n) {
+    final int hour = DateTime.now().hour;
+    if (hour < 12) return l10n.dashboardGreetingMorning;
+    if (hour < 17) return l10n.dashboardGreetingAfternoon;
+    return l10n.dashboardGreetingEvening;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l10n = AppLocalizations.of(context);
@@ -36,7 +46,7 @@ class DashboardScreen extends ConsumerWidget {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          _GreetingHeader(greeting: l10n.dashboardGreeting, name: agentName),
+          _GreetingHeader(greeting: _greetingFor(l10n), name: agentName),
           Expanded(
             child: AsyncValueView<DashboardSummary>(
               value: summary,
@@ -197,7 +207,8 @@ class _GreetingHeader extends StatelessWidget {
                   ],
                 ),
               ),
-              if (name.isNotEmpty) InitialsAvatar(name: name, size: 36),
+              if (name.isNotEmpty)
+                InitialsAvatar.onBrand(name: name, size: 36),
             ],
           ),
         ),

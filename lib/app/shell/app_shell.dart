@@ -68,17 +68,20 @@ class _BottomBar extends StatelessWidget {
   final ValueChanged<int> onTap;
   final List<String> labels;
 
+  // Home is a house and Contacts a single figure, per the frames. The previous
+  // dashboard/grid pairing made Home and More nearly indistinguishable at tab
+  // size — both read as a four-panel glyph.
   static const List<IconData> _icons = <IconData>[
-    Icons.dashboard_outlined,
+    Icons.home_outlined,
     Icons.chat_bubble_outline,
-    Icons.people_outline,
+    Icons.person_outline,
     Icons.grid_view_outlined,
   ];
 
   static const List<IconData> _activeIcons = <IconData>[
-    Icons.dashboard,
+    Icons.home,
     Icons.chat_bubble,
-    Icons.people,
+    Icons.person,
     Icons.grid_view,
   ];
 
@@ -88,10 +91,10 @@ class _BottomBar extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: isLight ? Colors.white : const Color(0xFF141C17),
+        color: isLight ? Colors.white : AppColor.surfaceDark,
         border: Border(
           top: BorderSide(
-            color: isLight ? AppColor.hairline : const Color(0xFF243029),
+            color: isLight ? AppColor.hairline : AppColor.hairlineDark,
           ),
         ),
       ),
