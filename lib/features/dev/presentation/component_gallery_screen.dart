@@ -98,8 +98,13 @@ class _ComponentGalleryScreenState extends State<ComponentGalleryScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
+                  // The header sizes itself now, so the gallery lets it —
+                  // pinning a height here would show a size the app never uses.
                   SizedBox(
-                    height: AppDimens.headerSearch,
+                    height: const AppHeader.search(
+                      title: '',
+                      searchHint: '',
+                    ).preferredSize.height,
                     child: AppHeader.search(
                       title: 'Inbox',
                       searchHint: 'Search conversations',

@@ -111,14 +111,36 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
 
   bool get _isSearch => searchHint != null;
 
+  // Content metrics, so the header can be sized from what it contains rather
+  // than from a fixed box the content has to fit inside. The handoff's 182 was
+  // such a box: whatever the title, field and status-bar inset did not use
+  // became dead green under the field, and shrinking it to fit left so little
+  // slack that the clear button appearing overflowed the header mid-typing.
+  static const double _titleLine = 34;
+  static const double _fieldHeight = 48;
+  static const double _topPad = 8;
+  static const double _titleToField = 12;
+
+  /// Space between the search field and the header's bottom edge. The frames
+  /// measure 18-24 logical px across inbox, contacts and agents.
+  static const double _bottomPad = 20;
+
   @override
-  Size get preferredSize => Size.fromHeight(
-        _titleOnly
-            ? AppDimens.headerTitle
-            : _isSearch
-                ? AppDimens.headerSearch
-                : AppDimens.headerBack,
-      );
+  Size get preferredSize {
+    if (!_isSearch && !_titleOnly) {
+      return const Size.fromHeight(AppDimens.headerBack);
+    }
+    final double content = _topPad +
+        _titleLine +
+        (_isSearch ? _titleToField + _fieldHeight : 0) +
+        _bottomPad;
+    // Content only — no status-bar inset. Scaffold already grows the app bar
+    // by the top padding, and the SafeArea inside applies it again to the
+    // content, so adding it here counted it a third time: measured on device,
+    // that left 60 logical px of dead green under the field where the frames
+    // have 18-24.
+    return Size.fromHeight(content);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -336,14 +358,28 @@ class _SearchFieldState extends State<_SearchField> {
           minWidth: 38,
           minHeight: 38,
         ),
+        // A plain sized tap target, not an IconButton: IconButton brings its
+        // own minimum metrics and grew the field the moment the clear button
+        // appeared, overflowing the header by 16px mid-typing. This matches the
+        // prefix's 38x38 exactly, so the field is the same height in both
+        // states.
         suffixIcon: showClear
-            ? IconButton(
-                onPressed: _clear,
-                icon: const Icon(Icons.close, size: 17),
-                color: AppColor.inkFaint,
-                tooltip: MaterialLocalizations.of(context).deleteButtonTooltip,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+            ? Semantics(
+                button: true,
+                label: MaterialLocalizations.of(context).deleteButtonTooltip,
+                child: InkWell(
+                  onTap: _clear,
+                  customBorder: const CircleBorder(),
+                  child: const SizedBox(
+                    width: 38,
+                    height: 38,
+                    child: Icon(
+                      Icons.close,
+                      size: 17,
+                      color: AppColor.inkFaint,
+                    ),
+                  ),
+                ),
               )
             : null,
         suffixIconConstraints: const BoxConstraints(
