@@ -163,6 +163,23 @@ class InternalNotesScreen extends ConsumerWidget {
             sendLabel: l10n.notesAdd,
             onSend: (String body) => _add(ref, body),
           ),
+          // The frame carries the privacy reminder as a caption under the
+          // composer, not inside the placeholder. Folded into the hint it made
+          // the field wrap to three lines, and it vanished the moment anyone
+          // started typing — which is exactly when it matters.
+          Container(
+            width: double.infinity,
+            color: Colors.white,
+            padding: const EdgeInsetsDirectional.only(
+              start: AppDimens.gutter,
+              end: AppDimens.gutter,
+              bottom: 10,
+            ),
+            child: Text(
+              l10n.notesPrivateCaption,
+              style: Theme.of(context).textTheme.labelMedium,
+            ),
+          ),
         ],
       ),
     );

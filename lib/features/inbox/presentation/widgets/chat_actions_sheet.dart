@@ -29,6 +29,19 @@ Future<void> showChatActionsSheet(
   );
 }
 
+/// Dismisses the sheet and explains why the action did not happen.
+///
+/// These rows have no endpoint in the mobile API. Closing the sheet and doing
+/// nothing looks exactly like a failure, so the user is told the capability
+/// lives in the web console rather than being left to guess.
+void _unavailable(BuildContext context) {
+  final AppLocalizations l10n = AppLocalizations.of(context);
+  Navigator.of(context).pop();
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(l10n.caNotAvailable)),
+  );
+}
+
 class _ChatActionsSheet extends StatelessWidget {
   const _ChatActionsSheet({
     required this.contactUid,
@@ -85,29 +98,34 @@ class _ChatActionsSheet extends StatelessWidget {
                 context.push(AppRoutes.chatNotes(contactUid));
               },
             ),
+            // Everything below Internal note has no endpoint in the mobile API.
+            // They stay in the sheet because the frame lists them and the
+            // product intends them, but they no longer dismiss in silence —
+            // tapping and having nothing happen is indistinguishable from a bug,
+            // so each says where the action does exist.
             ActionSheetRow(
               label: l10n.caSnooze,
               icon: Icons.snooze_outlined,
               tint: AppColor.info,
-              onTap: () => Navigator.of(context).pop(),
+              onTap: () => _unavailable(context),
             ),
             ActionSheetRow(
               label: l10n.caTransfer,
               icon: Icons.swap_horiz,
               tint: AppColor.success,
-              onTap: () => Navigator.of(context).pop(),
+              onTap: () => _unavailable(context),
             ),
             ActionSheetRow(
               label: l10n.caQualityReview,
               icon: Icons.star_outline,
               tint: AppColor.warning,
-              onTap: () => Navigator.of(context).pop(),
+              onTap: () => _unavailable(context),
             ),
             ActionSheetRow(
               label: l10n.caSendTemplate,
               icon: Icons.send_outlined,
               tint: AppColor.info,
-              onTap: () => Navigator.of(context).pop(),
+              onTap: () => _unavailable(context),
             ),
             // The three call/history rows are one neutral group in the frame.
             // Tinting two of them green and blue implied a state or severity
@@ -116,25 +134,25 @@ class _ChatActionsSheet extends StatelessWidget {
               label: l10n.caCallHistory,
               icon: Icons.call_outlined,
               tint: AppColor.inkMuted,
-              onTap: () => Navigator.of(context).pop(),
+              onTap: () => _unavailable(context),
             ),
             ActionSheetRow(
               label: l10n.caRequestCall,
               icon: Icons.perm_phone_msg_outlined,
               tint: AppColor.inkMuted,
-              onTap: () => Navigator.of(context).pop(),
+              onTap: () => _unavailable(context),
             ),
             ActionSheetRow(
               label: l10n.caHistoryAccess,
               icon: Icons.history,
               tint: AppColor.inkMuted,
-              onTap: () => Navigator.of(context).pop(),
+              onTap: () => _unavailable(context),
             ),
             ActionSheetRow(
               label: l10n.caClearHistory,
               icon: Icons.delete_outline,
               destructive: true,
-              onTap: () => Navigator.of(context).pop(),
+              onTap: () => _unavailable(context),
             ),
             const SizedBox(height: 8),
           ],

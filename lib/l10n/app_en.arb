@@ -85,7 +85,7 @@
   "@notesPrivacyNotice": {
     "description": "Brand-wash banner. The sticky-note styling plus this line are what make note privacy legible at a glance."
   },
-  "notesComposerHint": "Add an internal note… only your team can see this",
+  "notesComposerHint": "Add an internal note…",
   "notesAdd": "Add note",
   "notesEmptyTitle": "No notes yet",
   "notesCount": "{count, plural, =0{No notes} =1{1 note} other{{count} notes}}",
@@ -321,6 +321,8 @@
   "moreViewProfile": "View profile",
   "moreSearchHint": "Search",
   "chatNoTextBody": "(no text)",
+  "caNotAvailable": "Not available in the app yet — use the web console.",
+  "notesPrivateCaption": "Only your team can see this.",
   "notesEditTitle": "Edit note",
   "cvStatusOpen": "Open",
   "cvStatusPending": "Pending",

@@ -306,8 +306,13 @@ class _QuickReplyEditorScreenState
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _body,
+                      // Capped at five lines and then scrolls internally. At ten
+                      // a long reply grew the field until the variable chips,
+                      // PREVIEW and Delete were pushed off the bottom — the
+                      // frame keeps the field a fixed block so the rest of the
+                      // form stays reachable.
                       minLines: 4,
-                      maxLines: 10,
+                      maxLines: 5,
                       decoration: InputDecoration(labelText: l10n.qrMessage),
                       validator: (String? v) => (v == null || v.trim().isEmpty)
                           ? l10n.qrMessageRequired
