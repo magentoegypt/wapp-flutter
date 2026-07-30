@@ -18,6 +18,7 @@ class AppListTile extends StatelessWidget {
     this.onTap,
     this.showChevron = true,
     this.dense = false,
+    this.titleColor,
     super.key,
   });
 
@@ -28,6 +29,11 @@ class AppListTile extends StatelessWidget {
   final VoidCallback? onTap;
   final bool showChevron;
   final bool dense;
+
+  /// Overrides the title ink. For destructive rows — Sign out, Clear chat
+  /// history — which the frames render in danger red rather than as a bordered
+  /// button somewhere else on the screen.
+  final Color? titleColor;
 
   @override
   Widget build(BuildContext context) {
@@ -54,7 +60,10 @@ class AppListTile extends StatelessWidget {
                     title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+                    style: text.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: titleColor,
+                    ),
                   ),
                   if (subtitle != null) ...<Widget>[
                     const SizedBox(height: 2),

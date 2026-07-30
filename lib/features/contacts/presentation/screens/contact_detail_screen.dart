@@ -43,7 +43,9 @@ class ContactDetailScreen extends ConsumerWidget {
           children: <Widget>[
             const SizedBox(height: 20),
             Center(
-              child: InitialsAvatar(
+              // Filled deep green with light initials, as the frame draws the
+              // hero — the hash-tinted pastels are for list rows.
+              child: InitialsAvatar.onBrand(
                 name: c.name.isEmpty ? c.phone : c.name,
                 size: AppDimens.avatarHero,
               ),

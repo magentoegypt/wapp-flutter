@@ -6,6 +6,8 @@ import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_dimens.dart';
 import '../../../../core/localization/locale_controller.dart';
+import '../../../../core/widgets/agent_avatar.dart';
+import '../../../../core/widgets/app_header.dart';
 import '../../../../core/widgets/app_list_tile.dart';
 import '../../../../core/widgets/initials_avatar.dart';
 import '../../../../core/widgets/section_label.dart';
@@ -27,21 +29,30 @@ class MoreScreen extends ConsumerWidget {
     final bool isArabic = ref.watch(isRtlProvider);
 
     return Scaffold(
+      // The frame has a proper screen title with the agent avatar, and the
+      // profile card sits *below* it as a white card. The card had absorbed the
+      // header entirely, so the screen had no title at all.
+      // Title only — the frame's More header is the title and the avatar, with
+      // no search field.
+      appBar: AppHeader.title(
+        title: l10n.moreTitle,
+        trailing: const AgentAvatar(),
+      ),
       body: ListView(
-        padding: EdgeInsets.zero,
+        padding: const EdgeInsets.only(bottom: 24),
         children: <Widget>[
-          _AccountHeader(
+          _ProfileCard(
             name: auth.session?.user.name ?? '',
-            vendor: auth.session?.vendor.name ?? '',
+            role: auth.session?.user.role ?? '',
             onTap: () => context.go(AppRoutes.profile),
           ),
 
-          SectionLabel(l10n.moreTitle),
-          AppListTile(
-            title: l10n.moreQuickReplies,
-            leading: const IconTile(icon: Icons.bolt_outlined, color: AppColor.info),
-            onTap: () => context.push(AppRoutes.quickReplies),
-          ),
+          // WORKSPACE / ACCOUNT, per the frame. "MORE" duplicated the screen
+          // title and "LANGUAGE" named a single control rather than the group it
+          // belongs to.
+          SectionLabel(l10n.moreWorkspace),
+          // Campaigns first, per the frame — it is the destination people come
+          // to this screen for.
           AppListTile(
             title: l10n.moreCampaigns,
             leading: const IconTile(
@@ -51,6 +62,14 @@ class MoreScreen extends ConsumerWidget {
             onTap: () => context.push(AppRoutes.campaigns),
           ),
           AppListTile(
+            title: l10n.moreQuickReplies,
+            leading: const IconTile(
+              icon: Icons.bolt_outlined,
+              color: AppColor.info,
+            ),
+            onTap: () => context.push(AppRoutes.quickReplies),
+          ),
+          AppListTile(
             title: l10n.moreAgents,
             leading: const IconTile(
               icon: Icons.groups_outlined,
@@ -58,25 +77,19 @@ class MoreScreen extends ConsumerWidget {
             ),
             onTap: () => context.push(AppRoutes.agents),
           ),
-          AppListTile(
-            title: l10n.moreProfile,
-            leading: const IconTile(
-              icon: Icons.person_outline,
-              color: AppColor.brandDeep,
-            ),
-            onTap: () => context.go(AppRoutes.profile),
-          ),
+          // No Templates or Bot Flows rows. The frame lists both, but neither
+          // screen exists in this app and neither has an endpoint, so the rows
+          // would be dead links.
 
-          SectionLabel(l10n.moreLanguage),
-          // A Switch was the wrong affordance here: language is a choice
-          // between two named options, not an on/off state, and "Language /
-          // English" beside an unlabelled toggle gave no clue what enabling it
-          // would do. Both options are now visible with the active one marked.
+          SectionLabel(l10n.moreAccount),
+          // Language is a choice between two named options, not an on/off state
+          // — a Switch here gave no clue what enabling it would do.
           Padding(
             padding: const EdgeInsetsDirectional.only(
               start: AppDimens.gutter,
               end: AppDimens.gutter,
-              bottom: 4,
+              top: 2,
+              bottom: 8,
             ),
             child: _LanguageChoice(
               isArabic: isArabic,
@@ -87,21 +100,18 @@ class MoreScreen extends ConsumerWidget {
               },
             ),
           ),
-
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.all(AppDimens.gutter),
-            child: OutlinedButton.icon(
-              onPressed: () =>
-                  ref.read(authControllerProvider.notifier).logout(),
-              icon: const Icon(Icons.logout, size: 18),
-              label: Text(l10n.moreSignOut),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColor.danger,
-                minimumSize: const Size.fromHeight(48),
-                side: const BorderSide(color: AppColor.dangerWash),
-              ),
+          // Sign out is a destructive row in the frame, not a bordered button
+          // floating at the end of the scroll — it belongs in the ACCOUNT group
+          // with the rest of the account actions.
+          AppListTile(
+            title: l10n.moreSignOut,
+            titleColor: AppColor.danger,
+            leading: const IconTile(
+              icon: Icons.logout,
+              color: AppColor.danger,
             ),
+            showChevron: false,
+            onTap: () => ref.read(authControllerProvider.notifier).logout(),
           ),
         ],
       ),
@@ -109,64 +119,68 @@ class MoreScreen extends ConsumerWidget {
   }
 }
 
-class _AccountHeader extends StatelessWidget {
-  const _AccountHeader({
+/// The signed-in agent's card under the header.
+///
+/// Tapping it opens Profile, which is why there is no separate Profile row: the
+/// frame reaches the profile from here, and a row as well would be two
+/// affordances for one destination.
+class _ProfileCard extends StatelessWidget {
+  const _ProfileCard({
     required this.name,
-    required this.vendor,
+    required this.role,
     required this.onTap,
   });
 
   final String name;
-  final String vendor;
+  final String role;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+
     return Container(
-      color: AppColor.brand,
-      child: SafeArea(
-        bottom: false,
-        child: InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(AppDimens.gutter),
-            child: Row(
-              children: <Widget>[
-                InitialsAvatar.onBrand(
-                  name: name.isEmpty ? '?' : name,
-                  size: AppDimens.avatarHero,
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                      ),
-                      if (vendor.isNotEmpty)
-                        Text(
-                          vendor,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 12.5,
-                            color: Colors.white70,
+      color: Colors.white,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(AppDimens.gutter),
+          child: Row(
+            children: <Widget>[
+              InitialsAvatar.onBrand(
+                name: name.isEmpty ? '?' : name,
+                size: AppDimens.avatarList,
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
                           ),
-                        ),
-                    ],
-                  ),
+                    ),
+                    Text(
+                      <String>[
+                        if (role.isNotEmpty) role,
+                        l10n.moreViewProfile,
+                      ].join(' · '),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
                 ),
-                const Icon(Icons.chevron_right, color: Colors.white70),
-              ],
-            ),
+              ),
+              const Icon(
+                Icons.chevron_right,
+                color: AppColor.inkFaint,
+              ),
+            ],
           ),
         ),
       ),

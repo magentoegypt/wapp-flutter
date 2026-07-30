@@ -25,7 +25,30 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
         onSearchChanged = null,
         onSearchTap = null,
         trailing = null,
-        showBack = false;
+        showBack = false,
+        _titleOnly = false;
+
+  /// Large title with an optional trailing widget, and no search field.
+  ///
+  /// For a tab root that owns a title but nothing to search — More is the only
+  /// one today. Without this the screen had to borrow the search variant and
+  /// carry a field the frame does not have.
+  const AppHeader.title({
+    required this.title,
+    this.trailing,
+    super.key,
+  })  : subtitle = null,
+        subtitleTrailing = null,
+        avatar = null,
+        actions = null,
+        leading = null,
+        onBack = null,
+        onTitleTap = null,
+        searchHint = null,
+        onSearchChanged = null,
+        onSearchTap = null,
+        showBack = false,
+        _titleOnly = true;
 
   /// Title + search variant, used by the tab roots that own a list.
   ///
@@ -46,7 +69,10 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
         actions = null,
         leading = null,
         onBack = null,
-        onTitleTap = null;
+        onTitleTap = null,
+        _titleOnly = false;
+
+  final bool _titleOnly;
 
   final String title;
   final String? subtitle;
@@ -87,7 +113,11 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Size get preferredSize => Size.fromHeight(
-        _isSearch ? AppDimens.headerSearch : AppDimens.headerBack,
+        _titleOnly
+            ? AppDimens.headerTitle
+            : _isSearch
+                ? AppDimens.headerSearch
+                : AppDimens.headerBack,
       );
 
   @override
@@ -100,9 +130,33 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
           padding: const EdgeInsetsDirectional.symmetric(
             horizontal: AppDimens.gutter,
           ),
-          child: _isSearch ? _buildSearch(context) : _buildBack(context),
+          child: _titleOnly
+              ? _buildTitleOnly(context)
+              : _isSearch
+                  ? _buildSearch(context)
+                  : _buildBack(context),
         ),
       ),
+    );
+  }
+
+  Widget _buildTitleOnly(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        Expanded(
+          child: Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+          ),
+        ),
+        if (trailing != null) trailing!,
+      ],
     );
   }
 

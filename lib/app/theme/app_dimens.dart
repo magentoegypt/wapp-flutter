@@ -16,6 +16,10 @@ abstract final class AppDimens {
   static const double headerBack = 96;
   static const double headerSearch = 182;
 
+  /// Title-only header: the search variant's 182 minus the field and its gap.
+  /// Used by a tab root that has a title but nothing to search.
+  static const double headerTitle = 110;
+
   /// Floating compose button, inset by [gutter] from both edges.
   static const double fab = 56;
 
