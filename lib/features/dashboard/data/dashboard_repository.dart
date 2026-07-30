@@ -36,7 +36,52 @@ DashboardSummary dashboardFromJson(Map<String, dynamic> json) {
     inboundToday: asInt(s['inboundToday']),
     outboundToday: asInt(s['outboundToday']),
     queued: asInt(s['queued']),
+    avgFirstResponseSeconds: asInt(
+      s['avgFirstResponseSeconds'] ?? json['avgFirstResponseSeconds'],
+    ),
+    // series7d and agentQueue sit beside `stats` in some shapes and inside it
+    // in others; both are read tolerantly and simply stay empty if neither
+    // matches, so an unexpected shape hides a section rather than crashing it.
+    series7d: _series(json['series7d'] ?? s['series7d']),
+    agentQueue: _queue(json['agentQueue'] ?? s['agentQueue']),
   );
+}
+
+List<DaySeriesPoint> _series(Object? raw) {
+  if (raw is! List) return const <DaySeriesPoint>[];
+  final List<DaySeriesPoint> out = <DaySeriesPoint>[];
+  for (final Object? e in raw) {
+    if (e is! Map) continue;
+    final DateTime? day =
+        DateTime.tryParse('${e['date'] ?? e['day'] ?? ''}')?.toLocal();
+    if (day == null) continue;
+    final Object? v = e['count'] ?? e['total'] ?? e['conversations'] ?? e['value'];
+    out.add(DaySeriesPoint(
+      date: day,
+      count: v is num ? v.round() : int.tryParse('${v ?? ''}') ?? 0,
+    ));
+  }
+  out.sort((DaySeriesPoint a, DaySeriesPoint b) => a.date.compareTo(b.date));
+  return out;
+}
+
+List<QueueEntry> _queue(Object? raw) {
+  if (raw is! List) return const <QueueEntry>[];
+  final List<QueueEntry> out = <QueueEntry>[];
+  for (final Object? e in raw) {
+    if (e is! Map) continue;
+    final String uid = '${e['contactUid'] ?? e['uid'] ?? ''}';
+    if (uid.isEmpty) continue;
+    final Object? unread = e['unread'] ?? e['unreadCount'];
+    out.add(QueueEntry(
+      contactUid: uid,
+      name: '${e['name'] ?? e['waId'] ?? ''}',
+      lastMessage: (e['lastMessage'] ?? e['last_message']) as String?,
+      unreadCount:
+          unread is num ? unread.round() : int.tryParse('${unread ?? ''}') ?? 0,
+    ));
+  }
+  return out;
 }
 
 final dashboardRepositoryProvider = Provider<DashboardRepository>(

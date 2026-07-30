@@ -1,26 +1,34 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_dimens.dart';
+import '../../../../core/widgets/app_list_tile.dart';
 import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/initials_avatar.dart';
 import '../../../../core/widgets/section_label.dart';
 import '../../../../core/widgets/stat_card.dart';
+import '../../../../core/widgets/status_pill.dart';
+import '../../../../core/widgets/weekly_bar_chart.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../auth/presentation/auth_controller.dart';
 import '../../data/dashboard_repository.dart';
 import '../../domain/dashboard_summary.dart';
 
-/// Dashboard — Figma 38:1032, adapted to the metrics the API exposes.
+/// Dashboard — Figma 38:1032.
 ///
-/// The frame specified Resolved today / Avg. response / CSAT plus a seven-day
-/// chart and an agent queue. `GET /dashboard` provides none of those, so the
-/// screen is built from the eight metrics that do exist, keeping the frame's
-/// greeting header and 2×2 stat-card idiom. The unassigned count is given the
-/// warning tone because it is the one number an agent should act on.
+/// The frame's seven-day chart and "My queue" list are here as of the 30 Jul
+/// API pass, which added `series7d` and `agentQueue`. Both render only when the
+/// API actually sends them: an all-zero chart would read as a quiet week rather
+/// than as missing data.
+///
+/// Resolved today and CSAT are still absent, deliberately. Nothing records when
+/// a conversation was resolved and CSAT is not collected, so either card would
+/// be permanently zero. The unassigned count keeps the warning tone because it
+/// is the one number an agent should act on.
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
@@ -141,6 +149,76 @@ class DashboardScreen extends ConsumerWidget {
                         ],
                       ),
                     ),
+
+                    // The frame's weekly chart. Drawn only when the API sent a
+                    // series — an all-zero chart reads as "a quiet week" rather
+                    // than "no data", which is a different and wrong claim.
+                    if (d.series7d.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: 8),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppDimens.gutter,
+                        ),
+                        child: ChartCard(
+                          title: l10n.dashboardWeek,
+                          // Seven flat bars at zero are accurate but
+                          // indistinguishable from a chart that failed to
+                          // draw. When the whole week is zero, say so.
+                          child: d.series7d.every(
+                                  (DaySeriesPoint p) => p.count == 0)
+                              ? Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 28,
+                                  ),
+                                  child: Text(
+                                    l10n.dashboardWeekQuiet,
+                                    textAlign: TextAlign.center,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium,
+                                  ),
+                                )
+                              : WeeklyBarChart(
+                            data: <BarDatum>[
+                              for (final DaySeriesPoint p in d.series7d)
+                                BarDatum(
+                                  label: DateFormat.E(
+                                    Localizations.localeOf(context)
+                                        .toLanguageTag(),
+                                  ).format(p.date).characters.first.toString(),
+                                  value: p.count,
+                                ),
+                            ],
+                            semanticsLabel: l10n.dashboardWeek,
+                          ),
+                        ),
+                      ),
+                    ],
+
+                    // "My queue · See all", per the frame.
+                    if (d.agentQueue.isNotEmpty) ...<Widget>[
+                      SectionHeader(
+                        title: l10n.dashboardMyQueue,
+                        actionLabel: l10n.actionSeeAll,
+                        onAction: () => context.go(AppRoutes.chats),
+                      ),
+                      for (final QueueEntry q in d.agentQueue)
+                        AppListTile(
+                          title: q.name,
+                          subtitle: q.lastMessage,
+                          leading: InitialsAvatar(name: q.name),
+                          showChevron: false,
+                          trailing: q.unreadCount > 0
+                              ? StatusPill(
+                                  label: '${q.unreadCount}',
+                                  tone: StatusTone.success,
+                                  showDot: false,
+                                )
+                              : null,
+                          onTap: () =>
+                              context.push(AppRoutes.chat(q.contactUid)),
+                        ),
+                    ],
 
                     const SizedBox(height: 20),
                     Padding(
