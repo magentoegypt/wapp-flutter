@@ -185,5 +185,12 @@
   "dashboardNewContacts": "جهات اتصال جديدة",
   "dashboardTotalContacts": "إجمالي جهات الاتصال",
   "dashboardOpenInbox": "فتح صندوق الوارد",
-  "acGroups": "المجموعات"
+  "acGroups": "المجموعات",
+  "loginWelcome": "مرحبًا بعودتك 👋",
+  "loginWorkspaceHint": "سجّل الدخول إلى مساحة عملك",
+  "loginForgotPassword": "نسيت كلمة المرور؟",
+  "loginNoAccount": "ليس لديك حساب؟ تواصل مع مدير مساحة العمل.",
+  "loginTagline": "منصة واتساب للأعمال",
+  "loginEmailHint": "you@company.com",
+  "loginPasswordHint": "كلمة المرور"
 }

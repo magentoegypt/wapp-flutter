@@ -32,7 +32,7 @@
   "loginPasswordLabel": "Password",
   "loginEmailRequired": "Enter your email address.",
   "loginPasswordRequired": "Enter your password.",
-  "loginSubmit": "Sign in",
+  "loginSubmit": "Log in",
   "actionRetry": "Retry",
   "actionCancel": "Cancel",
   "actionSave": "Save",
@@ -220,5 +220,12 @@
   "dashboardNewContacts": "New contacts",
   "dashboardTotalContacts": "Total contacts",
   "dashboardOpenInbox": "Open inbox",
-  "acGroups": "Groups"
+  "acGroups": "Groups",
+  "loginWelcome": "Welcome back 👋",
+  "loginWorkspaceHint": "Log in to your workspace",
+  "loginForgotPassword": "Forgot password?",
+  "loginNoAccount": "Don't have an account? Contact your workspace admin.",
+  "loginTagline": "WhatsApp Business Platform",
+  "loginEmailHint": "you@company.com",
+  "loginPasswordHint": "Your password"
 }

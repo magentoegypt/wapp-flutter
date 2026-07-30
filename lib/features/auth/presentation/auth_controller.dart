@@ -51,15 +51,28 @@ class AuthController extends Notifier<AuthState> {
 
   AuthRepository get _repo => ref.read(authRepositoryProvider);
 
+  /// How long the branded splash stays up at minimum.
+  ///
+  /// Session restore is often faster than a frame or two, which made the splash
+  /// flash and disappear. This is a floor, not a sleep: it runs *concurrently*
+  /// with the network call below, so a slow restore is never made slower — the
+  /// wait only applies when resolving finished early.
+  static const Duration _minimumSplash = Duration(milliseconds: 1800);
+
   Future<void> _restore() async {
+    // Started before any awaiting so the clock covers the whole restore.
+    final Future<void> floor = Future<void>.delayed(_minimumSplash);
     try {
       if (!await _repo.hasStoredToken()) {
+        await floor;
         state = state.copyWith(status: AuthStatus.signedOut);
         return;
       }
       final Session session = await _repo.me();
+      await floor;
       state = state.copyWith(status: AuthStatus.signedIn, session: session);
     } catch (error, stack) {
+      await floor;
       // Catch **everything**, not just Failure. A parse or cast error escaping
       // here would leave status on `unknown`, and the router's redirect treats
       // `unknown` as "hold on Login" — stranding the app at the sign-in screen

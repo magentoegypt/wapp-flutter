@@ -7,11 +7,17 @@ import '../../../../core/error/failure.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../auth_controller.dart';
 
-/// Sign in with the agent's own credentials — Figma 289:4.
+/// Sign in — Figma 289:4.
 ///
-/// Deliberately per-agent rather than a workspace-wide key: the token issued
-/// here is scoped to this person and this device, so message attribution is
-/// correct and revoking one employee doesn't disturb the rest of the team.
+/// The frame is a green brand hero with a white sheet lifted over it, not a
+/// plain white form. An earlier version of this screen was written from the
+/// token tables before the rendered frames were available and diverged badly:
+/// no hero, inverted logo colours, no field labels, wrong copy. This is built
+/// against the frame.
+///
+/// Credentials are per-agent by design: the token issued here is scoped to this
+/// person and this device, so message attribution is correct and revoking one
+/// employee doesn't disturb the rest of the team.
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -34,11 +40,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
-    // No navigation on success. The router's redirect owns post-login routing:
-    // it restores a deep link captured before the session resolved, falling
-    // back to Home. Calling context.go(home) here raced that and always won,
-    // so a link that sent the user to Login — the most common case — was
-    // consumed and then discarded, landing them on Home instead.
+    // No navigation here — the router's redirect owns post-login routing so a
+    // deep link captured before the session resolved is honoured.
     await ref.read(authControllerProvider.notifier).login(
           email: _email.text.trim(),
           password: _password.text,
@@ -50,58 +53,57 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final AuthState auth = ref.watch(authControllerProvider);
     final Failure? failure = auth.failure;
-
-    // Field-level messages when the server returns 422, otherwise one banner.
     final ValidationFailure? validation =
         failure is ValidationFailure ? failure : null;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColor.brand,
+      // resizeToAvoidBottomInset keeps the sheet above the keyboard rather than
+      // letting the hero squash it.
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppDimens.gutter,
-              vertical: 32,
-            ),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
+        child: Column(
+          children: <Widget>[
+            const Expanded(child: _BrandHero()),
+            _Sheet(
               child: Form(
                 key: _formKey,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    const _Wordmark(),
-                    const SizedBox(height: 28),
                     Text(
-                      l10n.loginTitle,
+                      l10n.loginWelcome,
                       style: Theme.of(context).textTheme.displayLarge,
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 4),
                     Text(
-                      l10n.loginSubtitle,
+                      l10n.loginWorkspaceHint,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
 
                     if (failure != null && validation == null) ...<Widget>[
                       _ErrorBanner(message: failure.message),
                       const SizedBox(height: 14),
                     ],
 
+                    _FieldLabel(l10n.loginEmailLabel),
                     TextFormField(
                       controller: _email,
                       keyboardType: TextInputType.emailAddress,
                       autofillHints: const <String>[AutofillHints.username],
                       textInputAction: TextInputAction.next,
                       decoration: InputDecoration(
-                        labelText: l10n.loginEmailLabel,
+                        hintText: l10n.loginEmailHint,
                         errorText: validation?.forField('email'),
                       ),
-                      validator: (String? v) =>
-                          (v == null || v.trim().isEmpty) ? l10n.loginEmailRequired : null,
+                      validator: (String? v) => (v == null || v.trim().isEmpty)
+                          ? l10n.loginEmailRequired
+                          : null,
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
+
+                    _FieldLabel(l10n.loginPasswordLabel),
                     TextFormField(
                       controller: _password,
                       obscureText: _obscure,
@@ -109,21 +111,36 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       textInputAction: TextInputAction.done,
                       onFieldSubmitted: (_) => _submit(),
                       decoration: InputDecoration(
-                        labelText: l10n.loginPasswordLabel,
+                        hintText: l10n.loginPasswordHint,
                         errorText: validation?.forField('password'),
                         suffixIcon: IconButton(
                           onPressed: () => setState(() => _obscure = !_obscure),
                           icon: Icon(
-                            _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                            _obscure
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
                             size: 20,
                           ),
                           color: AppColor.inkFaint,
                         ),
                       ),
-                      validator: (String? v) =>
-                          (v == null || v.isEmpty) ? l10n.loginPasswordRequired : null,
+                      validator: (String? v) => (v == null || v.isEmpty)
+                          ? l10n.loginPasswordRequired
+                          : null,
                     ),
-                    const SizedBox(height: 22),
+
+                    const SizedBox(height: 10),
+                    Align(
+                      alignment: AlignmentDirectional.centerEnd,
+                      child: TextButton(
+                        // Recovery is handled by the web console today; this is
+                        // the frame's affordance, wired to a no-op until the
+                        // API exposes a reset endpoint.
+                        onPressed: null,
+                        child: Text(l10n.loginForgotPassword),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
 
                     FilledButton(
                       onPressed: auth.busy ? null : _submit,
@@ -138,45 +155,121 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             )
                           : Text(l10n.loginSubmit),
                     ),
+                    const SizedBox(height: 16),
+                    Text(
+                      l10n.loginNoAccount,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.labelMedium,
+                    ),
                   ],
                 ),
               ),
             ),
-          ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _Wordmark extends StatelessWidget {
-  const _Wordmark();
+/// Green hero: white tile with the brand initial, wordmark and tagline beneath,
+/// all reversed out of the brand green.
+class _BrandHero extends StatelessWidget {
+  const _BrandHero();
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: <Widget>[
-        Container(
-          width: 44,
-          height: 44,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: AppColor.brand,
-            borderRadius: BorderRadius.circular(12),
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Container(
+            width: 64,
+            height: 64,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: const Text(
+              'C',
+              style: TextStyle(
+                fontSize: 34,
+                fontWeight: FontWeight.w700,
+                color: AppColor.brand,
+              ),
+            ),
           ),
-          child: const Icon(Icons.chat_bubble, color: Colors.white, size: 22),
+          const SizedBox(height: 14),
+          const Text(
+            'Clickalize',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            AppLocalizations.of(context).loginTagline,
+            style: const TextStyle(fontSize: 12, color: Colors.white70),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// White card lifted over the hero, rounded on its top corners only.
+class _Sheet extends StatelessWidget {
+  const _Sheet({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(
+          AppDimens.gutter,
+          24,
+          AppDimens.gutter,
+          24,
         ),
-        const SizedBox(width: 10),
-        const Text(
-          'Clickalize',
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-            color: AppColor.ink,
+        child: child,
+      ),
+    );
+  }
+}
+
+/// Field caption sitting above its input, per the frame — the previous version
+/// relied on placeholders, which vanish as soon as the user types.
+class _FieldLabel extends StatelessWidget {
+  const _FieldLabel(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(bottom: 6, start: 2),
+      child: Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: Text(
+          text,
+          style: const TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
+            color: AppColor.inkMuted,
           ),
         ),
-      ],
+      ),
     );
   }
 }
