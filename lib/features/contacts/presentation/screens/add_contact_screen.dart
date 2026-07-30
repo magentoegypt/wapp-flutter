@@ -12,8 +12,10 @@ import '../../domain/contact.dart';
 
 /// Add contact — Figma 290:137.
 ///
-/// Bottom-pinned CTA per the handoff: a Column with a Spacer before the button,
-/// mirroring the flex spacer in the Figma frame.
+/// Presented as a modal: Cancel and Save live in the header, not on a
+/// bottom-pinned button. The handoff's "bottom-pinned CTA" note applies to the
+/// detail screens; this frame is a sheet, and a form you can abandon needs its
+/// escape hatch beside its commit.
 class AddContactScreen extends ConsumerStatefulWidget {
   const AddContactScreen({super.key});
 
@@ -23,7 +25,10 @@ class AddContactScreen extends ConsumerStatefulWidget {
 
 class _AddContactScreenState extends ConsumerState<AddContactScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final TextEditingController _name = TextEditingController();
+  // Split per the frame. The API still takes a single `name`, so the two are
+  // joined at the call site rather than changing the contract.
+  final TextEditingController _firstName = TextEditingController();
+  final TextEditingController _lastName = TextEditingController();
   final TextEditingController _phone = TextEditingController();
   final TextEditingController _email = TextEditingController();
 
@@ -35,7 +40,8 @@ class _AddContactScreenState extends ConsumerState<AddContactScreen> {
 
   @override
   void dispose() {
-    _name.dispose();
+    _firstName.dispose();
+    _lastName.dispose();
     _phone.dispose();
     _email.dispose();
     super.dispose();
@@ -50,7 +56,10 @@ class _AddContactScreenState extends ConsumerState<AddContactScreen> {
 
     try {
       await ref.read(contactRepositoryProvider).create(
-            name: _name.text.trim(),
+            // Single API field; the frame splits the input, not the contract.
+            name: <String>[_firstName.text.trim(), _lastName.text.trim()]
+                .where((String p) => p.isNotEmpty)
+                .join(' '),
             phone: _phone.text.trim(),
             email: _email.text.trim().isEmpty ? null : _email.text.trim(),
             groupIds: _groupIds.toList(),
@@ -75,7 +84,42 @@ class _AddContactScreenState extends ConsumerState<AddContactScreen> {
     final AsyncValue<ContactMeta> meta = ref.watch(contactMetaProvider);
 
     return Scaffold(
-      appBar: AppHeader.back(title: l10n.acTitle),
+      appBar: AppHeader.back(
+        title: l10n.acTitle,
+        // Cancel replaces the back arrow: this is a modal, and an arrow implies
+        // you can return to something rather than discard what you typed.
+        leading: TextButton(
+          onPressed: _saving ? null : () => context.pop(),
+          child: Text(
+            l10n.actionCancel,
+            style: const TextStyle(color: Colors.white),
+          ),
+        ),
+        actions: <Widget>[
+          _saving
+              ? const Padding(
+                  padding: EdgeInsetsDirectional.only(end: 12),
+                  child: SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  ),
+                )
+              : TextButton(
+                  onPressed: _save,
+                  child: Text(
+                    l10n.actionSave,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+        ],
+      ),
       body: SafeArea(
         child: Form(
           key: _formKey,
@@ -85,16 +129,33 @@ class _AddContactScreenState extends ConsumerState<AddContactScreen> {
                 child: ListView(
                   padding: const EdgeInsets.all(AppDimens.gutter),
                   children: <Widget>[
-                    TextFormField(
-                      controller: _name,
-                      textInputAction: TextInputAction.next,
-                      decoration: InputDecoration(
-                        labelText: l10n.acName,
-                        errorText: _validation?.forField('name'),
-                      ),
-                      validator: (String? v) => (v == null || v.trim().isEmpty)
-                          ? l10n.acNameRequired
-                          : null,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Expanded(
+                          child: TextFormField(
+                            controller: _firstName,
+                            textInputAction: TextInputAction.next,
+                            decoration: InputDecoration(
+                              labelText: l10n.acFirstName,
+                              errorText: _validation?.forField('name'),
+                            ),
+                            validator: (String? v) =>
+                                (v == null || v.trim().isEmpty)
+                                    ? l10n.acNameRequired
+                                    : null,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _lastName,
+                            textInputAction: TextInputAction.next,
+                            decoration:
+                                InputDecoration(labelText: l10n.acLastName),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
@@ -103,7 +164,7 @@ class _AddContactScreenState extends ConsumerState<AddContactScreen> {
                       textInputAction: TextInputAction.next,
                       decoration: InputDecoration(
                         labelText: l10n.acPhone,
-                        hintText: '+20 100 234 5678',
+                        hintText: l10n.acPhoneHint,
                         errorText: _validation?.forField('phone'),
                       ),
                       validator: (String? v) => (v == null || v.trim().isEmpty)
@@ -185,22 +246,8 @@ class _AddContactScreenState extends ConsumerState<AddContactScreen> {
                   },
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.all(AppDimens.gutter),
-                child: FilledButton(
-                  onPressed: _saving ? null : _save,
-                  child: _saving
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Text(l10n.actionSave),
-                ),
-              ),
+              // No bottom-pinned Save — it moved into the header alongside
+              // Cancel, where the frame puts it.
             ],
           ),
         ),
