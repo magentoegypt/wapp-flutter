@@ -17,7 +17,9 @@ import '../features/auth/presentation/auth_controller.dart';
 import '../features/contacts/presentation/screens/add_contact_screen.dart';
 import '../features/contacts/presentation/screens/contact_detail_screen.dart';
 import '../features/contacts/presentation/screens/contacts_screen.dart';
+import '../features/auth/presentation/screens/forgot_password_screen.dart';
 import '../features/auth/presentation/screens/login_screen.dart';
+import '../features/auth/presentation/screens/reset_password_screen.dart';
 import '../features/auth/presentation/screens/splash_screen.dart';
 import '../features/dashboard/presentation/screens/dashboard_screen.dart';
 import '../features/dev/presentation/component_gallery_screen.dart';
@@ -73,7 +75,11 @@ final Provider<GoRouter> routerProvider = Provider<GoRouter>((Ref ref) {
       if (location.startsWith('/dev/')) return null;
 
       final bool onSplash = location == AppRoutes.splash;
-      final bool onLogin = location == AppRoutes.login;
+      // Password recovery is part of the signed-out surface: the redirect must
+      // let these through or it bounces straight back to Login.
+      final bool onLogin = location == AppRoutes.login ||
+          location == AppRoutes.forgotPassword ||
+          location == AppRoutes.resetPassword;
 
       switch (status) {
         // Still validating a stored token. Hold on the splash so the sign-in
@@ -104,6 +110,15 @@ final Provider<GoRouter> routerProvider = Provider<GoRouter>((Ref ref) {
       GoRoute(
         path: AppRoutes.splash,
         builder: (_, __) => const SplashScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.forgotPassword,
+        builder: (_, __) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.resetPassword,
+        builder: (_, GoRouterState state) =>
+            ResetPasswordScreen(email: state.extra as String?),
       ),
       GoRoute(
         path: AppRoutes.login,

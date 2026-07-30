@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_dimens.dart';
 import '../../../../core/error/failure.dart';
 import '../../../../core/widgets/brand_mark.dart';
-import '../../../../core/widgets/text_prompt_dialog.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../data/auth_repository.dart';
 import '../auth_controller.dart';
 
 /// Sign in — Figma 289:4.
@@ -39,47 +39,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     _email.dispose();
     _password.dispose();
     super.dispose();
-  }
-
-  /// Requests a reset link for whatever address is in the email field.
-  ///
-  /// The confirmation deliberately does not say whether an account was found:
-  /// the endpoint answers 200 either way to avoid being an enumeration oracle,
-  /// and a UI that said "we found you" would give away exactly what the API is
-  /// withholding.
-  /// Requests a reset link for whatever address is in the email field.
-  ///
-  /// The confirmation deliberately does not say whether an account was found:
-  /// the endpoint answers 200 either way to avoid being an enumeration oracle,
-  /// and a UI that said "we found you" would give away exactly what the API is
-  /// withholding.
-  Future<void> _forgotPassword() async {
-    final AppLocalizations l10n = AppLocalizations.of(context);
-    final String? email = await showTextPromptDialog(
-      context,
-      title: l10n.loginForgotPassword,
-      message: l10n.loginResetPrompt,
-      confirmLabel: l10n.loginResetSend,
-      hintText: l10n.loginEmailHint,
-      initialValue: _email.text.trim(),
-      keyboardType: TextInputType.emailAddress,
-    );
-    if (email == null) return;
-
-    try {
-      await ref.read(authRepositoryProvider).forgotPassword(email);
-    } on Failure catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.message)));
-      }
-      return;
-    }
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.loginResetSent)),
-      );
-    }
   }
 
   Future<void> _submit() async {
@@ -177,7 +136,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     Align(
                       alignment: AlignmentDirectional.centerEnd,
                       child: TextButton(
-                        onPressed: auth.busy ? null : _forgotPassword,
+                        onPressed: auth.busy ? null : () => context.push(AppRoutes.forgotPassword),
                         child: Text(l10n.loginForgotPassword),
                       ),
                     ),

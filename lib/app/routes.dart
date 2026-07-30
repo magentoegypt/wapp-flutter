@@ -11,6 +11,8 @@ abstract final class AppRoutes {
   /// the user there if the resolved state never reaches the router.
   static const String splash = '/splash';
   static const String login = '/login';
+  static const String forgotPassword = '/forgot-password';
+  static const String resetPassword = '/reset-password';
 
   // Tab roots — these live inside the StatefulShellRoute branches.
   static const String home = '/home';

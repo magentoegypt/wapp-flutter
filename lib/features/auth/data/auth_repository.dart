@@ -30,6 +30,14 @@ abstract interface class AuthRepository {
   /// 200-vs-500 difference would be an account-enumeration oracle. So the UI
   /// must never claim the address was found.
   Future<void> forgotPassword(String email);
+
+  /// Completes a reset with the code from the emailed link. Revokes every
+  /// token on success, so other devices are signed out.
+  Future<void> resetPassword({
+    required String email,
+    required String token,
+    required String password,
+  });
 }
 
 class AuthRepositoryImpl implements AuthRepository {
@@ -43,6 +51,25 @@ class AuthRepositoryImpl implements AuthRepository {
     await _api.post(
       '/auth/forgot-password',
       body: <String, dynamic>{'email': email},
+    );
+  }
+
+  @override
+  Future<void> resetPassword({
+    required String email,
+    required String token,
+    required String password,
+  }) async {
+    await _api.post(
+      '/auth/reset-password',
+      body: <String, dynamic>{
+        'email': email,
+        'token': token,
+        'password': password,
+        // Laravel's reset rule is `confirmed`, so it wants the repeat field
+        // alongside. The screen validates the match before we get here.
+        'password_confirmation': password,
+      },
     );
   }
 
