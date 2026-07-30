@@ -51,3 +51,8 @@ config/local.json
 # (pubspec has generate: true), so committing it just churns three files every
 # time one string changes.
 lib/l10n/app_localizations*.dart
+
+# Device captures taken while verifying a change. docs/frames/ is for the Figma
+# reference frames, which are committed; screenshots off a phone are throwaway.
+docs/frames/device-*.png
+docs/frames/seq-*.png

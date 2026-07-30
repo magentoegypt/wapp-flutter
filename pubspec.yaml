@@ -41,6 +41,11 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^5.0.0
 
+  # Build-time only — these generate native icon/splash resources from the
+  # sources in tool/branding/ and are never linked into the app.
+  flutter_launcher_icons: ^0.14.1
+  flutter_native_splash: ^2.4.4
+
 flutter:
   uses-material-design: true
   generate: true
@@ -57,3 +62,56 @@ flutter:
     - family: Cairo
       fonts:
         - asset: assets/fonts/Cairo.ttf
+
+# Launcher icon. Sources live in tool/branding/ (build-time inputs, kept out of
+# assets/ so they are not bundled into the APK) and are rasterised from
+# assets/branding/logo.svg.
+#
+# The mark is green-on-white and not tintable, so the icon is a green logo on a
+# white ground rather than the reverse — the same treatment as BrandMark inside
+# the app. Regenerate with:
+#   dart run flutter_launcher_icons
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "tool/branding/icon_legacy.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "tool/branding/icon_fg.png"
+  remove_alpha_ios: true
+  web:
+    generate: true
+    image_path: "tool/branding/icon_legacy.png"
+    background_color: "#ffffff"
+    theme_color: "#00bf63"
+  windows:
+    generate: true
+    image_path: "tool/branding/icon_legacy.png"
+
+# Native launch screen, shown before the Flutter engine draws its first frame.
+# Without this the cold start flashed the platform default — black on a
+# dark-mode device — before jumping to the green in-app splash.
+#
+# Android 12+ (API 31) ignores the legacy windowBackground drawable and uses its
+# own splash API, configured separately below.
+#
+# The white disc behind the mark is baked into splash_a12.png rather than set via
+# `icon_background_color`. That attribute maps to
+# windowSplashScreenIconBackgroundColor, which stock Android draws as a circle
+# but HyperOS draws as a hard-edged square — verified on a Redmi running API 36.
+# Baking the shape in removes the OEM from the decision, and a disc is the right
+# shape to bake because Android 12+ masks splash icons to a circle anyway, so the
+# platform's own mask becomes a no-op.
+#
+# Pre-31 devices keep the rounded tile (splash_legacy.png), which matches
+# BrandMark in the app.
+# Regenerate with:
+#   dart run flutter_native_splash:create
+flutter_native_splash:
+  color: "#00bf63"
+  image: tool/branding/splash_legacy.png
+  android: true
+  ios: true
+  web: false
+  android_12:
+    color: "#00bf63"
+    image: tool/branding/splash_a12.png
