@@ -22,6 +22,14 @@ abstract interface class AuthRepository {
   Future<Session> me();
 
   Future<bool> hasStoredToken();
+
+  /// Asks the API to email a reset link.
+  ///
+  /// Always resolves for a well-formed address, whether or not an account
+  /// exists — the endpoint answers 200 either way on purpose, because a
+  /// 200-vs-500 difference would be an account-enumeration oracle. So the UI
+  /// must never claim the address was found.
+  Future<void> forgotPassword(String email);
 }
 
 class AuthRepositoryImpl implements AuthRepository {
@@ -29,6 +37,14 @@ class AuthRepositoryImpl implements AuthRepository {
 
   final ApiClient _api;
   final SecureTokenStore _tokens;
+
+  @override
+  Future<void> forgotPassword(String email) async {
+    await _api.post(
+      '/auth/forgot-password',
+      body: <String, dynamic>{'email': email},
+    );
+  }
 
   @override
   Future<Session> login({

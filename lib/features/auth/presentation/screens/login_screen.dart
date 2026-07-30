@@ -6,6 +6,7 @@ import '../../../../app/theme/app_dimens.dart';
 import '../../../../core/error/failure.dart';
 import '../../../../core/widgets/brand_mark.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../data/auth_repository.dart';
 import '../auth_controller.dart';
 
 /// Sign in — Figma 289:4.
@@ -37,6 +38,66 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     _email.dispose();
     _password.dispose();
     super.dispose();
+  }
+
+  /// Requests a reset link for whatever address is in the email field.
+  ///
+  /// The confirmation deliberately does not say whether an account was found:
+  /// the endpoint answers 200 either way to avoid being an enumeration oracle,
+  /// and a UI that said "we found you" would give away exactly what the API is
+  /// withholding.
+  Future<void> _forgotPassword() async {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final TextEditingController field =
+        TextEditingController(text: _email.text.trim());
+
+    final String? email = await showDialog<String>(
+      context: context,
+      builder: (BuildContext c) => AlertDialog(
+        title: Text(l10n.loginForgotPassword),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(l10n.loginResetPrompt),
+            const SizedBox(height: 12),
+            TextField(
+              controller: field,
+              autofocus: true,
+              keyboardType: TextInputType.emailAddress,
+              decoration: InputDecoration(hintText: l10n.loginEmailHint),
+            ),
+          ],
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(c).pop(),
+            child: Text(l10n.actionCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(c).pop(field.text.trim()),
+            child: Text(l10n.loginResetSend),
+          ),
+        ],
+      ),
+    );
+    field.dispose();
+    if (email == null || email.isEmpty) return;
+
+    try {
+      await ref.read(authRepositoryProvider).forgotPassword(email);
+    } on Failure catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.message)));
+      }
+      return;
+    }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.loginResetSent)),
+      );
+    }
   }
 
   Future<void> _submit() async {
@@ -134,10 +195,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     Align(
                       alignment: AlignmentDirectional.centerEnd,
                       child: TextButton(
-                        // Recovery is handled by the web console today; this is
-                        // the frame's affordance, wired to a no-op until the
-                        // API exposes a reset endpoint.
-                        onPressed: null,
+                        onPressed: auth.busy ? null : _forgotPassword,
                         child: Text(l10n.loginForgotPassword),
                       ),
                     ),

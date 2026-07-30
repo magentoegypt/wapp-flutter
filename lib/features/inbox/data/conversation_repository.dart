@@ -180,6 +180,7 @@ ChatMessage chatMessageFromJson(Map<String, dynamic> j) {
     sentAt: _date(j['messagedAt']),
     status: j['status'] as String?,
     agentName: (j['agent'] ?? j['agent_name']) as String?,
+    receivedOn: (j['receivedOn'] ?? j['received_on']) as String?,
   );
 }
 

@@ -81,9 +81,14 @@ class ConversationInfoScreen extends ConsumerWidget {
             const SizedBox(height: 18),
             _QuickActions(contactUid: contactUid, phone: t.phone, l10n: l10n),
 
-            if (details.isNotEmpty) ...<Widget>[
+            if (details.isNotEmpty || _receivedOn(t) != null) ...<Widget>[
               SectionLabel(l10n.ciContactDetails),
               ...details,
+              // Which workspace number the customer reached. Taken from the
+              // most recent message that carries one rather than the newest
+              // outright, so an outbound-only tail does not blank the row.
+              if (_receivedOn(t) != null)
+                _DetailRow(label: l10n.ciReceivedOn, value: _receivedOn(t)!),
             ],
 
             SectionLabel(l10n.ciServiceWindow),
@@ -157,10 +162,20 @@ class ConversationInfoScreen extends ConsumerWidget {
     );
   }
 
+  /// The number this conversation arrived on, or null if no message carries
+  /// one.
+  String? _receivedOn(ChatThread t) {
+    for (final ChatMessage m in t.messages.reversed) {
+      final String? on = m.receivedOn;
+      if (on != null && on.isNotEmpty) return on;
+    }
+    return null;
+  }
+
   /// The CONTACT DETAILS block, restricted to fields the customer record
   /// actually carries.
   ///
-  /// The frame also lists Channel, Received on, Customer status and Language.
+  /// The frame also lists Channel, Customer status and Language.
   /// None of them exist on [Contact] or in the conversation payload, and a
   /// row rendered from nothing reads as a fact — so they are left out until
   /// the API carries them.

@@ -36,9 +36,6 @@ import '../../data/campaign_repository.dart';
       CampaignExecution.na => (label: l10n.campNa, tone: StatusTone.neutral),
     };
 
-/// Free-text filter over the loaded campaign list.
-final campaignSearchProvider = StateProvider<String>((Ref ref) => '');
-
 /// Which half of the list is showing. Archive is terminal states only.
 final campaignArchivedProvider = StateProvider<bool>((Ref ref) => false);
 
@@ -51,7 +48,6 @@ class CampaignsScreen extends ConsumerWidget {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final AsyncValue<List<Campaign>> rows = ref.watch(campaignListProvider);
     final String locale = Localizations.localeOf(context).toLanguageTag();
-    final String query = ref.watch(campaignSearchProvider).trim().toLowerCase();
     final bool archived = ref.watch(campaignArchivedProvider);
 
     return Scaffold(
@@ -82,11 +78,11 @@ class CampaignsScreen extends ConsumerWidget {
               message: l10n.campEmptyMessage,
             );
           }
-          final List<Campaign> shown = items
-              .where((Campaign c) => c.isArchived == archived)
-              .where((Campaign c) =>
-                  query.isEmpty || c.title.toLowerCase().contains(query))
-              .toList();
+          // Only the Active/Archive split is client-side; the text query went
+          // to the API, so filtering by it again here would narrow a result set
+          // that is already narrowed.
+          final List<Campaign> shown =
+              items.where((Campaign c) => c.isArchived == archived).toList();
 
           return RefreshIndicator(
             onRefresh: () async => ref.invalidate(campaignListProvider),

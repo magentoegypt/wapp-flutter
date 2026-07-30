@@ -103,6 +103,7 @@ class ChatMessage {
     required this.sentAt,
     this.status,
     this.agentName,
+    this.receivedOn,
   });
 
   final String uid;
@@ -115,4 +116,10 @@ class ChatMessage {
 
   /// Which agent sent it, for per-bubble attribution in a shared inbox.
   final String? agentName;
+
+  /// The workspace WhatsApp number this message came in on, from the API's
+  /// `receivedOn`. Populated for 1241/1241 rows server-side; it was simply
+  /// never emitted before, which is why the frame's "Received on" row rendered
+  /// blank.
+  final String? receivedOn;
 }

@@ -64,7 +64,7 @@ class CampaignMeta {
 }
 
 abstract interface class CampaignRepository {
-  Future<List<Campaign>> list();
+  Future<List<Campaign>> list({String? query});
   Future<Campaign> byUid(String uid);
   Future<CampaignMeta> meta();
   Future<void> create({
@@ -81,8 +81,16 @@ class CampaignRepositoryImpl implements CampaignRepository {
   final ApiClient _api;
 
   @override
-  Future<List<Campaign>> list() async {
-    final dynamic body = await _api.get('/campaigns');
+  Future<List<Campaign>> list({String? query}) async {
+    // `?q=` is served by the API as of the 30 Jul pass; the screen used to
+    // filter the loaded page itself, which only ever searched what had already
+    // been fetched.
+    final dynamic body = await _api.get(
+      '/campaigns',
+      query: <String, dynamic>{
+        if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
+      },
+    );
     if (body is List) {
       return body.whereType<Map<String, dynamic>>().map(campaignFromJson).toList();
     }
@@ -196,8 +204,12 @@ final campaignRepositoryProvider = Provider<CampaignRepository>(
   (Ref ref) => CampaignRepositoryImpl(ref.watch(apiClientProvider)),
 );
 
+/// Free-text filter, sent to the API rather than applied to the loaded page.
+final campaignSearchProvider = StateProvider<String>((Ref ref) => '');
+
 final campaignListProvider = FutureProvider.autoDispose<List<Campaign>>((Ref ref) {
-  return ref.watch(campaignRepositoryProvider).list();
+  final String q = ref.watch(campaignSearchProvider);
+  return ref.watch(campaignRepositoryProvider).list(query: q);
 });
 
 final campaignDetailProvider =

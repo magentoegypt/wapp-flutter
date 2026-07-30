@@ -26,6 +26,15 @@ class _FakeAuthRepository implements AuthRepository {
   @override
   Future<bool> hasStoredToken() async => signedIn;
 
+  /// Records the request without a network call. The real endpoint answers 200
+  /// whether or not the address exists, so there is nothing to branch on.
+  String? forgotPasswordEmail;
+
+  @override
+  Future<void> forgotPassword(String email) async {
+    forgotPasswordEmail = email;
+  }
+
   @override
   Future<Session> me() async {
     if (!signedIn) throw const AuthFailureStub();
