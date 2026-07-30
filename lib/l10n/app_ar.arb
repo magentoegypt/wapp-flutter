@@ -229,6 +229,27 @@
       }
     }
   },
+  "campSearchHint": "ابحث في الحملات",
+  "campActive": "الجارية",
+  "campArchive": "الأرشيف",
+  "campNotScheduled": "غير مجدولة",
+  "campSentCount": "{count, plural, zero{لم تُرسل} one{أُرسلت واحدة} two{أُرسلت اثنتان} few{أُرسلت {count}} many{أُرسلت {count}} other{أُرسلت {count}}}",
+  "@campSentCount": {
+    "placeholders": {
+      "count": {
+        "type": "num",
+        "format": "compact"
+      }
+    }
+  },
+  "campDeliveredPct": "{pct}٪ وصلت",
+  "@campDeliveredPct": {
+    "placeholders": {
+      "pct": {
+        "type": "int"
+      }
+    }
+  },
   "notesEditTitle": "تعديل الملاحظة",
   "cvStatusOpen": "مفتوحة",
   "cvStatusPending": "معلّقة",

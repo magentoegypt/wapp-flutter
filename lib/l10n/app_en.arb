@@ -270,6 +270,27 @@
       }
     }
   },
+  "campSearchHint": "Search campaigns",
+  "campActive": "Active",
+  "campArchive": "Archive",
+  "campNotScheduled": "Not scheduled",
+  "campSentCount": "{count, plural, =1{1 sent} other{{count} sent}}",
+  "@campSentCount": {
+    "placeholders": {
+      "count": {
+        "type": "num",
+        "format": "compact"
+      }
+    }
+  },
+  "campDeliveredPct": "{pct}% delivered",
+  "@campDeliveredPct": {
+    "placeholders": {
+      "pct": {
+        "type": "int"
+      }
+    }
+  },
   "notesEditTitle": "Edit note",
   "cvStatusOpen": "Open",
   "cvStatusPending": "Pending",
