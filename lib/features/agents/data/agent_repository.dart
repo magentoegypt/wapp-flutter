@@ -57,16 +57,23 @@ class AgentRepositoryImpl implements AgentRepository {
     return rows.whereType<Map<String, dynamic>>().map(agentFromJson).toList();
   }
 
-  /// There is no `GET /agents/{uid}` on the API - it returns 404 - so the
-  /// record is resolved from the list instead. Swap this for a direct fetch
-  /// if that endpoint is ever added; the signature will not change.
+  /// `GET /agents/{uid}` exists as of the 30 Jul API pass and is vendor-scoped
+  /// through the `vendor_users` pivot — a foreign or unknown uid 404s
+  /// identically. This used to filter the whole list client-side because the
+  /// endpoint returned 404 for everything.
   @override
   Future<Agent> byUid(String uid) async {
-    final List<Agent> all = await list();
-    return all.firstWhere(
-      (Agent a) => a.uid == uid,
-      orElse: () => throw const NotFoundFailure('That teammate no longer exists.'),
-    );
+    final dynamic body = await _api.get('/agents/$uid');
+    final Map<String, dynamic> m =
+        (body as Map<String, dynamic>?) ?? const <String, dynamic>{};
+    // Singular key, matching the rest of the API's detail endpoints, with a
+    // bare-body fallback.
+    final Map<String, dynamic> row =
+        (m['agent'] as Map<String, dynamic>?) ?? m;
+    if (row.isEmpty) {
+      throw const NotFoundFailure('That teammate no longer exists.');
+    }
+    return agentFromJson(row);
   }
 }
 

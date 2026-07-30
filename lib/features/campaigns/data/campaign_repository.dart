@@ -3,14 +3,27 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
 import '../../contacts/domain/contact.dart' show NamedRef;
 
-/// Campaign lifecycle. Backend stores these as integers on `campaigns.status`.
-enum CampaignStatus { draft, scheduled, running, completed, failed }
+/// Record lifecycle — the `status` field, `campaigns.status`.
+///
+/// Says whether the campaign record is live, held or filed away. It says
+/// nothing about whether anything was sent, which is why it is not what a badge
+/// should show.
+enum CampaignLifecycle { active, paused, archived }
+
+/// Send progress — the `executionStatus` field.
+///
+/// The stable machine value, and the one to branch on. The client used to parse
+/// `statusText`, which is a translated display label; anything unrecognised fell
+/// back to a `draft` state that **does not exist anywhere in the campaign
+/// domain**, so every campaign was mislabelled. There is no draft.
+enum CampaignExecution { upcoming, awaiting, processing, executed, paused, na }
 
 class Campaign {
   const Campaign({
     required this.uid,
     required this.title,
-    required this.status,
+    required this.lifecycle,
+    required this.execution,
     this.templateName,
     this.scheduledAt,
     this.totalContacts = 0,
@@ -22,7 +35,12 @@ class Campaign {
 
   final String uid;
   final String title;
-  final CampaignStatus status;
+  final CampaignLifecycle lifecycle;
+  final CampaignExecution execution;
+
+  /// Filed away rather than live. Drives the Active/Archive split; paused
+  /// campaigns stay under Active because they are still someone's open work.
+  bool get isArchived => lifecycle == CampaignLifecycle.archived;
   final String? templateName;
   final DateTime? scheduledAt;
   final int totalContacts;
@@ -124,48 +142,45 @@ class CampaignRepositoryImpl implements CampaignRepository {
 
 int _int(Object? v) => v is num ? v.round() : int.tryParse('${v ?? ''}') ?? 0;
 
-CampaignStatus _status(Object? raw) {
-  if (raw is String) {
-    // The detail endpoint sends a human-readable `statusText` ("Draft",
-    // "Running"), not the lowercase enum name. Matching case-sensitively made
-    // every campaign fall back to Draft — which is not a cosmetic mis-label:
-    // Campaign detail gates the Send button on `status == draft`, so an
-    // already-sent campaign would offer to send again.
-    final String key = raw.trim().toLowerCase();
-    for (final CampaignStatus s in CampaignStatus.values) {
-      if (s.name == key) return s;
-    }
-    // A numeric value arriving as a string must still reach the integer map
-    // below rather than being swallowed by the string branch.
-    final int? asInt = int.tryParse(key);
-    if (asInt != null) return _statusFromInt(asInt);
-    return CampaignStatus.draft;
+/// Parses an enum by name, case- and whitespace-insensitively.
+///
+/// Unrecognised values fall to [fallback] rather than to a guess: an unknown
+/// label used to become `draft`, and Campaign detail gated its Send button on
+/// exactly that, so a finished campaign offered to send again.
+T _enumByName<T extends Enum>(Object? raw, List<T> values, T fallback) {
+  final String key = '${raw ?? ''}'.trim().toLowerCase();
+  for (final T v in values) {
+    if (v.name.toLowerCase() == key) return v;
   }
-  return _statusFromInt(_int(raw));
+  return fallback;
 }
 
-CampaignStatus _statusFromInt(int value) => switch (value) {
-  1 => CampaignStatus.running,
-  2 => CampaignStatus.scheduled,
-  5 => CampaignStatus.completed,
-  6 => CampaignStatus.failed,
-  _ => CampaignStatus.draft,
-};
-
 Campaign campaignFromJson(Map<String, dynamic> j) {
-  // The list and the detail endpoint disagree on shape. The list puts
-  // `targeted` and `status` at the top level; the detail nests everything
-  // under `stats` and renames two of them - `opened` for read receipts and
-  // `unreached` for failures - and carries `statusText` instead of `status`.
-  // Reading only the list's names made the detail screen show Read 0 when the
-  // real figure was 2, which is worse than showing nothing.
+  // Detail is now a strict superset of a list row, but the stats still nest:
+  // detail puts them under `stats` and renames two — `opened` for read receipts
+  // and `unreached` for failures. Reading only the list's names made the detail
+  // screen show Read 0 when the real figure was 2.
+  //
+  // `statusText` is deliberately not read. It is a translated display label, so
+  // branching on it is locale-dependent by construction; the client renders its
+  // own localized label from `executionStatus` instead.
   final Map<String, dynamic> stats =
       (j['stats'] as Map<String, dynamic>?) ?? const <String, dynamic>{};
 
   return Campaign(
     uid: (j['uid'] ?? j['_uid'] ?? '').toString(),
     title: (j['title'] ?? '').toString(),
-    status: _status(j['status'] ?? j['statusText']),
+    lifecycle: _enumByName(
+      j['status'],
+      CampaignLifecycle.values,
+      CampaignLifecycle.active,
+    ),
+    execution: _enumByName(
+      j['executionStatus'] ?? j['execution_status'],
+      CampaignExecution.values,
+      CampaignExecution.na,
+    ),
+
     templateName: (j['templateName'] ?? j['template_name']) as String?,
     scheduledAt: DateTime.tryParse('${j['scheduledAt'] ?? ''}')?.toLocal(),
     // `targeted` is the audience size; `allContacts` means the whole book.

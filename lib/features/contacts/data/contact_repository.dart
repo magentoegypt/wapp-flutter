@@ -11,6 +11,7 @@ abstract interface class ContactRepository {
     required String name,
     required String phone,
     String? email,
+    String? countryCode,
     List<String> groupIds,
   });
 }
@@ -43,8 +44,9 @@ class ContactRepositoryImpl implements ContactRepository {
     // meta is flat under the envelope - no singular record key.
     final Map<String, dynamic> j =
         (body as Map<String, dynamic>?) ?? const <String, dynamic>{};
-    // `/contacts/meta` returns groups, labels, customFields and
-    // assignableUsers. There is no country list, so that stays empty.
+    // `/contacts/meta` carries 252 countries as of the 30 Jul API pass; it
+    // previously returned none, which is why the Add-contact country field was
+    // left out rather than shipped against an empty list.
     return ContactMeta(
       groups: _refs(j['groups']),
       labels: _refs(j['labels']),
@@ -57,6 +59,7 @@ class ContactRepositoryImpl implements ContactRepository {
     required String name,
     required String phone,
     String? email,
+    String? countryCode,
     List<String> groupIds = const <String>[],
   }) async {
     final dynamic body = await _api.post(
@@ -65,6 +68,7 @@ class ContactRepositoryImpl implements ContactRepository {
         'name': name,
         'phone': phone,
         if (email != null && email.isNotEmpty) 'email': email,
+        if (countryCode != null && countryCode.isNotEmpty) 'country': countryCode,
         if (groupIds.isNotEmpty) 'groups': groupIds,
       },
     );

@@ -34,7 +34,7 @@ class CampaignDetailScreen extends ConsumerWidget {
         value: campaign,
         onRetry: () => ref.invalidate(campaignDetailProvider(uid)),
         builder: (Campaign c) {
-          final badge = campaignBadge(l10n, c.status);
+          final badge = campaignBadge(l10n, c.execution);
           return SafeArea(
             child: Column(
               children: <Widget>[

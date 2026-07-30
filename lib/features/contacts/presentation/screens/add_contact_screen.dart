@@ -33,6 +33,11 @@ class _AddContactScreenState extends ConsumerState<AddContactScreen> {
   final TextEditingController _email = TextEditingController();
 
   bool _saving = false;
+
+  /// ISO code from `/contacts/meta`. Null means "not stated" rather than a
+  /// default — guessing a country from the dialling code would be wrong as
+  /// often as it was right.
+  String? _countryCode;
   ValidationFailure? _validation;
 
   /// Contact groups the new contact will join, keyed by group uid.
@@ -62,6 +67,7 @@ class _AddContactScreenState extends ConsumerState<AddContactScreen> {
                 .join(' '),
             phone: _phone.text.trim(),
             email: _email.text.trim().isEmpty ? null : _email.text.trim(),
+            countryCode: _countryCode,
             groupIds: _groupIds.toList(),
           );
       ref.invalidate(contactListProvider);
@@ -172,6 +178,36 @@ class _AddContactScreenState extends ConsumerState<AddContactScreen> {
                           : null,
                     ),
                     const SizedBox(height: 12),
+                    // Country, per the frame. Only rendered once the meta call
+                    // has actually returned a list — an empty dropdown is a
+                    // control that cannot be used.
+                    meta.maybeWhen(
+                      data: (ContactMeta m) => m.countries.isEmpty
+                          ? const SizedBox.shrink()
+                          : Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: DropdownButtonFormField<String>(
+                                initialValue: _countryCode,
+                                isExpanded: true,
+                                decoration: InputDecoration(
+                                  labelText: l10n.acCountry,
+                                ),
+                                items: <DropdownMenuItem<String>>[
+                                  for (final NamedRef c in m.countries)
+                                    DropdownMenuItem<String>(
+                                      value: c.id,
+                                      child: Text(
+                                        c.name,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                ],
+                                onChanged: (String? v) =>
+                                    setState(() => _countryCode = v),
+                              ),
+                            ),
+                      orElse: () => const SizedBox.shrink(),
+                    ),
                     TextFormField(
                       controller: _email,
                       keyboardType: TextInputType.emailAddress,

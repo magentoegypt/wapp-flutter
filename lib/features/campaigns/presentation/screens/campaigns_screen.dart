@@ -20,14 +20,20 @@ import '../../data/campaign_repository.dart';
 /// that render it so detail and list can never disagree.
 ({String label, StatusTone tone}) campaignBadge(
   AppLocalizations l10n,
-  CampaignStatus s,
+  CampaignExecution e,
 ) =>
-    switch (s) {
-      CampaignStatus.draft => (label: l10n.campDraft, tone: StatusTone.neutral),
-      CampaignStatus.scheduled => (label: l10n.campScheduled, tone: StatusTone.info),
-      CampaignStatus.running => (label: l10n.campRunning, tone: StatusTone.warning),
-      CampaignStatus.completed => (label: l10n.campCompleted, tone: StatusTone.success),
-      CampaignStatus.failed => (label: l10n.campFailed, tone: StatusTone.danger),
+    switch (e) {
+      CampaignExecution.upcoming =>
+        (label: l10n.campUpcoming, tone: StatusTone.info),
+      CampaignExecution.awaiting =>
+        (label: l10n.campAwaiting, tone: StatusTone.info),
+      CampaignExecution.processing =>
+        (label: l10n.campProcessing, tone: StatusTone.warning),
+      CampaignExecution.executed =>
+        (label: l10n.campCompleted, tone: StatusTone.success),
+      CampaignExecution.paused =>
+        (label: l10n.campPaused, tone: StatusTone.neutral),
+      CampaignExecution.na => (label: l10n.campNa, tone: StatusTone.neutral),
     };
 
 /// Free-text filter over the loaded campaign list.
@@ -35,11 +41,6 @@ final campaignSearchProvider = StateProvider<String>((Ref ref) => '');
 
 /// Which half of the list is showing. Archive is terminal states only.
 final campaignArchivedProvider = StateProvider<bool>((Ref ref) => false);
-
-/// A campaign is archived once it can no longer change on its own — completed
-/// or failed. Draft, scheduled and running are all still live work.
-bool isArchived(CampaignStatus s) =>
-    s == CampaignStatus.completed || s == CampaignStatus.failed;
 
 /// Campaigns — Figma 283:2.
 class CampaignsScreen extends ConsumerWidget {
@@ -82,7 +83,7 @@ class CampaignsScreen extends ConsumerWidget {
             );
           }
           final List<Campaign> shown = items
-              .where((Campaign c) => isArchived(c.status) == archived)
+              .where((Campaign c) => c.isArchived == archived)
               .where((Campaign c) =>
                   query.isEmpty || c.title.toLowerCase().contains(query))
               .toList();
@@ -105,14 +106,14 @@ class CampaignsScreen extends ConsumerWidget {
                       id: 'active',
                       label: l10n.campActive,
                       count: items
-                          .where((Campaign c) => !isArchived(c.status))
+                          .where((Campaign c) => !c.isArchived)
                           .length,
                     ),
                     FilterOption(
                       id: 'archive',
                       label: l10n.campArchive,
                       count: items
-                          .where((Campaign c) => isArchived(c.status))
+                          .where((Campaign c) => c.isArchived)
                           .length,
                     ),
                   ],
@@ -142,8 +143,8 @@ class CampaignsScreen extends ConsumerWidget {
                       // title, the delivery line and the status pill.
                       showChevron: false,
                       trailing: StatusPill(
-                        label: campaignBadge(l10n, c.status).label,
-                        tone: campaignBadge(l10n, c.status).tone,
+                        label: campaignBadge(l10n, c.execution).label,
+                        tone: campaignBadge(l10n, c.execution).tone,
                       ),
                       onTap: () => context.push(AppRoutes.campaign(c.uid)),
                     ),

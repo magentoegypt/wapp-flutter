@@ -161,7 +161,7 @@ class _ResultRow extends StatelessWidget {
   Widget _campaign(BuildContext context, Campaign c) {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final String locale = Localizations.localeOf(context).toLanguageTag();
-    final ({String label, StatusTone tone}) badge = campaignBadge(l10n, c.status);
+    final ({String label, StatusTone tone}) badge = campaignBadge(l10n, c.execution);
 
     return AppListTile(
       title: c.title,
