@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/widgets/brand_mark.dart';
 
 /// Shown while a stored token is validated against `GET /me`.
 ///
@@ -20,12 +21,12 @@ class SplashScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            Icon(Icons.chat_bubble, color: Colors.white, size: 40),
-            SizedBox(height: 16),
+            BrandMark(),
+            SizedBox(height: 14),
             Text(
               'Clickalize',
               style: TextStyle(
-                fontSize: 22,
+                fontSize: 24,
                 fontWeight: FontWeight.w700,
                 color: Colors.white,
               ),

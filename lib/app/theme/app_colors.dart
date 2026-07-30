@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
-/// Design tokens, transcribed verbatim from the Figma handoff
-/// ("Clickalize Mobile — Flutter handoff", Figma section 286:2).
+/// Design tokens. [brand] was corrected from the handoff's `#2BAC32` to
+/// `#00BF63` — the fill colour of the real product logo
+/// (wapp.magento2.click/imgs/logo-short.svg) — with [brandDeep] and
+/// [brandWash] rederived at the same hue (151°) to keep contrast behaviour
+/// unchanged.
 ///
 /// Two rules travel with this palette and are worth restating at the call site:
 ///
@@ -12,9 +15,9 @@ import 'package:flutter/material.dart';
 ///    at body sizes; use [brandDeep] for any green text or icon on a light
 ///    ground, and reserve [brand] for fills.
 abstract final class AppColor {
-  static const Color brand = Color(0xFF2BAC32);
-  static const Color brandDeep = Color(0xFF1B731F); // AA text on white
-  static const Color brandWash = Color(0xFFEAF7EC);
+  static const Color brand = Color(0xFF00BF63);
+  static const Color brandDeep = Color(0xFF00703A); // ~6.2:1 on white
+  static const Color brandWash = Color(0xFFEBFAF3);
 
   static const Color ink = Color(0xFF101828);
   static const Color inkMuted = Color(0xFF667085);

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_dimens.dart';
 import '../../../../core/error/failure.dart';
+import '../../../../core/widgets/brand_mark.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../auth_controller.dart';
 
@@ -172,8 +173,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 }
 
-/// Green hero: white tile with the brand initial, wordmark and tagline beneath,
-/// all reversed out of the brand green.
+/// Green hero: the product mark, wordmark and tagline, reversed out of the
+/// brand green. Shares [BrandMark] with Splash so the logo does not shift when
+/// one hands over to the other.
 class _BrandHero extends StatelessWidget {
   const _BrandHero();
 
@@ -184,23 +186,7 @@ class _BrandHero extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Container(
-            width: 64,
-            height: 64,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: const Text(
-              'C',
-              style: TextStyle(
-                fontSize: 34,
-                fontWeight: FontWeight.w700,
-                color: AppColor.brand,
-              ),
-            ),
-          ),
+          const BrandMark(),
           const SizedBox(height: 14),
           const Text(
             'Clickalize',
