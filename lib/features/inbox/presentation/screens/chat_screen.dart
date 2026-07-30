@@ -82,7 +82,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         // per-message delivery state — so it is read from the inbox row for
         // this contact, which does have it. When that row isn't loaded (deep
         // link straight into a chat) the pill is omitted rather than guessed.
-        subtitleTrailing: _statusOf(widget.contactUid) == null
+        // Gated on the thread too, not just the status: the inbox row resolves
+        // first, so the pill used to hang in the app bar on its own for the
+        // second or two before the name and avatar arrived.
+        subtitleTrailing: thread.valueOrNull == null ||
+                _statusOf(widget.contactUid) == null
             ? null
             : _StatusMenu(
                 status: _statusOf(widget.contactUid)!,

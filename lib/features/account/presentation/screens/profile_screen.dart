@@ -71,9 +71,14 @@ class ProfileScreen extends ConsumerWidget {
             // would promise one.
             showChevron: false,
           ),
+          // `/me` returns the vendor as uid + status only, with no display
+          // name, so this is an empty string rather than null — `?? '—'` never
+          // fired and the row rendered with a blank value. Omitted entirely
+          // when there is nothing to show.
+          if ((session?.vendor.name ?? '').isNotEmpty)
           AppListTile(
             title: l10n.prWorkspace,
-            subtitle: session?.vendor.name ?? '—',
+            subtitle: session!.vendor.name,
             leading: const IconTile(
               icon: Icons.business_outlined,
               color: AppColor.brandDeep,

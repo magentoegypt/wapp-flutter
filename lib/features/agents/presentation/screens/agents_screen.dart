@@ -131,6 +131,8 @@ class _Summary extends StatelessWidget {
         : items.fold<int>(0, (int s, Agent a) => s + a.avgResponseSeconds) ~/
             items.length;
 
+    // Short labels: 'Resolved today' and 'Avg. response' both ellipsised at
+    // three-up on a 720px screen. The section heading already scopes them.
     return StatCardRow(
       cards: <StatCard>[
         StatCard(
@@ -140,13 +142,13 @@ class _Summary extends StatelessWidget {
         ),
         StatCard(
           value: '$resolved',
-          label: l10n.agResolvedToday,
+          label: l10n.agResolvedShort,
           icon: Icons.check_circle_outline,
           iconColor: AppColor.success,
         ),
         StatCard(
           value: DurationFormat.coarse(avg),
-          label: l10n.agAvgResponse,
+          label: l10n.agAvgShort,
           icon: Icons.timer_outlined,
           iconColor: AppColor.info,
         ),

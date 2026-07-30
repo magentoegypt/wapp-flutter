@@ -224,7 +224,7 @@ class _CreateCampaignScreenState extends ConsumerState<CreateCampaignScreen> {
                         tint: AppColor.info,
                         label: l10n.ccTemplate,
                         value: _templateName,
-                        placeholder: l10n.ccChooseTemplate,
+                        placeholder: l10n.ccNotSelected,
                         onChange: () => _pickTemplate(m.templates),
                       ),
                       SectionLabel(l10n.ccAudience),
@@ -428,9 +428,13 @@ class _SummaryCard extends StatelessWidget {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final bool chosen = value != null && value!.isNotEmpty;
 
+    // Label is the constant, value the variable — so the label is the title and
+    // the value the subtitle. That also makes an unset field read as unset: the
+    // subtitle is already muted, where the title slot rendered the placeholder
+    // in bold ink and made "not chosen yet" look like a choice.
     return AppListTile(
-      title: chosen ? value! : placeholder,
-      subtitle: label,
+      title: label,
+      subtitle: chosen ? value! : placeholder,
       leading: IconTile(icon: icon, color: tint),
       showChevron: false,
       trailing: Text(

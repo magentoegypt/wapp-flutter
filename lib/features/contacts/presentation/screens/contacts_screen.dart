@@ -7,16 +7,11 @@ import '../../../../core/widgets/agent_avatar.dart';
 import '../../../../core/widgets/app_header.dart';
 import '../../../../core/widgets/app_list_tile.dart';
 import '../../../../core/widgets/async_value_view.dart';
-import '../../../../core/widgets/filter_chip_bar.dart';
 import '../../../../core/widgets/initials_avatar.dart';
 import '../../../../core/widgets/status_pill.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../data/contact_repository.dart';
 import '../../domain/contact.dart';
-
-/// Which lifecycle segment the Contacts list is filtered to. Null is "All".
-final contactStageProvider =
-    StateProvider<LifecycleStage?>((Ref ref) => null);
 
 /// Lifecycle stage as a pill, or null when the backend sent nothing we
 /// recognise. Blocked outranks the stage — it is the fact that changes what an
@@ -45,7 +40,6 @@ class ContactsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final AsyncValue<List<Contact>> rows = ref.watch(contactListProvider);
-    final LifecycleStage? stage = ref.watch(contactStageProvider);
 
     return Scaffold(
       appBar: AppHeader.search(
@@ -67,38 +61,18 @@ class ContactsScreen extends ConsumerWidget {
       ),
       body: Column(
         children: <Widget>[
-          // Lifecycle segments, per the frame. Filtering happens on the loaded
-          // page rather than server-side: the contacts endpoint takes no stage
-          // parameter, and quietly refetching on every chip tap would make the
-          // segments feel slower than the list they filter.
-          FilterChipBar(
-            options: <FilterOption>[
-              FilterOption(id: '', label: l10n.ctFilterAll),
-              FilterOption(
-                id: LifecycleStage.customer.name,
-                label: l10n.ctStageCustomer,
-              ),
-              FilterOption(
-                id: LifecycleStage.lead.name,
-                label: l10n.ctStageLead,
-              ),
-              FilterOption(id: LifecycleStage.vip.name, label: l10n.ctStageVip),
-            ],
-            selectedId: stage?.name ?? '',
-            onSelected: (String id) => ref
-                .read(contactStageProvider.notifier)
-                .state = id.isEmpty ? null : LifecycleStage.values.byName(id),
-          ),
+          // No lifecycle segment row. The frame has one, but nothing feeds it:
+          // contacts.status is an integer column carrying blocked/active, never
+          // a customer/lead/vip vocabulary, so every segment matched zero
+          // contacts on device. Three chips that always return "no contacts" are
+          // worse than no chips. LifecycleStage stays in the domain, mapped
+          // defensively, ready for the day the API sends one.
           Expanded(
             child: AsyncValueView<List<Contact>>(
               value: rows,
               onRetry: () => ref.invalidate(contactListProvider),
               builder: (List<Contact> items) {
-                final List<Contact> shown = stage == null
-                    ? items
-                    : items
-                        .where((Contact c) => c.lifecycleStage == stage)
-                        .toList();
+                final List<Contact> shown = items;
 
                 if (shown.isEmpty) {
                   return EmptyState(
@@ -114,14 +88,13 @@ class ContactsScreen extends ConsumerWidget {
                     itemBuilder: (BuildContext context, int i) {
                       final Contact c = shown[i];
                       final String display = c.name.isEmpty ? c.phone : c.name;
+                      // stageBadge is non-null only for a blocked contact
+                      // today, so the chevron is what almost every row gets.
                       final badge = stageBadge(l10n, c);
                       return AppListTile(
                         title: display,
                         subtitle: c.phone,
                         leading: InitialsAvatar(name: display),
-                        // The frame's trailing slot is the lifecycle pill, not
-                        // a chevron. Omitted rather than faked when the backend
-                        // sent no recognised stage.
                         showChevron: badge == null,
                         trailing: badge == null
                             ? null
