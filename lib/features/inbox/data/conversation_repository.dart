@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/error/failure.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/util/message_text.dart';
+import '../domain/channel.dart';
 import '../domain/conversation.dart';
 
 /// Which slice of the inbox to load. Mirrors the filter chips on 36:1032.
@@ -119,6 +120,8 @@ Conversation conversationFromJson(Map<String, dynamic> j) {
     unreadCount: _int(j['unread'] ?? j['unreadCount']),
     status: ConversationStatus.fromApi(j['status']),
     assignedAgentName: (j['assignedUserName'] ?? j['assignedAgent']) as String?,
+    channel: MessageChannelX.fromApi(j['channel']),
+    instagramUsername: (j['instagramUsername'] ?? j['instagram_username']) as String?,
     isIncomingLast: (last['isIncoming'] as bool?) ?? true,
   );
 }
@@ -168,6 +171,7 @@ ChatThread chatThreadFromJson(String contactUid, Map<String, dynamic> j) {
     ),
     // The API renames the engine's isDirectMessageDeliveryWindowOpened to
     // `windowOpen`, but passes conversationExpiresAt through verbatim.
+    channel: MessageChannelX.fromApi(contact['channel'] ?? j['channel']),
     windowOpen: (j['windowOpen'] as bool?) ?? false,
     windowExpiresAt: _date(j['conversationExpiresAt']),
     // Chat detail carries no canned replies; the composer chips are sourced

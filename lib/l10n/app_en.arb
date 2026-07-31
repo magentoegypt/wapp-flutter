@@ -579,5 +579,61 @@
   "mtList": "List",
   "mtLink": "Link",
   "mtUnsupported": "Unsupported message",
-  "mtOpenInConsole": "Open in the web console to see it in full."
+  "mtOpenInConsole": "Open in the web console to see it in full.",
+  "rwTooltip": "Chat expires in {hours} hrs {minutes} mins. Once expired, WhatsApp will allow only template messages to be sent.",
+  "@rwTooltip": {
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      },
+      "minutes": {
+        "type": "String"
+      }
+    }
+  },
+  "rwExpired": "Window closed — templates only",
+  "chanWhatsapp": "WhatsApp",
+  "chanInstagram": "Instagram",
+  "ciChannel": "Channel",
+  "igTitle": "Instagram message",
+  "igOnly": "Only available on Instagram conversations.",
+  "igKind": "What to send",
+  "igQuickReplies": "Quick replies",
+  "igButtons": "Buttons",
+  "igCards": "Cards",
+  "igMessage": "Message",
+  "igMessageHint": "What the customer sees above the options",
+  "igMessageRequired": "Write a message.",
+  "igOptionTitle": "Title",
+  "igOptionPayload": "Payload",
+  "igOptionUrl": "Link",
+  "igCardSubtitle": "Subtitle",
+  "igCardImage": "Image URL",
+  "igAdd": "Add",
+  "igRemove": "Remove",
+  "igAtLeastOne": "Add at least one.",
+  "igTitleRequired": "Every option needs a title.",
+  "igTitleTooLong": "Titles are cut at {max} characters by Instagram — shorten it.",
+  "@igTitleTooLong": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "igMax": "Instagram allows at most {max}.",
+  "@igMax": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "igTruncWarn": "Instagram trims over-long text without telling you, so these limits are enforced here.",
+  "igSend": "Send",
+  "igSent": "Sent.",
+  "igReact": "React",
+  "igReacted": "Reaction sent.",
+  "igFromTemplate": "Use a saved template",
+  "igNoTemplates": "No saved Instagram templates."
 }

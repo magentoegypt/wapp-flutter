@@ -1,3 +1,5 @@
+import 'channel.dart';
+
 /// Conversation state.
 ///
 /// The API serialises this as a **string** (`"pending"`, `"open"`, …) even
@@ -40,6 +42,8 @@ class Conversation {
     this.status = ConversationStatus.open,
     this.assignedAgentName,
     this.isIncomingLast = true,
+    this.channel = MessageChannel.whatsapp,
+    this.instagramUsername,
   });
 
   final String contactUid;
@@ -53,6 +57,13 @@ class Conversation {
   /// Whether the most recent message came from the customer — drives whether
   /// the row shows delivery ticks.
   final bool isIncomingLast;
+
+  /// Which network this arrived over. Drives the avatar badge — an agent has to
+  /// know before replying, because the reply rules differ between the two.
+  final MessageChannel channel;
+
+  /// Present only on Instagram rows; null on WhatsApp.
+  final String? instagramUsername;
 
   bool get isUnassigned => assignedAgentName == null;
 }
@@ -77,6 +88,7 @@ class ChatThread {
     this.page = 1,
     this.hasMore = false,
     this.loadingMore = false,
+    this.channel = MessageChannel.whatsapp,
   });
 
   final String contactUid;
@@ -112,6 +124,10 @@ class ChatThread {
   /// so a fast flick cannot fire the same page request several times.
   final bool loadingMore;
 
+  /// Gates the Instagram-only send controls. Posting an Instagram payload at a
+  /// WhatsApp thread answers 422, so this decides whether they are offered.
+  final MessageChannel channel;
+
   bool get isReplyLockOpen => replyLockHeldBy == null;
 
   ChatThread copyWith({
@@ -124,6 +140,7 @@ class ChatThread {
       contactUid: contactUid,
       name: name,
       phone: phone,
+      channel: channel,
       messages: messages ?? this.messages,
       windowOpen: windowOpen,
       windowExpiresAt: windowExpiresAt,

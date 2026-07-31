@@ -53,6 +53,10 @@ abstract final class AppRoutes {
   static String chatHistoryAccess(String uid) => '/chats/$uid/history-access';
   static String chatReminder(String uid) => '/chats/$uid/reminder';
 
+  /// Instagram's three structured message types. Only reachable on an
+  /// Instagram conversation — the send endpoints answer 422 on a WhatsApp one.
+  static String chatInstagram(String uid) => '/chats/$uid/instagram';
+
   // Calling — full-screen, outside the shell entirely.
   static String callIncoming(String uid) => '/calls/$uid/incoming';
   static String callOutgoing(String uid) => '/calls/$uid/outgoing';

@@ -18,6 +18,7 @@ import '../../../contacts/data/contact_repository.dart';
 import '../../../contacts/domain/contact.dart';
 import '../../data/conversation_repository.dart';
 import '../../data/note_repository.dart';
+import '../../domain/channel.dart';
 import '../../domain/conversation.dart';
 
 /// Conversation info — Figma 290:4.
@@ -49,6 +50,14 @@ class ConversationInfoScreen extends ConsumerWidget {
         ref.watch(notesProvider(contactUid)).valueOrNull?.length ?? 0;
     final String locale = Localizations.localeOf(context).toLanguageTag();
     final List<Widget> details = _detailRows(l10n, contact, locale);
+    // The Instagram handle travels on the inbox row, not on the thread — the
+    // chat endpoint has never carried it. Read it back out of the list that is
+    // already loaded behind this screen and drop the line when the row isn't
+    // there (a filtered inbox, a cold start), rather than widening an endpoint
+    // for one string.
+    final String? handle = _instagramHandle(
+      ref.watch(inboxListProvider).valueOrNull ?? const <Conversation>[],
+    );
 
     return Scaffold(
       appBar: AppHeader.back(title: l10n.ciContactInfo),
@@ -81,15 +90,25 @@ class ConversationInfoScreen extends ConsumerWidget {
             const SizedBox(height: 18),
             _QuickActions(contactUid: contactUid, phone: t.phone, l10n: l10n),
 
-            if (details.isNotEmpty || _receivedOn(t) != null) ...<Widget>[
-              SectionLabel(l10n.ciContactDetails),
-              ...details,
-              // Which workspace number the customer reached. Taken from the
-              // most recent message that carries one rather than the newest
-              // outright, so an outbound-only tail does not blank the row.
-              if (_receivedOn(t) != null)
-                _DetailRow(label: l10n.ciReceivedOn, value: _receivedOn(t)!),
-            ],
+            SectionLabel(l10n.ciContactDetails),
+            ...details,
+            // Which network the thread runs on. Always shown, even though it
+            // is WhatsApp for almost every row: an agent has to know before
+            // replying, because what may be sent and how long the window stays
+            // open differ between the two, and an absent row would read as
+            // "WhatsApp" by default on exactly the threads where that is wrong.
+            _DetailRow(
+              label: l10n.ciChannel,
+              value: t.channel.isInstagram
+                  ? l10n.chanInstagram
+                  : l10n.chanWhatsapp,
+              secondary: t.channel.isInstagram ? handle : null,
+            ),
+            // Which workspace number the customer reached. Taken from the
+            // most recent message that carries one rather than the newest
+            // outright, so an outbound-only tail does not blank the row.
+            if (_receivedOn(t) != null)
+              _DetailRow(label: l10n.ciReceivedOn, value: _receivedOn(t)!),
 
             // The frame's LABELS chips. Read-only: ContactRepository has no
             // label mutation, so the frame's "+ Add" chip is not here — an add
@@ -186,6 +205,20 @@ class ConversationInfoScreen extends ConsumerWidget {
     );
   }
 
+  /// This contact's Instagram handle from the loaded inbox, or null when the
+  /// list does not currently hold the row.
+  String? _instagramHandle(List<Conversation> rows) {
+    for (final Conversation c in rows) {
+      if (c.contactUid != contactUid) continue;
+      // Empty and absent are the same thing here — the field comes back as ""
+      // on a row the sync has not filled in, and a blank second line reads as
+      // a rendering fault.
+      final String handle = (c.instagramUsername ?? '').trim();
+      return handle.isEmpty ? null : handle;
+    }
+    return null;
+  }
+
   /// The number this conversation arrived on, or null if no message carries
   /// one.
   String? _receivedOn(ChatThread t) {
@@ -199,9 +232,11 @@ class ConversationInfoScreen extends ConsumerWidget {
   /// The CONTACT DETAILS block, restricted to fields the customer record
   /// actually carries.
   ///
-  /// The frame also lists Channel and Customer status. Neither exists on
-  /// [Contact] or in the conversation payload, and a row rendered from nothing
-  /// reads as a fact — so they are left out until the API carries them.
+  /// The frame also lists Customer status, which exists neither on [Contact]
+  /// nor in the conversation payload, and a row rendered from nothing reads as
+  /// a fact — so it stays out until the API carries it. Channel used to be in
+  /// that group; it is on the thread now and the caller renders it alongside
+  /// the other thread-derived row.
   /// Language is here: it was listed as absent by a stale comment, but the
   /// field has existed since contacts gained city/language.
   List<Widget> _detailRows(
@@ -239,10 +274,15 @@ class ConversationInfoScreen extends ConsumerWidget {
 /// idiom made seven pieces of read-only data look like seven tappable
 /// settings.
 class _DetailRow extends StatelessWidget {
-  const _DetailRow({required this.label, required this.value});
+  const _DetailRow({required this.label, required this.value, this.secondary});
 
   final String label;
   final String value;
+
+  /// A quieter second line under [value] — the Instagram handle under the
+  /// channel name. It qualifies the value rather than standing beside it, so
+  /// it stacks instead of claiming a row of its own.
+  final String? secondary;
 
   @override
   Widget build(BuildContext context) {
@@ -259,15 +299,26 @@ class _DetailRow extends StatelessWidget {
           Text(label, style: text.bodyMedium),
           const SizedBox(width: 16),
           Expanded(
-            child: Text(
-              value,
-              // End-aligned, so the values line up on the trailing edge in
-              // both writing directions.
-              textAlign: TextAlign.end,
-              style: text.bodyMedium?.copyWith(
-                color: AppColor.ink,
-                fontWeight: FontWeight.w600,
-              ),
+            // End-aligned, so the values line up on the trailing edge in both
+            // writing directions.
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: <Widget>[
+                Text(
+                  value,
+                  textAlign: TextAlign.end,
+                  style: text.bodyMedium?.copyWith(
+                    color: AppColor.ink,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (secondary != null)
+                  Text(
+                    secondary!,
+                    textAlign: TextAlign.end,
+                    style: text.bodySmall?.copyWith(color: AppColor.inkMuted),
+                  ),
+              ],
             ),
           ),
         ],

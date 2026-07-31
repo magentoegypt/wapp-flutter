@@ -40,6 +40,7 @@ import '../features/dashboard/presentation/screens/dashboard_screen.dart';
 import '../features/dev/presentation/component_gallery_screen.dart';
 import '../features/inbox/presentation/screens/chat_screen.dart';
 import '../features/inbox/presentation/screens/inbox_screen.dart';
+import '../features/inbox/presentation/screens/instagram_send_screen.dart';
 import '../features/inbox/presentation/screens/internal_notes_screen.dart';
 import 'routes.dart';
 import 'shell/app_shell.dart';
@@ -287,6 +288,12 @@ final Provider<GoRouter> routerProvider = Provider<GoRouter>((Ref ref) {
             parentNavigatorKey: _rootKey,
             builder: (_, GoRouterState s) =>
                 ClearHistoryScreen(contactUid: s.pathParameters['uid']!),
+          ),
+          GoRoute(
+            path: 'instagram',
+            parentNavigatorKey: _rootKey,
+            builder: (_, GoRouterState s) =>
+                InstagramSendScreen(contactUid: s.pathParameters['uid']!),
           ),
         ],
       ),

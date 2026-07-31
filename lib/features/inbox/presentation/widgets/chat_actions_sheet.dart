@@ -6,6 +6,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_dimens.dart';
 import '../../../../core/widgets/app_list_tile.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../domain/channel.dart';
 
 /// Chat actions — Figma 330:15.
 ///
@@ -16,6 +17,7 @@ Future<void> showChatActionsSheet(
   required String contactUid,
   required String name,
   String? phone,
+  MessageChannel channel = MessageChannel.whatsapp,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -25,6 +27,7 @@ Future<void> showChatActionsSheet(
       contactUid: contactUid,
       name: name,
       phone: phone,
+      channel: channel,
     ),
   );
 }
@@ -44,11 +47,13 @@ class _ChatActionsSheet extends StatelessWidget {
     required this.contactUid,
     required this.name,
     this.phone,
+    this.channel = MessageChannel.whatsapp,
   });
 
   final String contactUid;
   final String name;
   final String? phone;
+  final MessageChannel channel;
 
   @override
   Widget build(BuildContext context) {
@@ -133,6 +138,17 @@ class _ChatActionsSheet extends StatelessWidget {
               tint: AppColor.warning,
               onTap: () => _go(context, AppRoutes.chatReview(contactUid)),
             ),
+            // Instagram's structured sends have no WhatsApp equivalent, and
+            // posting one at a WhatsApp thread answers 422. That is a correct
+            // server guard rather than a state the UI should reach, so the row
+            // only exists on an Instagram conversation.
+            if (channel.isInstagram)
+              ActionSheetRow(
+                label: l10n.igTitle,
+                icon: Icons.dynamic_feed_outlined,
+                tint: const Color(0xFFE0356C),
+                onTap: () => _go(context, AppRoutes.chatInstagram(contactUid)),
+              ),
             ActionSheetRow(
               label: l10n.caSendTemplate,
               icon: Icons.send_outlined,

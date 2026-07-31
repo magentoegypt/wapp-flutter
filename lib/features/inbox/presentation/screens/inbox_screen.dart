@@ -9,8 +9,8 @@ import '../../../../core/widgets/agent_avatar.dart';
 import '../../../../core/widgets/app_header.dart';
 import '../../../../core/widgets/app_list_tile.dart';
 import '../../../../core/widgets/async_value_view.dart';
+import '../../../../core/widgets/channel_badge.dart';
 import '../../../../core/widgets/filter_chip_bar.dart';
-import '../../../../core/widgets/initials_avatar.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../data/conversation_repository.dart';
 import '../../domain/conversation.dart';
@@ -140,7 +140,7 @@ class _ConversationRow extends StatelessWidget {
       subtitle: item.isIncomingLast || item.lastMessage.isEmpty
           ? item.lastMessage
           : '${item.lastMessage}  ✓',
-      leading: InitialsAvatar(name: item.name),
+      leading: AvatarWithChannel(name: item.name, channel: item.channel),
       showChevron: false,
       onTap: () => context.push(AppRoutes.chat(item.contactUid)),
       trailing: Column(

@@ -13,12 +13,14 @@ import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/message_bubble.dart';
 import '../../../../core/widgets/initials_avatar.dart';
 import '../../../../core/widgets/message_composer.dart';
+import '../../../../core/widgets/reply_window_ring.dart';
 import '../../../../core/widgets/status_pill.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../calls/data/call_repository.dart';
 import '../../../calls/domain/call.dart';
 import '../../../quick_replies/data/quick_reply_repository.dart';
 import '../../data/conversation_repository.dart';
+import '../../domain/channel.dart';
 import '../../domain/conversation.dart';
 import '../widgets/chat_actions_sheet.dart';
 import '../widgets/message_kind_style.dart';
@@ -97,9 +99,22 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       appBar: AppHeader.back(
         title: thread.valueOrNull?.name ?? '',
         subtitle: thread.valueOrNull?.phone,
+        // The countdown leads the avatar so the first thing in the header,
+        // after the way back, is how long free-form replies still work. The
+        // ring renders nothing at all once the window has closed, so on a
+        // dormant thread this collapses to the avatar alone.
         avatar: thread.valueOrNull == null
             ? null
-            : InitialsAvatar(name: thread.valueOrNull!.name, size: 30),
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  ReplyWindowRing(
+                    expiresAt: thread.valueOrNull!.windowExpiresAt,
+                    windowOpen: thread.valueOrNull!.windowOpen,
+                  ),
+                  InitialsAvatar(name: thread.valueOrNull!.name, size: 30),
+                ],
+              ),
         // The chat detail payload carries no conversation status — only
         // per-message delivery state — so it is read from the inbox row for
         // this contact, which does have it. When that row isn't loaded (deep
@@ -129,6 +144,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               contactUid: widget.contactUid,
               name: thread.valueOrNull?.name ?? '',
               phone: thread.valueOrNull?.phone,
+              channel:
+                  thread.valueOrNull?.channel ?? MessageChannel.whatsapp,
             ),
             icon: const Icon(Icons.more_vert, color: Colors.white),
           ),
