@@ -353,6 +353,13 @@ jobs:
           SLUG=$(jq -r '.data.buildShortcutUrl // empty' "$RESP")
           test -n "$SLUG" || { echo "::error::upload reported success but returned no shortcut"; exit 1; }
           echo "url=https://i.loadly.io/${SLUG}" >> "$GITHUB_OUTPUT"
+
+          # Also to the log and the annotations. The install link is meant to be
+          # handed out, and the job summary that otherwise holds it is visible
+          # only in the run's web page — no API returns it, so a link that lives
+          # there alone cannot be scripted against or copied from a terminal.
+          echo "Install: https://i.loadly.io/${SLUG}"
+          echo "::notice title=Install link::https://i.loadly.io/${SLUG}"
           echo "qr=$(jq -r '.data.buildQRCodeURL // empty' "$RESP")" >> "$GITHUB_OUTPUT"
           # buildKey is Loadly's stable id for this build — the handle you need
           # to find or remove it later, once the shortcut points at a newer one.
