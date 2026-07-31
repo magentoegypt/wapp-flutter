@@ -42,6 +42,7 @@ import '../features/inbox/presentation/screens/chat_screen.dart';
 import '../features/inbox/presentation/screens/inbox_screen.dart';
 import '../features/inbox/presentation/screens/instagram_send_screen.dart';
 import '../features/inbox/presentation/screens/internal_notes_screen.dart';
+import '../features/settings/presentation/screens/instagram_settings_screen.dart';
 import 'routes.dart';
 import 'shell/app_shell.dart';
 
@@ -390,6 +391,14 @@ final Provider<GoRouter> routerProvider = Provider<GoRouter>((Ref ref) {
         parentNavigatorKey: _rootKey,
         builder: (_, GoRouterState s) =>
             AgentDetailScreen(uid: s.pathParameters['uid']!),
+      ),
+
+      // Workspace settings, so it sits beside /agents rather than under
+      // /chats/:uid — nothing here is scoped to a conversation.
+      GoRoute(
+        path: AppRoutes.instagramSettings,
+        parentNavigatorKey: _rootKey,
+        builder: (_, __) => const InstagramSettingsScreen(),
       ),
 
       GoRoute(

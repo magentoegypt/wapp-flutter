@@ -649,5 +649,38 @@
   "mediaPermission": "Photo access is needed to attach a file.",
   "mediaIgFormats": "Instagram accepts fewer formats than WhatsApp, so a file that works in one may be refused in the other.",
   "igReactTitle": "React to message",
-  "igReactOnly": "Reactions are Instagram-only."
+  "igReactOnly": "Reactions are Instagram-only.",
+
+  "igsTitle": "Instagram settings",
+  "igsLive": "These write straight to Instagram. There is no draft — saving changes what customers see right away.",
+  "igsAdminOnly": "Only a workspace admin can change these.",
+  "igsMenu": "Persistent menu",
+  "igsMenuHint": "Up to 5 actions, always available from the chat menu.",
+  "igsIce": "Ice breakers",
+  "igsIceHint": "Up to 4 questions, shown before the customer's first message.",
+  "igsAddAction": "Add action",
+  "igsAddQuestion": "Add question",
+  "igsLabel": "Title",
+  "igsQuestion": "Question",
+  "igsPayload": "Payload",
+  "igsUrl": "Link",
+  "igsType": "On tap",
+  "igsPostback": "Send to the bot",
+  "igsWebUrl": "Open a link",
+  "igsSave": "Save to Instagram",
+  "igsClear": "Remove all",
+  "igsClearMenu": "Remove the persistent menu? Customers stop seeing it immediately.",
+  "igsClearIce": "Remove the ice breakers? Customers stop seeing them immediately.",
+  "igsSaved": "Saved to Instagram.",
+  "igsRemoved": "Removed from Instagram.",
+  "igsNone": "Nothing configured yet.",
+  "igsIncomplete": "Fill in every field before saving.",
+  "igsKeptLocales": "{count, plural, =1{1 other language is configured and will be kept.} other{{count} other languages are configured and will be kept.}}",
+  "@igsKeptLocales": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

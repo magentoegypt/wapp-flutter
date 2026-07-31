@@ -33,6 +33,10 @@ abstract final class AppRoutes {
   static const String campaignNew = '/campaigns/new';
   static const String agents = '/agents';
 
+  /// Instagram's persistent menu and ice breakers. Workspace settings, not a
+  /// conversation action — admin-gated, and the API answers 403 to anyone else.
+  static const String instagramSettings = '/settings/instagram';
+
   /// Component gallery — every shared widget in light/dark × LTR/RTL.
   /// Debug builds only; not reachable from the UI.
   static const String devGallery = '/dev/gallery';

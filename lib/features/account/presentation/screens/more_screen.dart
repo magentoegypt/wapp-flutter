@@ -13,6 +13,7 @@ import '../../../../core/widgets/initials_avatar.dart';
 import '../../../../core/widgets/section_label.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../auth/presentation/auth_controller.dart';
+import '../../../inbox/domain/channel.dart';
 
 /// More — Figma 289:34.
 ///
@@ -77,6 +78,21 @@ class MoreScreen extends ConsumerWidget {
             ),
             onTap: () => context.push(AppRoutes.agents),
           ),
+          // Admins only, because every endpoint behind it answers 403 to anyone
+          // else. Hidden rather than disabled: a visible row that always
+          // refuses reads as a broken feature, not a permission boundary. The
+          // screen still handles the 403 — role can change after login.
+          if (auth.session?.user.isAdmin ?? false)
+            AppListTile(
+              title: l10n.igsTitle,
+              leading: IconTile(
+                icon: MessageChannel.instagram.badgeIcon,
+                // Reuses the badge's own colour rather than restating the hex,
+                // so this row and the inbox badges cannot drift apart.
+                color: MessageChannel.instagram.badgeColor,
+              ),
+              onTap: () => context.push(AppRoutes.instagramSettings),
+            ),
           // No Templates or Bot Flows rows. The frame lists both, but neither
           // screen exists in this app and neither has an endpoint, so the rows
           // would be dead links.
