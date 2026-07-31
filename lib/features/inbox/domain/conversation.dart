@@ -1,4 +1,5 @@
 import 'channel.dart';
+import 'message_payload.dart';
 
 /// Conversation state.
 ///
@@ -227,6 +228,13 @@ class ChatMessage {
     this.status,
     this.agentName,
     this.receivedOn,
+    this.media,
+    this.interactive,
+    this.template,
+    this.order,
+    this.unsupportedReason,
+    this.isBotReply = false,
+    this.campaignName,
   });
 
   final String uid;
@@ -249,4 +257,25 @@ class ChatMessage {
   /// never emitted before, which is why the frame's "Received on" row rendered
   /// blank.
   final String? receivedOn;
+
+  /// Exactly one of these four is non-null, and all four are null for plain
+  /// text. Bind to [kind] to decide which to read — do not sniff for whichever
+  /// happens to be set, because the server resolves the type and the client
+  /// re-deriving it is how the two drift apart.
+  final MessageMedia? media;
+  final MessageInteractive? interactive;
+  final MessageTemplate? template;
+  final MessageOrder? order;
+
+  /// Meta's own wording for why it could not be rendered. Only on
+  /// [MessageKind.unsupported].
+  final String? unsupportedReason;
+
+  /// The bot answered rather than a person. Worth badging: in a shared inbox
+  /// an agent reading back through a thread otherwise credits a teammate.
+  final bool isBotReply;
+
+  /// Set when the message went out as part of a campaign blast, so it is not
+  /// mistaken for a teammate replying to this one customer.
+  final String? campaignName;
 }

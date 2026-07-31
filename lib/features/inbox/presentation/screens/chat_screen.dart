@@ -27,6 +27,7 @@ import '../../domain/conversation.dart';
 import '../widgets/attach_sheet.dart';
 import '../widgets/chat_actions_sheet.dart';
 import '../widgets/message_kind_style.dart';
+import '../widgets/message_payload_view.dart';
 import '../widgets/reaction_picker.dart';
 
 /// Chat — Figma 37:1032.
@@ -445,17 +446,65 @@ class _MessageList extends StatelessWidget {
     final MessageKindStyle style = MessageKindStyle.of(m.kind, l10n);
     final String body = m.body.trim();
 
+    // The structured payload, when there is one. Until this existed the label
+    // WAS the bubble: an order said "Order" and showed none of its lines.
+    final Widget? content = messagePayloadView(context, m, locale);
+
+    // Once the payload renders the cart, the header, the buttons — repeating
+    // the type name above it is noise. The label stays only when nothing else
+    // announces the kind.
+    final bool labelRedundant = content != null &&
+        const <MessageKind>{
+          MessageKind.order,
+          MessageKind.template,
+          MessageKind.interactiveButtons,
+          MessageKind.interactiveList,
+        }.contains(m.kind);
+
     return MessageBubble(
-      kindIcon: style.icon,
-      kindLabel: style.label,
-      // With a type line present an empty body is fine — the label carries the
-      // meaning. Only an untyped, textless message still needs the old
-      // placeholder, and that combination should no longer occur.
-      text: body.isEmpty && style.label == null ? l10n.chatNoTextBody : body,
+      kindIcon: labelRedundant ? null : style.icon,
+      kindLabel: labelRedundant ? null : style.label,
+      // With a type line or a payload present an empty body is fine. Only an
+      // untyped, textless message still needs the old placeholder.
+      text: body.isEmpty && style.label == null && content == null
+          ? l10n.chatNoTextBody
+          : body,
+      content: content,
+      badge: _badgeFor(context, m),
       timeLabel:
           m.sentAt == null ? '' : DateFormat.Hm(locale).format(m.sentAt!),
       isOutgoing: !m.isIncoming,
       status: _status(m.status),
+    );
+  }
+
+  /// "Bot" or a campaign name above the bubble.
+  ///
+  /// Both answer the same question — who actually sent this? In a shared inbox
+  /// an agent reading back through a thread otherwise credits a teammate for
+  /// the bot's replies, or reads a campaign blast as a personal message to this
+  /// one customer.
+  Widget? _badgeFor(BuildContext context, ChatMessage m) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final String? text = m.isBotReply
+        ? l10n.mtBot
+        : (m.campaignName == null ? null : '${l10n.mtCampaign} · ${m.campaignName}');
+    if (text == null) return null;
+
+    return Container(
+      padding: const EdgeInsetsDirectional.symmetric(horizontal: 6, vertical: 1),
+      decoration: BoxDecoration(
+        color: AppColor.infoWash,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 10.5,
+          fontWeight: FontWeight.w700,
+          color: AppColor.info,
+        ),
+      ),
     );
   }
 

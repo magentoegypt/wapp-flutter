@@ -6,6 +6,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/util/message_text.dart';
 import '../domain/channel.dart';
 import '../domain/conversation.dart';
+import '../domain/message_payload.dart';
 
 /// Which slice of the inbox to load. Mirrors the filter chips on 36:1032.
 enum InboxFilter { all, unread, unassigned }
@@ -258,6 +259,19 @@ ChatMessage chatMessageFromJson(Map<String, dynamic> j) {
     status: j['status'] as String?,
     agentName: (j['agent'] ?? j['agent_name']) as String?,
     receivedOn: (j['receivedOn'] ?? j['received_on']) as String?,
+    // All four keys are present on every message with the unused ones null,
+    // so these parse to null rather than throwing on a plain text row.
+    media: MessageMedia.fromJson(j['media']),
+    interactive: MessageInteractive.fromJson(j['interactive']),
+    template: MessageTemplate.fromJson(j['template']),
+    order: MessageOrder.fromJson(j['order']),
+    unsupportedReason: (j['unsupportedReason'] as String?)?.trim().isEmpty ?? true
+        ? null
+        : (j['unsupportedReason'] as String?),
+    isBotReply: (j['isBotReply'] as bool?) ?? false,
+    campaignName: (j['campaign'] is Map<String, dynamic>)
+        ? (j['campaign'] as Map<String, dynamic>)['name'] as String?
+        : j['campaign'] as String?,
   );
 }
 

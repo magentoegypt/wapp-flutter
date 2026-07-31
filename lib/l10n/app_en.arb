@@ -682,5 +682,18 @@
         "type": "int"
       }
     }
-  }
+  },
+
+  "mtOrderItems": "{count, plural, =1{1 item} other{{count} items}}",
+  "@mtOrderItems": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "mtOrderMixed": "Mixed currencies",
+  "mtListRows": "{count, plural, =1{1 option} other{{count} options}}",
+  "@mtListRows": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "mtCatalogGeneric": "View catalog",
+  "mtBot": "Bot",
+  "mtCampaign": "Campaign"
 }

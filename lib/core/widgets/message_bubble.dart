@@ -36,6 +36,8 @@ class MessageBubble extends StatelessWidget {
     this.status,
     this.kindIcon,
     this.kindLabel,
+    this.content,
+    this.badge,
     super.key,
   });
 
@@ -54,6 +56,18 @@ class MessageBubble extends StatelessWidget {
   /// which renders exactly as it always has.
   final IconData? kindIcon;
   final String? kindLabel;
+
+  /// The structured payload — cart lines, reply buttons, a location, a
+  /// template's components. Rendered between the body text and the timestamp.
+  ///
+  /// A slot rather than a subclass per type: the chrome (alignment, tail,
+  /// colours, ticks, direction handling) is identical for all eighteen kinds,
+  /// and eighteen subclasses of it would drift the moment one of them was
+  /// touched.
+  final Widget? content;
+
+  /// A small pill above the type line — "Bot" or a campaign name.
+  final Widget? badge;
 
   @override
   Widget build(BuildContext context) {
@@ -88,6 +102,10 @@ class MessageBubble extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
+            if (badge != null) ...<Widget>[
+              badge!,
+              const SizedBox(height: 4),
+            ],
             // The type line. A photo, an order or a location says almost
             // nothing through its text — an order carries none at all — so
             // without this the bubble is blank and reads as a rendering fault
@@ -135,6 +153,11 @@ class MessageBubble extends StatelessWidget {
                 style:
                     Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.35),
               ),
+            if (content != null) ...<Widget>[
+              if (text.isNotEmpty || kindLabel != null)
+                const SizedBox(height: 6),
+              content!,
+            ],
             const SizedBox(height: 2),
             Row(
               mainAxisSize: MainAxisSize.min,
