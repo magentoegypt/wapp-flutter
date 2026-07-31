@@ -16,6 +16,11 @@ import '../../../core/widgets/section_label.dart';
 import '../../../core/widgets/stat_card.dart';
 import '../../../core/widgets/status_pill.dart';
 import '../../../core/widgets/weekly_bar_chart.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../inbox/data/conversation_repository.dart';
+import '../../inbox/domain/conversation.dart';
+import '../../inbox/presentation/widgets/message_kind_style.dart';
+import '../../inbox/presentation/widgets/message_payload_view.dart';
 
 /// Every shared component on one page, under a live brightness × direction
 /// toggle.
@@ -317,6 +322,21 @@ class _ComponentGalleryScreenState extends State<ComponentGalleryScreen> {
                   ),
                 ]),
 
+                // Every payload family, including the four with no live rows in
+                // any thread on this workspace: location, contact card, CTA URL
+                // and multi-product. Fixtures go through the real mapper rather
+                // than being hand-built model objects, so this exercises the
+                // parsers too — a gallery of hand-made objects would keep
+                // rendering happily after the wire shape moved under it.
+                _group('Message payloads', <Widget>[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppDimens.gutter,
+                    ),
+                    child: Column(children: _payloadSamples()),
+                  ),
+                ]),
+
                 _group('Composer', <Widget>[
                   QuickReplyChips(
                     replies: const <String>['Thanks!', 'Anything else?', 'Share tracking'],
@@ -355,25 +375,24 @@ class _ComponentGalleryScreenState extends State<ComponentGalleryScreen> {
                   ),
                 ]),
 
+                // No fixed heights. Both of these size to their content, and
+                // the 190/170 boxes they used to sit in clipped the button off
+                // the bottom as soon as the device's text scale nudged the
+                // column past them — the gallery reported an overflow that the
+                // widgets themselves do not have.
                 _group('Empty and error states', <Widget>[
-                  SizedBox(
-                    height: 190,
-                    child: EmptyState(
-                      icon: Icons.forum_outlined,
-                      title: 'No conversations yet',
-                      message: 'New messages from customers will appear here.',
-                      action: FilledButton(
-                        onPressed: () {},
-                        child: const Text('Start a conversation'),
-                      ),
+                  EmptyState(
+                    icon: Icons.forum_outlined,
+                    title: 'No conversations yet',
+                    message: 'New messages from customers will appear here.',
+                    action: FilledButton(
+                      onPressed: () {},
+                      child: const Text('Start a conversation'),
                     ),
                   ),
-                  SizedBox(
-                    height: 170,
-                    child: FailureMessage(
-                      message: 'No connection. Check your network and try again.',
-                      onRetry: () {},
-                    ),
+                  FailureMessage(
+                    message: 'No connection. Check your network and try again.',
+                    onRetry: () {},
                   ),
                 ]),
               ],
@@ -382,6 +401,172 @@ class _ComponentGalleryScreenState extends State<ComponentGalleryScreen> {
         ),
       ),
     );
+  }
+
+  /// One bubble per payload family, built from wire-shaped JSON.
+  List<Widget> _payloadSamples() {
+    final List<Map<String, dynamic>> fixtures = <Map<String, dynamic>>[
+      <String, dynamic>{
+        'uid': 'g-location',
+        'type': 'location',
+        'body': '',
+        'isIncoming': true,
+        'interactive': <String, dynamic>{
+          'location': <String, dynamic>{
+            'name': 'Kingdom Centre',
+            'address': 'Olaya, Riyadh 12214',
+            'lat': 24.7118,
+            'lng': 46.6745,
+          },
+        },
+      },
+      <String, dynamic>{
+        'uid': 'g-location-bare',
+        'type': 'location',
+        'body': '',
+        'isIncoming': true,
+        // No name and no address, so the coordinates are all there is — the
+        // only case in which they are shown at all.
+        'interactive': <String, dynamic>{
+          'location': <String, dynamic>{'lat': 30.0444, 'lng': 31.2357},
+        },
+      },
+      <String, dynamic>{
+        'uid': 'g-contacts',
+        'type': 'contacts',
+        'body': '',
+        'isIncoming': true,
+        'interactive': <String, dynamic>{
+          'contacts': <dynamic>[
+            <String, dynamic>{
+              // Meta's nested shape.
+              'name': <String, dynamic>{'formatted_name': 'Amira Hassan'},
+              'phones': <dynamic>[
+                <String, dynamic>{'phone': '+20 100 000 0000'},
+                <String, dynamic>{'phone': '+20 122 222 2222'},
+              ],
+              'emails': <dynamic>[
+                <String, dynamic>{'email': 'amira@example.com'},
+              ],
+            },
+            // The flattened shape, which the API has also been seen to send.
+            <String, dynamic>{'name': 'Omar Khaled'},
+          ],
+        },
+      },
+      <String, dynamic>{
+        'uid': 'g-cta',
+        'type': 'cta_url',
+        'body': 'Track your delivery here.',
+        'isIncoming': false,
+        'interactive': <String, dynamic>{
+          'ctaUrl': <String, dynamic>{
+            'url': 'https://example.com/track/10432',
+            'displayText': 'Track order',
+          },
+        },
+      },
+      <String, dynamic>{
+        'uid': 'g-productlist',
+        'type': 'product_list',
+        'body': 'This week’s picks',
+        'isIncoming': false,
+        'interactive': <String, dynamic>{
+          'products': <dynamic>[
+            <String, dynamic>{'retailerId': 'SOFA-118', 'section': 'Living room'},
+            <String, dynamic>{'retailerId': 'CHAIR-22', 'section': 'Living room'},
+            <String, dynamic>{'retailerId': 'LAMP-07', 'section': 'Lighting'},
+          ],
+        },
+      },
+      <String, dynamic>{
+        'uid': 'g-order',
+        'type': 'order',
+        'body': '',
+        'isIncoming': true,
+        'order': <String, dynamic>{
+          'itemCount': 2,
+          'currency': 'SAR',
+          'total': 31500,
+          'items': <dynamic>[
+            <String, dynamic>{
+              'name': 'Louis XVI Marquetry Coffee Table',
+              'quantity': 1,
+              'lineTotal': 31000,
+              'currency': 'SAR',
+            },
+            <String, dynamic>{
+              'name': 'Brass Mounts',
+              'quantity': 2,
+              'lineTotal': 500,
+              'currency': 'SAR',
+            },
+          ],
+        },
+      },
+      <String, dynamic>{
+        'uid': 'g-order-mixed',
+        'type': 'order',
+        'body': '',
+        'isIncoming': true,
+        // Total withheld because the cart mixes currencies. Summing it would
+        // add SAR to USD and print a confident wrong number.
+        'order': <String, dynamic>{
+          'itemCount': 2,
+          'total': null,
+          'items': <dynamic>[
+            <String, dynamic>{
+              'name': 'Abaya',
+              'quantity': 1,
+              'lineTotal': 900,
+              'currency': 'SAR',
+            },
+            <String, dynamic>{
+              'name': 'Shipping',
+              'quantity': 1,
+              'lineTotal': 25,
+              'currency': 'USD',
+            },
+          ],
+        },
+      },
+      <String, dynamic>{
+        'uid': 'g-unsupported',
+        'type': 'unsupported',
+        'body': '',
+        'isIncoming': true,
+        'unsupportedReason':
+            'Message type is not supported on WhatsApp Business API.',
+      },
+    ];
+
+    return <Widget>[
+      for (final Map<String, dynamic> f in fixtures)
+        Builder(
+          builder: (BuildContext c) {
+            final ChatMessage m = chatMessageFromJson(f);
+            final MessageKindStyle style =
+                MessageKindStyle.of(m.kind, AppLocalizations.of(c));
+            final Widget? content = messagePayloadView(c, m, 'en');
+            final bool labelRedundant = content != null &&
+                const <MessageKind>{
+                  MessageKind.order,
+                  MessageKind.template,
+                  MessageKind.interactiveButtons,
+                  MessageKind.interactiveList,
+                }.contains(m.kind);
+
+            return MessageBubble(
+              kindIcon: labelRedundant ? null : style.icon,
+              kindLabel: labelRedundant ? null : style.label,
+              text: m.body,
+              content: content,
+              timeLabel: '10:30',
+              isOutgoing: !m.isIncoming,
+            );
+          },
+        ),
+    ];
   }
 
   Widget _group(String title, List<Widget> children) {

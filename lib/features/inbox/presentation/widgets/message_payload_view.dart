@@ -91,9 +91,11 @@ class _Cart extends StatelessWidget {
 
   String _money(double v, String? currency) => NumberFormat.currency(
         locale: locale,
-        // The symbol is whatever Meta sent. Passing null lets intl guess from
-        // the locale, which would label a SAR cart in EGP for an Arabic agent.
-        name: currency ?? '',
+        // The code is whatever Meta sent, with a trailing space so it reads
+        // "SAR 31,500.00" rather than "SAR31,500.00". Passing null instead
+        // would let intl guess from the locale and label a SAR cart in EGP for
+        // an Arabic agent — the amount would be right and the currency a lie.
+        symbol: currency == null ? '' : '$currency ',
         decimalDigits: 2,
       ).format(v);
 
@@ -433,6 +435,10 @@ class _Contacts extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         for (final ContactCard c in cards) ...<Widget>[
+          // A gap before every card but the first. Without it a second card's
+          // name butts straight against the previous card's last email and the
+          // two read as one person with a stray line.
+          if (c != cards.first) const SizedBox(height: 8),
           Text(
             c.name,
             style: small?.copyWith(fontWeight: FontWeight.w600),
