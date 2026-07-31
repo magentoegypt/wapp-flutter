@@ -56,3 +56,12 @@ lib/l10n/app_localizations*.dart
 # reference frames, which are committed; screenshots off a phone are throwaway.
 docs/frames/device-*.png
 docs/frames/seq-*.png
+
+# Signing material and anything derived from it. android/.gitignore covers only
+# paths under android/, and its *.jks pattern matches neither the base64 form
+# nor a PKCS12 file — so a keystore made in the repo root was not ignored.
+*.jks
+*.keystore
+*.p12
+*.b64
+key.properties

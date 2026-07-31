@@ -83,6 +83,21 @@ Future<ProviderContainer> _container({
   );
 }
 
+/// Bounded pump, used everywhere [WidgetTester.pumpAndSettle] would otherwise
+/// go.
+///
+/// pumpAndSettle cannot be used on any route that reaches the shell. The
+/// dashboard renders a [CircularProgressIndicator] while its request is in
+/// flight, and under the test HTTP stub that request never resolves — so a
+/// frame is always scheduled and settling never happens. These tests assert
+/// routing, not loading, so a fixed number of frames is both sufficient and
+/// immune to whatever the data layer is doing.
+Future<void> _settle(WidgetTester tester) async {
+  for (int i = 0; i < 15; i++) {
+    await tester.pump(const Duration(milliseconds: 250));
+  }
+}
+
 Future<void> _pumpApp(WidgetTester tester, ProviderContainer container) async {
   await tester.pumpWidget(
     UncontrolledProviderScope(
@@ -90,7 +105,7 @@ Future<void> _pumpApp(WidgetTester tester, ProviderContainer container) async {
       child: const ClickalizeApp(),
     ),
   );
-  await tester.pumpAndSettle();
+  await _settle(tester);
 }
 
 void main() {
@@ -99,7 +114,7 @@ void main() {
     await _pumpApp(tester, c);
 
     expect(c.read(authControllerProvider).status, AuthStatus.signedOut);
-    expect(find.text('Sign in'), findsWidgets);
+    expect(find.text('Log in'), findsWidgets);
   });
 
   testWidgets('a stored token redirects past Login to the dashboard',
@@ -125,24 +140,26 @@ void main() {
     );
   });
 
-  testWidgets('each tab keeps its own stack', (WidgetTester tester) async {
+  testWidgets('Chat is pushed over the shell and covers the bottom bar',
+      (WidgetTester tester) async {
     final ProviderContainer c = await _container();
     await _pumpApp(tester, c);
     final router = c.read(routerProvider);
+    String location() =>
+        router.routerDelegate.currentConfiguration.uri.toString();
 
     router.go(AppRoutes.chats);
-    await tester.pumpAndSettle();
-    router.push(AppRoutes.chat('abc-123'));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('abc-123'), findsWidgets);
+    await _settle(tester);
+    expect(find.text('Home'), findsWidgets, reason: 'a tab shows the bar');
 
-    // Switch away and back — the pushed chat must survive, which is the whole
-    // reason for StatefulShellRoute over flat routes.
-    router.go(AppRoutes.contacts);
-    await tester.pumpAndSettle();
-    router.go(AppRoutes.chats);
-    await tester.pumpAndSettle();
-    expect(find.textContaining('abc-123'), findsWidgets);
+    router.go(AppRoutes.chat('abc-123'));
+    await _settle(tester);
+    expect(location(), AppRoutes.chat('abc-123'));
+    // The Shell column of the handoff puts Chat in `push`, not `tabs` — it is a
+    // top-level route, so the bar is covered rather than kept. Asserted on the
+    // bar rather than on anything the chat screen renders: with no network in
+    // the test it renders no text at all, so there is nothing else to match.
+    expect(find.text('Home'), findsNothing);
   });
 
   testWidgets('Profile keeps the bottom bar, Campaigns covers it',
@@ -152,11 +169,11 @@ void main() {
     final router = c.read(routerProvider);
 
     router.go(AppRoutes.profile);
-    await tester.pumpAndSettle();
+    await _settle(tester);
     expect(find.text('More'), findsWidgets);
 
     router.go(AppRoutes.campaigns);
-    await tester.pumpAndSettle();
+    await _settle(tester);
     expect(find.text('Campaigns'), findsWidgets);
     expect(find.text('More'), findsNothing);
   });

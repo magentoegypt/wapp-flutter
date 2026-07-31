@@ -1,0 +1,333 @@
+name: Publish to Loadly
+
+# Manual by default. Publishing on every push to main would put a new build in
+# front of testers for changes that were never meant to be tried, and would burn
+# a versionCode each time.
+on:
+  workflow_dispatch:
+    inputs:
+      flavor:
+        # staging currently points at the same API_BASE_URL as prod and shares
+        # the applicationId, so it differs only in APP_NAME and will replace a
+        # tester's existing install rather than sit beside it.
+        description: Build config (staging currently hits the same API as prod)
+        type: choice
+        default: prod
+        options: [prod, staging]
+      notes:
+        description: What testers should look at in this build
+        type: string
+        default: ''
+  push:
+    tags: ['v*']
+
+concurrency:
+  # Two publishes racing would upload out of order and could hand testers an
+  # older build as the newest link.
+  group: publish-loadly
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: 3.44.4
+  # github.run_number restarts at 1 if this workflow file is ever renamed or
+  # deleted and recreated, which would push versionCode backwards. Bump this
+  # offset past the highest already-published code if that ever happens.
+  VERSION_CODE_OFFSET: 1000
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v5
+
+      # AGP 9.0.1 lists JDK 17 as both minimum and default. The runner image
+      # already defaults to 17, but pinning it here keeps the build honest if
+      # the image default moves.
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      # Applies to Gradle however it is launched, including indirectly through
+      # the flutter CLI, so the Gradle cache works without invoking gradlew.
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Resolve the flavor config
+        id: cfg
+        env:
+          FLAVOR: ${{ github.event_name == 'push' && 'prod' || inputs.flavor }}
+        run: |
+          set -euo pipefail
+          test -f "config/${FLAVOR}.json" || { echo "::error::config/${FLAVOR}.json missing"; exit 1; }
+          echo "flavor=${FLAVOR}" >> "$GITHUB_OUTPUT"
+          echo "entrypoint=lib/main_${FLAVOR}.dart" >> "$GITHUB_OUTPUT"
+
+      - run: flutter pub get
+
+      # Gates. A build that fails these should never reach a tester's phone.
+      - run: flutter analyze
+      - run: flutter test
+
+      # Decoded into RUNNER_TEMP, never the workspace, so the key cannot be
+      # picked up by a later step that archives or commits the tree.
+      - name: Decode the keystore and check every secret
+        id: keystore
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          LOADLY_API_KEY: ${{ secrets.LOADLY_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${KEYSTORE_B64:-}" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 is not set. CI must sign with a stable"
+            echo "::error::key — each runner's debug key differs, so testers would hit a"
+            echo "::error::signature mismatch on every update. See docs/ci-loadly.md."
+            exit 1
+          fi
+
+          KS="$RUNNER_TEMP/upload.jks"
+          # Line wrapping in the secret is harmless; stray carriage returns from
+          # a Windows-side encode are not, and would leave a truncated file that
+          # only fails much later with "Unrecognized keystore format".
+          printf '%s' "$KEYSTORE_B64" | tr -d '\r' | base64 -di > "$KS"
+
+          # base64 exits 0 on empty input, so an unset or mistyped secret would
+          # otherwise sail through as a 0-byte keystore.
+          test -s "$KS" || { echo "::error::decoded keystore is empty — check the secret"; exit 1; }
+
+          # Each secret is checked here, naming itself, rather than surfacing as
+          # a signing failure ~15 minutes into the build that blames the build.
+          keytool -list -keystore "$KS" -storepass "$KEYSTORE_PASSWORD" > /dev/null 2>&1 \
+            || { echo "::error::keystore did not open — ANDROID_KEYSTORE_PASSWORD is wrong, or the secret is corrupt"; exit 1; }
+          test -n "${KEY_ALIAS:-}" || { echo "::error::ANDROID_KEY_ALIAS is not set"; exit 1; }
+          keytool -list -keystore "$KS" -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" > /dev/null 2>&1 \
+            || { echo "::error::alias '$KEY_ALIAS' is not in the keystore — check ANDROID_KEY_ALIAS"; exit 1; }
+          # -certreq writes a CSR to stdout and changes nothing, but it has to
+          # unlock the private key to do it — so it proves the key password.
+          keytool -certreq -keystore "$KS" -storepass "$KEYSTORE_PASSWORD" \
+            -alias "$KEY_ALIAS" -keypass "$KEY_PASSWORD" > /dev/null 2>&1 \
+            || { echo "::error::ANDROID_KEY_PASSWORD is wrong for alias '$KEY_ALIAS'"; exit 1; }
+
+          # Checked now, not after the build: nothing else about this run is
+          # useful if the upload cannot authenticate.
+          test -n "${LOADLY_API_KEY:-}" || { echo "::error::LOADLY_API_KEY is not set"; exit 1; }
+
+          echo "path=$KS" >> "$GITHUB_OUTPUT"
+
+      - name: Compute the version
+        id: version
+        env:
+          EVENT: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          CODE=$(( ${{ github.run_number }} + ${{ env.VERSION_CODE_OFFSET }} ))
+          # Flutter strips non-digits from --build-number silently and floors the
+          # result at 1, so a malformed value would ship as versionCode 1 with a
+          # green build. Assert instead.
+          case "$CODE" in ''|*[!0-9]*) echo "::error::bad version code '$CODE'"; exit 1;; esac
+          # Above int32 the Gradle plugin dies with the misleading
+          # "flutterVersionCode must be an integer".
+          [ "$CODE" -lt 2100000000 ] || { echo "::error::version code $CODE exceeds the Play cap"; exit 1; }
+          echo "code=$CODE" >> "$GITHUB_OUTPUT"
+
+          # versionName. On a tag push the tag IS the release name, so derive it
+          # — otherwise pushing v1.2.0 would ship an APK reporting whatever
+          # pubspec still said, and the tag would be a label with no effect.
+          # On a manual run, leave it to pubspec.
+          NAME=""
+          if [ "$EVENT" = "push" ]; then
+            NAME="${REF_NAME#v}"
+            # Prerelease suffixes are allowed: versionName is a free-form string
+            # on Android and Flutter passes --build-name through untouched, so
+            # v1.2.0-rc1 is a perfectly good release name.
+            if ! printf '%s' "$NAME" | grep -qE '^[0-9]+(\.[0-9]+)*([-+][0-9A-Za-z.-]+)?$'; then
+              echo "::error::tag '$REF_NAME' is not a version — expected v1.2.0 or v1.2.0-rc1"
+              exit 1
+            fi
+          fi
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+
+          # Reported here so the log says which value won before anything builds.
+          PUBSPEC=$(sed -n 's/^version: *\([^+]*\).*/\1/p' pubspec.yaml)
+          echo "versionName: ${NAME:-$PUBSPEC (from pubspec)}  versionCode: $CODE"
+
+      # Driven through `flutter build`, never gradlew: only this path writes
+      # flutter.versionCode into android/local.properties, which is gitignored
+      # and therefore absent on a fresh checkout.
+      - name: Build the release APK
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ steps.keystore.outputs.path }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          BUILD_NAME: ${{ steps.version.outputs.name }}
+        run: |
+          set -euo pipefail
+          # Omitting --build-name entirely is what makes Flutter fall back to
+          # pubspec; passing it empty would not.
+          ARGS=()
+          [ -n "${BUILD_NAME:-}" ] && ARGS+=("--build-name=${BUILD_NAME}")
+
+          flutter build apk --release \
+            -t "${{ steps.cfg.outputs.entrypoint }}" \
+            --dart-define-from-file="config/${{ steps.cfg.outputs.flavor }}.json" \
+            --build-number="${{ steps.version.outputs.code }}" \
+            ${ARGS[@]+"${ARGS[@]}"}
+
+      # The build succeeding does not prove it was signed with the right key —
+      # the Gradle fallback would have produced a debug-signed APK just as
+      # happily. Check the artifact rather than trusting the build.
+      - name: Verify the signature is not the debug key
+        id: apk
+        run: |
+          set -euo pipefail
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          test -s "$APK" || { echo "::error::no APK at $APK"; exit 1; }
+
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          CERTS=$("$APKSIGNER" verify --print-certs "$APK")
+          echo "$CERTS"
+
+          if grep -q "CN=Android Debug" <<< "$CERTS"; then
+            echo "::error::APK is debug-signed — the release signing config did not apply"
+            exit 1
+          fi
+
+          echo "path=$APK" >> "$GITHUB_OUTPUT"
+          echo "size=$(du -h "$APK" | cut -f1)" >> "$GITHUB_OUTPUT"
+
+          # Read the version back out of the artifact rather than echoing what
+          # we asked for, so the summary reports what actually shipped.
+          AAPT=$(ls "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -1)
+          BADGING=$("$AAPT" dump badging "$APK")
+          echo "version_name=$(sed -n "s/.*versionName='\([^']*\)'.*/\1/p" <<< "$BADGING")" >> "$GITHUB_OUTPUT"
+          echo "version_code=$(sed -n "s/.*versionCode='\([^']*\)'.*/\1/p" <<< "$BADGING")" >> "$GITHUB_OUTPUT"
+
+      - name: Upload to Loadly
+        id: loadly
+        env:
+          LOADLY_API_KEY: ${{ secrets.LOADLY_API_KEY }}
+          APK: ${{ steps.apk.outputs.path }}
+          NOTES: ${{ inputs.notes || github.ref_name }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          DESC="${NOTES:-} (${SHA:0:7}, build ${{ steps.version.outputs.code }})"
+
+          RESP="$RUNNER_TEMP/loadly-response.json"
+
+          # --form-string, not -F: with -F a value beginning @ or < would be read
+          # as a filename, so a key or a note starting with @ would silently send
+          # the wrong thing.
+          #
+          # No curl -f here on purpose. Loadly answers HTTP 200 even when the
+          # upload fails and reports the real outcome only in the body's numeric
+          # `code`, so -f would call a failed upload a success. Transport
+          # failures are caught by the captured status instead.
+          #
+          # No --retry either. This POST creates a resource, and curl's retry
+          # fires on a 5xx returned *after* the body was accepted — so a gateway
+          # timing out behind a successful upload gets the whole 59MB re-sent and
+          # Loadly ends up with several builds for one versionCode. Retrying is
+          # the operator's call: re-run the job. --connect-timeout keeps the one
+          # genuinely safe fast-failure, an unreachable host.
+          HTTP=$(curl -sS -o "$RESP" -w '%{http_code}' \
+            --connect-timeout 30 --max-time 900 \
+            https://api.loadly.io/apiv2/app/upload \
+            --form-string "_api_key=${LOADLY_API_KEY}" \
+            --form-string "buildUpdateDescription=${DESC}" \
+            -F "file=@${APK}")
+
+          if [ "$HTTP" != "200" ]; then
+            echo "::error::Loadly returned HTTP $HTTP"
+            head -c 2000 "$RESP" || true
+            exit 1
+          fi
+
+          # A proxy or maintenance page answers 200 with HTML; without this, jq
+          # dies on a parse error that names neither the step nor the cause.
+          if ! jq -e . "$RESP" > /dev/null 2>&1; then
+            echo "::error::Loadly returned 200 with a non-JSON body:"
+            head -c 2000 "$RESP"
+            exit 1
+          fi
+
+          CODE=$(jq -r '.code // empty' "$RESP")
+          if [ "$CODE" != "0" ]; then
+            # Matched on the number, not the message: the live wording differs
+            # from the documented wording for at least code 1001.
+            MSG=$(jq -r '.message // "no message"' "$RESP")
+            echo "::error::Loadly upload failed — code ${CODE:-missing}: $MSG"
+            case "$CODE" in
+              1001|1002|1055) echo "::error::That is an API-key problem. Check the LOADLY_API_KEY secret.";;
+              1022)           echo "::error::File too large for the account.";;
+              1098)           echo "::error::Hourly API limit reached. Retry later.";;
+            esac
+            exit 1
+          fi
+
+          # The build fields live under .data, not at the top level.
+          # buildShortcutUrl is a bare slug, and the install host is i.loadly.io
+          # rather than loadly.io — both fastlane plugins build the link as
+          # "https://i.loadly.io/#{data['buildShortcutUrl']}".
+          SLUG=$(jq -r '.data.buildShortcutUrl // empty' "$RESP")
+          test -n "$SLUG" || { echo "::error::upload reported success but returned no shortcut"; exit 1; }
+          echo "url=https://i.loadly.io/${SLUG}" >> "$GITHUB_OUTPUT"
+          echo "qr=$(jq -r '.data.buildQRCodeURL // empty' "$RESP")" >> "$GITHUB_OUTPUT"
+          # buildKey is Loadly's stable id for this build — the handle you need
+          # to find or remove it later, once the shortcut points at a newer one.
+          echo "key=$(jq -r '.data.buildKey // empty' "$RESP")" >> "$GITHUB_OUTPUT"
+
+      # Everything reaches the shell through env, never through ${{ }}. These
+      # values come back from Loadly, and ${{ }} is a textual substitution into
+      # the script — a quote or a newline in a response field would otherwise
+      # rewrite this step's own source.
+      - name: Summarise
+        env:
+          URL: ${{ steps.loadly.outputs.url }}
+          QR: ${{ steps.loadly.outputs.qr }}
+          BUILD_KEY: ${{ steps.loadly.outputs.key }}
+          FLAVOR: ${{ steps.cfg.outputs.flavor }}
+          VERSION_NAME: ${{ steps.apk.outputs.version_name }}
+          CODE: ${{ steps.apk.outputs.version_code }}
+          SIZE: ${{ steps.apk.outputs.size }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          {
+            echo "## Clickalize published to Loadly"
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Install | $URL |"
+            echo "| Flavor | $FLAVOR |"
+            echo "| versionName | $VERSION_NAME |"
+            echo "| versionCode | $CODE |"
+            echo "| Size | $SIZE |"
+            echo "| Commit | $COMMIT |"
+            echo "| Loadly build key | \`$BUILD_KEY\` |"
+            echo
+            echo "![QR]($QR)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Kept so a published build can be pulled back for comparison after the
+      # Loadly link is replaced by the next upload.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: clickalize-${{ steps.version.outputs.code }}-${{ steps.cfg.outputs.flavor }}
+          path: ${{ steps.apk.outputs.path }}
+          if-no-files-found: error
+          retention-days: 30
