@@ -1,8 +1,13 @@
-name: Publish to Loadly
+name: Android CI and Loadly publish
 
-# Manual by default. Publishing on every push to main would put a new build in
-# front of testers for changes that were never meant to be tried, and would burn
-# a versionCode each time.
+# Two modes in one pipeline, so the build that gets checked is the same build
+# that gets shipped:
+#
+#   push to main  -> analyze, test, build and verify. Nothing is uploaded.
+#   manual / v tag -> all of the above, then publish to Loadly.
+#
+# Publishing on every push to main would put a build in front of testers for
+# changes never meant to be tried, and burn a versionCode each time.
 on:
   workflow_dispatch:
     inputs:
@@ -19,26 +24,30 @@ on:
         type: string
         default: ''
   push:
+    branches: [main]
     tags: ['v*']
 
 concurrency:
-  # Two publishes racing would upload out of order and could hand testers an
-  # older build as the newest link.
-  group: publish-loadly
-  cancel-in-progress: false
+  # Publishes share one group and are never cancelled — two racing uploads could
+  # hand testers an older build as the newest link. Check runs are per-ref and
+  # do cancel, since a superseded commit's result is of no interest.
+  group: >-
+    loadly-${{ (github.event_name == 'workflow_dispatch' || github.ref_type == 'tag')
+      && 'publish' || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' && github.ref_type != 'tag' }}
 
 permissions:
   contents: read
 
 env:
   FLUTTER_VERSION: 3.44.4
-  # github.run_number restarts at 1 if this workflow file is ever renamed or
-  # deleted and recreated, which would push versionCode backwards. Bump this
-  # offset past the highest already-published code if that ever happens.
+  # github.run_number restarts at 1 if this workflow file is renamed or deleted
+  # and recreated, which would push versionCode backwards. Bump this offset past
+  # the highest already-published code if that ever happens.
   VERSION_CODE_OFFSET: 1000
 
 jobs:
-  publish:
+  build:
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -63,15 +72,26 @@ jobs:
       # the flutter CLI, so the Gradle cache works without invoking gradlew.
       - uses: gradle/actions/setup-gradle@v6
 
-      - name: Resolve the flavor config
+      - name: Resolve the mode and flavor
         id: cfg
         env:
+          # inputs is unpopulated on a push, so a push always means prod.
           FLAVOR: ${{ github.event_name == 'push' && 'prod' || inputs.flavor }}
+          EVENT: ${{ github.event_name }}
+          REF_TYPE: ${{ github.ref_type }}
         run: |
           set -euo pipefail
           test -f "config/${FLAVOR}.json" || { echo "::error::config/${FLAVOR}.json missing"; exit 1; }
           echo "flavor=${FLAVOR}" >> "$GITHUB_OUTPUT"
           echo "entrypoint=lib/main_${FLAVOR}.dart" >> "$GITHUB_OUTPUT"
+
+          if [ "$EVENT" = "workflow_dispatch" ] || [ "$REF_TYPE" = "tag" ]; then
+            PUBLISH=true
+          else
+            PUBLISH=false
+          fi
+          echo "publish=$PUBLISH" >> "$GITHUB_OUTPUT"
+          echo "mode: $([ "$PUBLISH" = true ] && echo 'build + publish to Loadly' || echo 'build + verify only')"
 
       - run: flutter pub get
 
@@ -89,13 +109,24 @@ jobs:
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           LOADLY_API_KEY: ${{ secrets.LOADLY_API_KEY }}
+          PUBLISH: ${{ steps.cfg.outputs.publish }}
         run: |
           set -euo pipefail
+          echo "signed=false" >> "$GITHUB_OUTPUT"
+
           if [ -z "${KEYSTORE_B64:-}" ]; then
-            echo "::error::ANDROID_KEYSTORE_BASE64 is not set. CI must sign with a stable"
-            echo "::error::key — each runner's debug key differs, so testers would hit a"
-            echo "::error::signature mismatch on every update. See docs/ci-loadly.md."
-            exit 1
+            if [ "$PUBLISH" = "true" ]; then
+              echo "::error::ANDROID_KEYSTORE_BASE64 is not set. A published build must be"
+              echo "::error::signed with a stable key — each runner's debug key differs, so"
+              echo "::error::testers would hit a signature mismatch on every update."
+              echo "::error::See docs/ci-loadly.md."
+              exit 1
+            fi
+            # A check run should tell you the code is broken, not that a secret
+            # is missing, so it falls back rather than failing. It also keeps the
+            # signing key out of every push to main.
+            echo "::warning::No signing secrets — this check run builds with the debug key."
+            exit 0
           fi
 
           KS="$RUNNER_TEMP/upload.jks"
@@ -121,16 +152,19 @@ jobs:
             -alias "$KEY_ALIAS" -keypass "$KEY_PASSWORD" > /dev/null 2>&1 \
             || { echo "::error::ANDROID_KEY_PASSWORD is wrong for alias '$KEY_ALIAS'"; exit 1; }
 
-          # Checked now, not after the build: nothing else about this run is
+          # Checked now, not after the build: nothing else about a publish run is
           # useful if the upload cannot authenticate.
-          test -n "${LOADLY_API_KEY:-}" || { echo "::error::LOADLY_API_KEY is not set"; exit 1; }
+          if [ "$PUBLISH" = "true" ]; then
+            test -n "${LOADLY_API_KEY:-}" || { echo "::error::LOADLY_API_KEY is not set"; exit 1; }
+          fi
 
           echo "path=$KS" >> "$GITHUB_OUTPUT"
+          echo "signed=true" >> "$GITHUB_OUTPUT"
 
       - name: Compute the version
         id: version
         env:
-          EVENT: ${{ github.event_name }}
+          REF_TYPE: ${{ github.ref_type }}
           REF_NAME: ${{ github.ref_name }}
         run: |
           set -euo pipefail
@@ -144,12 +178,13 @@ jobs:
           [ "$CODE" -lt 2100000000 ] || { echo "::error::version code $CODE exceeds the Play cap"; exit 1; }
           echo "code=$CODE" >> "$GITHUB_OUTPUT"
 
-          # versionName. On a tag push the tag IS the release name, so derive it
-          # — otherwise pushing v1.2.0 would ship an APK reporting whatever
-          # pubspec still said, and the tag would be a label with no effect.
-          # On a manual run, leave it to pubspec.
+          # versionName. Only a TAG carries one — on a tag push the tag IS the
+          # release name, so derive it, or v1.2.0 would ship an APK reporting
+          # whatever pubspec still said. A branch push has no version in its ref
+          # ("main" is not one), so pubspec wins there, as it does for a manual
+          # run.
           NAME=""
-          if [ "$EVENT" = "push" ]; then
+          if [ "$REF_TYPE" = "tag" ]; then
             NAME="${REF_NAME#v}"
             # Prerelease suffixes are allowed: versionName is a free-form string
             # on Android and Flutter passes --build-name through untouched, so
@@ -191,8 +226,10 @@ jobs:
       # The build succeeding does not prove it was signed with the right key —
       # the Gradle fallback would have produced a debug-signed APK just as
       # happily. Check the artifact rather than trusting the build.
-      - name: Verify the signature is not the debug key
+      - name: Inspect the built APK
         id: apk
+        env:
+          SIGNED: ${{ steps.keystore.outputs.signed }}
         run: |
           set -euo pipefail
           APK=build/app/outputs/flutter-apk/app-release.apk
@@ -202,9 +239,13 @@ jobs:
           CERTS=$("$APKSIGNER" verify --print-certs "$APK")
           echo "$CERTS"
 
-          if grep -q "CN=Android Debug" <<< "$CERTS"; then
-            echo "::error::APK is debug-signed — the release signing config did not apply"
-            exit 1
+          if [ "$SIGNED" = "true" ]; then
+            if grep -q "CN=Android Debug" <<< "$CERTS"; then
+              echo "::error::APK is debug-signed — the release signing config did not apply"
+              exit 1
+            fi
+          else
+            echo "::notice::Debug-signed check build. Not publishable; gate skipped."
           fi
 
           echo "path=$APK" >> "$GITHUB_OUTPUT"
@@ -219,6 +260,7 @@ jobs:
 
       - name: Upload to Loadly
         id: loadly
+        if: steps.cfg.outputs.publish == 'true'
         env:
           LOADLY_API_KEY: ${{ secrets.LOADLY_API_KEY }}
           APK: ${{ steps.apk.outputs.path }}
@@ -292,12 +334,13 @@ jobs:
           # to find or remove it later, once the shortcut points at a newer one.
           echo "key=$(jq -r '.data.buildKey // empty' "$RESP")" >> "$GITHUB_OUTPUT"
 
-      # Everything reaches the shell through env, never through ${{ }}. These
-      # values come back from Loadly, and ${{ }} is a textual substitution into
-      # the script — a quote or a newline in a response field would otherwise
-      # rewrite this step's own source.
+      # Everything reaches the shell through env, never through ${{ }}. The
+      # Loadly values come back from a remote API, and ${{ }} is a textual
+      # substitution into the script — a quote or a newline in a response field
+      # would otherwise rewrite this step's own source.
       - name: Summarise
         env:
+          PUBLISHED: ${{ steps.cfg.outputs.publish }}
           URL: ${{ steps.loadly.outputs.url }}
           QR: ${{ steps.loadly.outputs.qr }}
           BUILD_KEY: ${{ steps.loadly.outputs.key }}
@@ -305,29 +348,40 @@ jobs:
           VERSION_NAME: ${{ steps.apk.outputs.version_name }}
           CODE: ${{ steps.apk.outputs.version_code }}
           SIZE: ${{ steps.apk.outputs.size }}
+          SIGNED: ${{ steps.keystore.outputs.signed }}
           COMMIT: ${{ github.sha }}
         run: |
           {
-            echo "## Clickalize published to Loadly"
+            if [ "$PUBLISHED" = "true" ]; then
+              echo "## Clickalize published to Loadly"
+            else
+              echo "## Clickalize built and verified"
+              echo
+              echo "Not published — pushes to main build and check only."
+            fi
             echo
             echo "| | |"
             echo "|---|---|"
-            echo "| Install | $URL |"
+            [ "$PUBLISHED" = "true" ] && echo "| Install | $URL |"
             echo "| Flavor | $FLAVOR |"
             echo "| versionName | $VERSION_NAME |"
             echo "| versionCode | $CODE |"
             echo "| Size | $SIZE |"
+            echo "| Signing | $([ "$SIGNED" = "true" ] && echo 'release key' || echo 'debug key (check build)') |"
             echo "| Commit | $COMMIT |"
-            echo "| Loadly build key | \`$BUILD_KEY\` |"
-            echo
-            echo "![QR]($QR)"
+            [ "$PUBLISHED" = "true" ] && echo "| Loadly build key | \`$BUILD_KEY\` |"
+            if [ "$PUBLISHED" = "true" ] && [ -n "$QR" ]; then
+              echo
+              echo "![QR]($QR)"
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
 
-      # Kept so a published build can be pulled back for comparison after the
-      # Loadly link is replaced by the next upload.
+      # Kept so a build can be pulled back for comparison after the Loadly link
+      # is replaced by the next upload. Check builds expire sooner — they exist
+      # to be looked at when something breaks, not to be kept.
       - uses: actions/upload-artifact@v7
         with:
           name: clickalize-${{ steps.version.outputs.code }}-${{ steps.cfg.outputs.flavor }}
           path: ${{ steps.apk.outputs.path }}
           if-no-files-found: error
-          retention-days: 30
+          retention-days: ${{ steps.cfg.outputs.publish == 'true' && 30 || 7 }}

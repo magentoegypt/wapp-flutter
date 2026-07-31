@@ -4,9 +4,20 @@
 signed release APK and uploads it to [Loadly](https://loadly.io), which returns an install
 link testers can open on their phone.
 
-Run it from the repo's **Actions** tab → *Publish to Loadly* → *Run workflow*, or push a
-`v*` tag. It is deliberately not wired to every push to `main`: that would put builds in
-front of testers that were never meant to be tried, and burn a `versionCode` each time.
+It runs in two modes, so the build that gets checked is the same build that gets shipped:
+
+| Trigger | What happens |
+| --- | --- |
+| **Push to `main`** | analyze, test, build the release APK, inspect it. **Nothing is uploaded.** |
+| **Actions tab → Run workflow** | all of the above, then publish to Loadly |
+| **Push a `v*` tag** | all of the above, then publish — with `versionName` taken from the tag |
+
+Publishing on every push to `main` would put builds in front of testers that were never
+meant to be tried, and burn a `versionCode` each time — so the upload stays deliberate.
+
+Check runs on `main` do not need the signing secrets. Without them the build falls back to
+the debug key and says so; the run still catches a broken build, which is what it is for,
+and the signing key is not decrypted on every push. Publishing always requires them.
 
 ## One-time setup
 
@@ -126,8 +137,9 @@ This pipeline is **Android only, and APK only**. It does not build an AAB (what 
 Store requires) and has no iOS path — Loadly can host an IPA, but that needs a macOS runner
 and Apple signing credentials, neither of which is set up here.
 
-`flutter analyze` and `flutter test` run as gates inside this workflow, so they only
-execute when someone publishes. There is no pull-request check workflow in this repo yet.
+`flutter analyze` and `flutter test` run on every push to `main` as well as on every
+publish. There is no pull-request check workflow yet, so a PR is not verified until its
+commits land on `main`.
 
 ## What the pipeline does
 
