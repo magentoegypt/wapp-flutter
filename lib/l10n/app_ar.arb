@@ -544,5 +544,19 @@
   "igReact": "تفاعل",
   "igReacted": "تم إرسال التفاعل.",
   "igFromTemplate": "استخدام قالب محفوظ",
-  "igNoTemplates": "لا توجد قوالب إنستغرام محفوظة."
+  "igNoTemplates": "لا توجد قوالب إنستغرام محفوظة.",
+  "attachTitle": "إرفاق",
+  "attachPhoto": "مكتبة الصور",
+  "attachCamera": "التقاط صورة",
+  "attachVideo": "فيديو",
+  "attachDocNote": "يمكن إرسال المستندات من لوحة التحكم على الويب.",
+  "mediaCaption": "التعليق",
+  "mediaCaptionHint": "اختياري",
+  "mediaSend": "إرسال",
+  "mediaSending": "جارٍ الإرسال…",
+  "mediaSent": "تم الإرسال.",
+  "mediaPermission": "يلزم الوصول إلى الصور لإرفاق ملف.",
+  "mediaIgFormats": "يقبل إنستغرام صيغًا أقل من واتساب، لذا قد يُرفض ملف يعمل في أحدهما.",
+  "igReactTitle": "التفاعل مع الرسالة",
+  "igReactOnly": "التفاعلات متاحة في إنستغرام فقط."
 }

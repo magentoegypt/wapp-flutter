@@ -635,5 +635,19 @@
   "igReact": "React",
   "igReacted": "Reaction sent.",
   "igFromTemplate": "Use a saved template",
-  "igNoTemplates": "No saved Instagram templates."
+  "igNoTemplates": "No saved Instagram templates.",
+  "attachTitle": "Attach",
+  "attachPhoto": "Photo library",
+  "attachCamera": "Take a photo",
+  "attachVideo": "Video",
+  "attachDocNote": "Documents can be sent from the web console.",
+  "mediaCaption": "Caption",
+  "mediaCaptionHint": "Optional",
+  "mediaSend": "Send",
+  "mediaSending": "Sending…",
+  "mediaSent": "Sent.",
+  "mediaPermission": "Photo access is needed to attach a file.",
+  "mediaIgFormats": "Instagram accepts fewer formats than WhatsApp, so a file that works in one may be refused in the other.",
+  "igReactTitle": "React to message",
+  "igReactOnly": "Reactions are Instagram-only."
 }

@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
-
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/error/failure.dart';
 import '../../../../core/util/duration_format.dart';
 import '../../../../core/widgets/app_banner.dart';
 import '../../../../core/widgets/app_header.dart';
 import '../../../../core/widgets/async_value_view.dart';
-import '../../../../core/widgets/message_bubble.dart';
 import '../../../../core/widgets/initials_avatar.dart';
+import '../../../../core/widgets/message_bubble.dart';
 import '../../../../core/widgets/message_composer.dart';
 import '../../../../core/widgets/reply_window_ring.dart';
 import '../../../../core/widgets/status_pill.dart';
@@ -20,10 +20,14 @@ import '../../../calls/data/call_repository.dart';
 import '../../../calls/domain/call.dart';
 import '../../../quick_replies/data/quick_reply_repository.dart';
 import '../../data/conversation_repository.dart';
+import '../../data/instagram_repository.dart';
+import '../../data/media_repository.dart';
 import '../../domain/channel.dart';
 import '../../domain/conversation.dart';
+import '../widgets/attach_sheet.dart';
 import '../widgets/chat_actions_sheet.dart';
 import '../widgets/message_kind_style.dart';
+import '../widgets/reaction_picker.dart';
 
 /// Chat — Figma 37:1032.
 ///
@@ -52,6 +56,71 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     // bottom. reload() has the same effect here only because a send is already
     // a return to the bottom; anywhere else, prefer prepend().
     await ref.read(chatThreadProvider(widget.contactUid).notifier).reload();
+  }
+
+  /// Picks a file, uploads it, then sends the returned name.
+  ///
+  /// Always uploads, even on WhatsApp where a mediaUrl would also be accepted.
+  /// Instagram is upload-only, and one path exercised by every send beats a
+  /// second one exercised by two contacts out of thirty-six.
+  Future<void> _attach(MessageChannel channel) async {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final PickedMedia? picked = await showAttachSheet(context, channel: channel);
+    if (picked == null || !mounted) return;
+
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(
+      SnackBar(content: Text(l10n.mediaSending), duration: const Duration(minutes: 5)),
+    );
+
+    try {
+      final MediaRepository repo = ref.read(mediaRepositoryProvider);
+      final String name = await repo.upload(
+        path: picked.path,
+        fileName: picked.fileName,
+      );
+      await repo.send(
+        contactUid: widget.contactUid,
+        uploadedFileName: name,
+        kind: picked.kind,
+      );
+      if (!mounted) return;
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(l10n.mediaSent)));
+      await ref.read(chatThreadProvider(widget.contactUid).notifier).reload();
+    } on Failure catch (e) {
+      // Surface the server's wording verbatim. Instagram's accepted formats
+      // are narrower than WhatsApp's, and only the server knows which list
+      // applies — an invented client message would be wrong half the time.
+      if (!mounted) return;
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(e.message)));
+    }
+  }
+
+  /// Long-press a bubble to react. Instagram only — there is no WhatsApp
+  /// endpoint, so the gesture does nothing on a WhatsApp thread rather than
+  /// offering a picker whose send would 422.
+  Future<void> _react(ChatMessage message) async {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final String? emoji = await showReactionPicker(context);
+    if (emoji == null || !mounted) return;
+    try {
+      await ref.read(instagramRepositoryProvider).react(
+            contactUid: widget.contactUid,
+            messageUid: message.uid,
+            emoji: emoji,
+          );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10n.igReacted)));
+    } on Failure catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.message)));
+    }
   }
 
   /// Loads the next older page when the reader nears the top of the thread.
@@ -160,7 +229,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             Expanded(
               child: NotificationListener<ScrollNotification>(
                 onNotification: _onScroll,
-                child: _MessageList(thread: data),
+                child: _MessageList(
+                  thread: data,
+                  // Null on WhatsApp: the long-press only exists where the
+                  // endpoint does.
+                  onReact: data.channel.isInstagram ? _react : null,
+                ),
               ),
             ),
             // Both strips can be visible at once — the handoff requires their
@@ -200,7 +274,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               key: _composerKey,
               hintText: l10n.chatComposerHint,
               onSend: _send,
-              onAttach: () {},
+              onAttach: () => _attach(data.channel),
             ),
           ],
         ),
@@ -298,9 +372,12 @@ class _CallButton extends ConsumerWidget {
 }
 
 class _MessageList extends StatelessWidget {
-  const _MessageList({required this.thread});
+  const _MessageList({required this.thread, this.onReact});
 
   final ChatThread thread;
+
+  /// Set only on an Instagram thread — see [ChatScreen._react].
+  final void Function(ChatMessage message)? onReact;
 
   @override
   Widget build(BuildContext context) {
@@ -344,7 +421,12 @@ class _MessageList extends StatelessWidget {
           children: <Widget>[
             if (startsDay && m.sentAt != null)
               ChatDayDivider(label: _dayLabel(context, m.sentAt!)),
-            _bubbleFor(context, m, locale),
+            // The whole bubble is the target, not a separate affordance: a
+            // reaction is a low-stakes gesture and the frames show no button.
+            GestureDetector(
+              onLongPress: onReact == null ? null : () => onReact!(m),
+              child: _bubbleFor(context, m, locale),
+            ),
           ],
         );
       },

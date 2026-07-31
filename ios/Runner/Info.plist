@@ -70,5 +70,9 @@
 		<false/>
 		<key>NSMicrophoneUsageDescription</key>
 	<string>Clickalize needs the microphone so you can take and make calls with customers.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Clickalize needs your photo library so you can send images and video to customers.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Clickalize needs the camera so you can take a photo to send to a customer.</string>
 </dict>
 </plist>

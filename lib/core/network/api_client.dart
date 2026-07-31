@@ -52,8 +52,27 @@ class ApiClient {
   Future<dynamic> get(String path, {Map<String, dynamic>? query}) =>
       _send(() => _dio.get<dynamic>(path, queryParameters: query));
 
-  Future<dynamic> post(String path, {Object? body}) =>
-      _send(() => _dio.post<dynamic>(path, data: body));
+  /// [onSendProgress] is only meaningful for a multipart upload — dio reports
+  /// bytes as they leave, which is the difference between a progress bar and a
+  /// spinner that sits there for a 40MB video.
+  Future<dynamic> post(
+    String path, {
+    Object? body,
+    void Function(int sent, int total)? onSendProgress,
+    Duration? timeout,
+  }) =>
+      _send(() => _dio.post<dynamic>(
+            path,
+            data: body,
+            onSendProgress: onSendProgress,
+            // The client's 20s default is sized for JSON. An upload needs its
+            // own budget — a 40MB video on a weak mobile link takes minutes,
+            // and the default would abort it partway and report a timeout that
+            // looks like the server being slow.
+            options: timeout == null
+                ? null
+                : Options(sendTimeout: timeout, receiveTimeout: timeout),
+          ));
 
   Future<dynamic> put(String path, {Object? body}) =>
       _send(() => _dio.put<dynamic>(path, data: body));
