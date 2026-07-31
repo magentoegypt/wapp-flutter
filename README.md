@@ -13,9 +13,14 @@ Flavors are `dev`, `staging` and `prod` — each pairs `lib/main_<flavor>.dart` 
 
 ## Shipping it
 
-[**Publishing to Loadly**](docs/ci-loadly.md) — the GitHub Actions pipeline that builds a
-signed release APK and hands testers an install link, plus the one-time keystore and
-secrets setup it needs.
+Two GitHub Actions pipelines, both publishing to [Loadly](https://loadly.io):
+
+- [**Android**](docs/ci-loadly.md) — builds and verifies on every push to `main`; publishes a
+  signed APK on demand or on a `v*` tag.
+- [**iOS (Ad Hoc)**](docs/ci-loadly-ios.md) — builds a signed `.ipa` on demand or on a `v*`
+  tag. Ad Hoc installs only on devices registered in the provisioning profile.
+
+Each doc covers the one-time credential setup its pipeline needs. A `v*` tag runs both.
 
 ## Getting Started
 

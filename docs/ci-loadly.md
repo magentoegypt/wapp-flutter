@@ -140,9 +140,14 @@ uploads once, deliberately.
 
 ## Scope
 
-This pipeline is **Android only, and APK only**. It does not build an AAB (what the Play
-Store requires) and has no iOS path — Loadly can host an IPA, but that needs a macOS runner
-and Apple signing credentials, neither of which is set up here.
+This pipeline is **Android only, and APK only**. It does not build an AAB, which is what the
+Play Store requires.
+
+iOS has its own pipeline — see [Publishing iOS (Ad Hoc) to Loadly](ci-loadly-ios.md). Note
+that a `v*` tag triggers **both** workflows, which run in parallel with separate concurrency
+groups. Their build numbers are not the same: `github.run_number` counts per workflow file,
+so Android's `versionCode` and iOS's `CFBundleVersion` use the same formula but drift apart.
+That's harmless — the two stores and Loadly treat them independently.
 
 `flutter analyze` and `flutter test` run on every push to `main` as well as on every
 publish. There is no pull-request check workflow yet, so a PR is not verified until its
