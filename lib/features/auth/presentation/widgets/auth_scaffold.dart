@@ -23,30 +23,62 @@ class AuthScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColor.brand,
+      // Scrolls once the keyboard no longer leaves room for the form.
+      //
+      // The hero took Expanded and the sheet its natural height, which is fine
+      // at rest and overflows the moment the keyboard opens: the hero cannot
+      // shrink below its own content, so the column ran 125px past the bottom
+      // and Flutter painted the yellow-and-black bar over Login. It affected
+      // all three signed-out screens, since they share this scaffold.
+      //
+      // minHeight pins the layout to the full viewport when there IS room, so
+      // the hero still fills the screen and the sheet still sits at the
+      // bottom; IntrinsicHeight is what keeps Expanded meaningful inside a
+      // scroll view, whose children are otherwise unbounded.
       body: SafeArea(
-        child: Column(
-          children: <Widget>[
-            Expanded(
-              child: Stack(
-                children: <Widget>[
-                  const Positioned.fill(child: _BrandHero()),
-                  if (onBack != null)
-                    PositionedDirectional(
-                      start: 6,
-                      top: 0,
-                      child: IconButton(
-                        onPressed: onBack,
-                        icon: const Icon(Icons.arrow_back),
-                        color: Colors.white,
-                        tooltip:
-                            MaterialLocalizations.of(context).backButtonTooltip,
+        child: LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            return SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: IntrinsicHeight(
+                  child: Column(
+                    children: <Widget>[
+                      Expanded(
+                        child: Stack(
+                          children: <Widget>[
+                            // Deliberately NOT Positioned.fill, which is what
+                            // it was: a Stack reports the intrinsic height of
+                            // its non-positioned children only, so a wholly
+                            // positioned Stack measures zero. IntrinsicHeight
+                            // then budgeted nothing for the hero and squeezed
+                            // it until its own Column overflowed. Unpositioned,
+                            // it both measures and still fills, because
+                            // Expanded hands the Stack a tight height and
+                            // Center expands into it.
+                            const _BrandHero(),
+                            if (onBack != null)
+                              PositionedDirectional(
+                                start: 6,
+                                top: 0,
+                                child: IconButton(
+                                  onPressed: onBack,
+                                  icon: const Icon(Icons.arrow_back),
+                                  color: Colors.white,
+                                  tooltip: MaterialLocalizations.of(context)
+                                      .backButtonTooltip,
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
-                    ),
-                ],
+                      _Sheet(child: child),
+                    ],
+                  ),
+                ),
               ),
-            ),
-            _Sheet(child: child),
-          ],
+            );
+          },
         ),
       ),
     );
@@ -98,7 +130,10 @@ class _Sheet extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
-      child: SingleChildScrollView(
+      // Plain padding, not a scroll view: the scaffold above now scrolls the
+      // whole page, and nesting a second vertical scroller inside it would
+      // give this one unbounded height.
+      child: Padding(
         padding: const EdgeInsets.fromLTRB(
           AppDimens.gutter,
           24,
