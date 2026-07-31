@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
+import '../../../core/network/envelope.dart';
 import '../../calls/domain/call.dart';
 import '../domain/action_models.dart';
 
@@ -192,7 +193,7 @@ class ConversationActionRepositoryImpl implements ConversationActionRepository {
   @override
   Future<List<Team>> teams() async {
     final dynamic body = await _api.get('/teams');
-    return _rows(body, 'teams')
+    return envelopeRows(body, 'teams')
         .map((Map<String, dynamic> j) => Team(
               uid: '${j['uid'] ?? j['_uid'] ?? ''}',
               name: '${j['name'] ?? j['title'] ?? ''}',
@@ -221,7 +222,7 @@ class ConversationActionRepositoryImpl implements ConversationActionRepository {
   @override
   Future<List<ConversationLabel>> labels() async {
     final dynamic body = await _api.get('/labels');
-    return _rows(body, 'labels')
+    return envelopeRows(body, 'labels')
         .map((Map<String, dynamic> j) => ConversationLabel(
               uid: '${j['uid'] ?? j['_uid'] ?? ''}',
               name: '${j['name'] ?? j['title'] ?? ''}',
@@ -242,17 +243,13 @@ class ConversationActionRepositoryImpl implements ConversationActionRepository {
   @override
   Future<List<MessageTemplate>> templates() async {
     final dynamic body = await _api.get('/templates');
-    return _rows(body, 'templates').map(_templateFromJson).toList();
+    return envelopeRows(body, 'templates').map(_templateFromJson).toList();
   }
 
   @override
   Future<MessageTemplate> template(String templateUid) async {
     final dynamic body = await _api.get('/templates/$templateUid');
-    final Map<String, dynamic> m = (body as Map<String, dynamic>?) ??
-        const <String, dynamic>{};
-    return _templateFromJson(
-      (m['template'] as Map<String, dynamic>?) ?? m,
-    );
+    return _templateFromJson(envelopeRecord(body, 'template'));
   }
 
   @override
@@ -275,7 +272,7 @@ class ConversationActionRepositoryImpl implements ConversationActionRepository {
     final Map<String, dynamic> m =
         (body as Map<String, dynamic>?) ?? const <String, dynamic>{};
     return CallHistoryPage(
-      calls: _rows(m, 'calls').map(callRecordFromJson).toList(),
+      calls: envelopeRows(m, 'calls').map(callRecordFromJson).toList(),
       page: _int(m['page'], fallback: page),
       hasMore: (m['hasMore'] as bool?) ?? false,
     );
@@ -288,15 +285,18 @@ class ConversationActionRepositoryImpl implements ConversationActionRepository {
   @override
   Future<HistoryAccessSnapshot> historyAccess(String contactUid) async {
     final dynamic body = await _api.get('${_base(contactUid)}/history-access');
-    final Map<String, dynamic> m =
-        (body as Map<String, dynamic>?) ?? const <String, dynamic>{};
+    // Nested under a domain-named key, like every list endpoint in this API:
+    // {success, historyAccess: {currentUser, pending, approved, isVendorAdmin,
+    // revealFullHistory}}. Reading isVendorAdmin from the top level yielded
+    // null, which defaulted to false and showed an owner the agent screen.
+    final Map<String, dynamic> m = envelopeRecord(body, 'historyAccess');
     final Map<String, dynamic> me =
         (m['currentUser'] as Map<String, dynamic>?) ?? const <String, dynamic>{};
 
     return HistoryAccessSnapshot(
       currentUserStatus: _accessStatus(me['status']),
-      pending: _rows(m, 'pending').map(_accessRequestFromJson).toList(),
-      approved: _rows(m, 'approved').map(_accessRequestFromJson).toList(),
+      pending: envelopeRows(m, 'pending').map(_accessRequestFromJson).toList(),
+      approved: envelopeRows(m, 'approved').map(_accessRequestFromJson).toList(),
       isVendorAdmin: (m['isVendorAdmin'] as bool?) ?? false,
       revealFullHistory: (m['revealFullHistory'] as bool?) ?? false,
     );
@@ -339,7 +339,7 @@ class ConversationActionRepositoryImpl implements ConversationActionRepository {
   @override
   Future<List<Reminder>> reminders(String contactUid) async {
     final dynamic body = await _api.get('${_base(contactUid)}/reminders');
-    return _rows(body, 'reminders').map(_reminderFromJson).toList();
+    return envelopeRows(body, 'reminders').map(_reminderFromJson).toList();
   }
 
   @override
@@ -375,9 +375,10 @@ class ConversationActionRepositoryImpl implements ConversationActionRepository {
   @override
   Future<bool> toggleFavourite(String contactUid) async {
     final dynamic body = await _api.post('${_base(contactUid)}/favorite');
-    final Map<String, dynamic> m =
-        (body as Map<String, dynamic>?) ?? const <String, dynamic>{};
-    return (m['favorite'] as bool?) ?? false;
+    // Same nesting risk as history-access: read through the helper so a
+    // domain-keyed envelope cannot silently answer "not favourited".
+    final Map<String, dynamic> m = envelopeRecord(body, 'conversation');
+    return (m['favorite'] ?? m['isFavorite']) as bool? ?? false;
   }
 }
 
@@ -393,14 +394,7 @@ String _localStamp(DateTime t) {
   return '${t.year}-${two(t.month)}-${two(t.day)}T${two(t.hour)}:${two(t.minute)}';
 }
 
-List<Map<String, dynamic>> _rows(dynamic body, String key) {
-  if (body is List) return body.whereType<Map<String, dynamic>>().toList();
-  final Map<String, dynamic> m =
-      (body as Map<String, dynamic>?) ?? const <String, dynamic>{};
-  final List<dynamic> raw =
-      (m[key] ?? m['data']) as List<dynamic>? ?? const <dynamic>[];
-  return raw.whereType<Map<String, dynamic>>().toList();
-}
+
 
 int _int(Object? v, {int fallback = 0}) {
   if (v is int) return v;

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
+import '../../../core/network/envelope.dart';
 import '../../conversation_actions/data/conversation_action_repository.dart'
     show callRecordFromJson;
 import '../domain/call.dart';
@@ -44,11 +45,9 @@ class CallRepositoryImpl implements CallRepository {
   @override
   Future<CallCapability> capability() async {
     final dynamic body = await _api.get('/calls/capability');
-    final Map<String, dynamic> m =
-        (body as Map<String, dynamic>?) ?? const <String, dynamic>{};
-    // The payload nests under `calling`; tolerate it being flat too.
-    final Map<String, dynamic> c =
-        (m['calling'] as Map<String, dynamic>?) ?? m;
+    // Nested under `calling`, the same domain-key convention as every other
+    // endpoint here; falls back to flat.
+    final Map<String, dynamic> c = envelopeRecord(body, 'calling');
 
     return CallCapability(
       enabled: (c['enabled'] as bool?) ?? false,
@@ -67,21 +66,19 @@ class CallRepositoryImpl implements CallRepository {
   @override
   Future<List<CallRecord>> pending() async {
     final dynamic body = await _api.get('/calls/pending');
-    return _rows(body, 'calls').map(callRecordFromJson).toList();
+    return envelopeRows(body, 'calls').map(callRecordFromJson).toList();
   }
 
   @override
   Future<List<Map<String, dynamic>>> iceServers() async {
     final dynamic body = await _api.get('/calls/ice-servers');
-    return _rows(body, 'iceServers');
+    return envelopeRows(body, 'iceServers');
   }
 
   @override
   Future<CallRecord> place(String contactUid) async {
     final dynamic body = await _api.post('/conversations/$contactUid/calls');
-    final Map<String, dynamic> m =
-        (body as Map<String, dynamic>?) ?? const <String, dynamic>{};
-    return callRecordFromJson((m['call'] as Map<String, dynamic>?) ?? m);
+    return callRecordFromJson(envelopeRecord(body, 'call'));
   }
 
   @override
@@ -101,20 +98,11 @@ class CallRepositoryImpl implements CallRepository {
   @override
   Future<String?> sdp(String callUid) async {
     final dynamic body = await _api.get('/calls/$callUid/sdp');
-    final Map<String, dynamic> m =
-        (body as Map<String, dynamic>?) ?? const <String, dynamic>{};
+    final Map<String, dynamic> m = envelopeRecord(body, 'sdp');
     return (m['sdp'] ?? m['description']) as String?;
   }
 }
 
-List<Map<String, dynamic>> _rows(dynamic body, String key) {
-  if (body is List) return body.whereType<Map<String, dynamic>>().toList();
-  final Map<String, dynamic> m =
-      (body as Map<String, dynamic>?) ?? const <String, dynamic>{};
-  final List<dynamic> raw =
-      (m[key] ?? m['data']) as List<dynamic>? ?? const <dynamic>[];
-  return raw.whereType<Map<String, dynamic>>().toList();
-}
 
 final callRepositoryProvider = Provider<CallRepository>(
   (Ref ref) => CallRepositoryImpl(ref.watch(apiClientProvider)),
