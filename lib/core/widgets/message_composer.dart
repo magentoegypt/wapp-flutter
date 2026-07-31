@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_dimens.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Horizontal row of canned-reply suggestions, sitting directly above the
 /// composer in the chat frame.
@@ -136,12 +137,14 @@ class MessageComposerState extends State<MessageComposer> {
             if (widget.onAttach != null)
               IconButton(
                 onPressed: widget.onAttach,
-                // The frame's leading affordance is an outlined emoji face, not
-                // a paperclip — it opens the attach sheet either way, but the
-                // frame leads with expression rather than files.
-                icon: const Icon(Icons.emoji_emotions_outlined, size: 21),
+                // A paperclip, deliberately departing from the frame, which
+                // draws an outlined emoji face here. This button opens the
+                // attach sheet — photo, camera, video — and a smiley promises
+                // an emoji keyboard the app does not have. Matching the frame's
+                // pixels would mean mismatching its meaning.
+                icon: const Icon(Icons.attach_file, size: 21),
                 color: AppColor.inkMuted,
-                tooltip: MaterialLocalizations.of(context).moreButtonTooltip,
+                tooltip: AppLocalizations.of(context).attachTitle,
               ),
             Expanded(
               child: TextField(
