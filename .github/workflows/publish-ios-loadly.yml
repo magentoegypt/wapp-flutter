@@ -231,22 +231,52 @@ jobs:
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
           echo "CFBundleShortVersionString: ${NAME:-<from pubspec>}  CFBundleVersion: $CODE"
 
-      # Signing is driven entirely by FLUTTER_XCODE_* environment variables.
-      # Flutter strips that prefix and passes the rest to xcodebuild as
-      # command-line build settings, which are the highest-precedence layer —
-      # above the project's own. So CI signs manually while the checked-in
-      # project stays on automatic signing, and nothing in the repo changes.
-      # That matters here: the only developer is on Windows and could not
-      # repair a broken Xcode project.
+      # Signing settings go into the Runner target's own xcconfig, NOT onto the
+      # xcodebuild command line.
+      #
+      # The obvious approach — FLUTTER_XCODE_* environment variables, which
+      # Flutter forwards as command-line build settings — is too broad. Command
+      # line settings apply to EVERY target in the build, and a plugin framework
+      # has no provisioning profile, so each one fails the archive with
+      # "<plugin> does not support provisioning profiles, but provisioning
+      # profile <uuid> has been manually specified".
+      #
+      # ios/Flutter/Release.xcconfig is the baseConfigurationReference of build
+      # configuration 97C14707, which belongs to the PBXNativeTarget "Runner"
+      # configuration list — so it reaches Runner and nothing else. Pods keep
+      # their own xcconfigs untouched.
+      #
+      # Written at build time and never committed, so the checked-in project
+      # stays on automatic signing. That matters here: the only developer is on
+      # Windows and could not repair a broken Xcode project.
+      - name: Scope manual signing to the Runner target
+        env:
+          TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
+          PROFILE_UUID: ${{ steps.signing.outputs.profile_uuid }}
+        run: |
+          set -euo pipefail
+          XCCONFIG=ios/Flutter/Release.xcconfig
+          # Indented to match the YAML block scalar, which strips it before bash
+          # sees the heredoc — so the terminator lines up too.
+          cat >> "$XCCONFIG" <<EOF
+
+          // Appended by CI. Target-scoped so plugin frameworks are unaffected.
+          CODE_SIGN_STYLE = Manual
+          DEVELOPMENT_TEAM = ${TEAM_ID}
+          PROVISIONING_PROFILE_SPECIFIER = ${PROFILE_UUID}
+          CODE_SIGN_IDENTITY = Apple Distribution
+          // The conditional form specifically: the PROJECT level hardcodes
+          // CODE_SIGN_IDENTITY[sdk=iphoneos*] = "iPhone Developer", a
+          // DEVELOPMENT identity that cannot sign an Ad Hoc distribution. A
+          // target xcconfig outranks a project build setting, but only if it
+          // matches the same condition.
+          CODE_SIGN_IDENTITY[sdk=iphoneos*] = Apple Distribution
+          EOF
+          echo "--- $XCCONFIG ---"
+          cat "$XCCONFIG"
+
       - name: Build the Ad Hoc IPA
         env:
-          FLUTTER_XCODE_CODE_SIGN_STYLE: Manual
-          FLUTTER_XCODE_DEVELOPMENT_TEAM: ${{ secrets.IOS_TEAM_ID }}
-          FLUTTER_XCODE_PROVISIONING_PROFILE_SPECIFIER: ${{ steps.signing.outputs.profile_uuid }}
-          # Overrides the project's three hardcoded
-          # CODE_SIGN_IDENTITY[sdk=iphoneos*] = "iPhone Developer" entries, which
-          # name a DEVELOPMENT identity and cannot sign an Ad Hoc distribution.
-          FLUTTER_XCODE_CODE_SIGN_IDENTITY: Apple Distribution
           BUILD_NAME: ${{ steps.version.outputs.name }}
         run: |
           set -euo pipefail
