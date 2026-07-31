@@ -17,7 +17,14 @@ meant to be tried, and burn a `versionCode` each time — so the upload stays de
 
 Check runs on `main` do not need the signing secrets. Without them the build falls back to
 the debug key and says so; the run still catches a broken build, which is what it is for,
-and the signing key is not decrypted on every push. Publishing always requires them.
+and the signing key is not decrypted on every push.
+
+Publishing normally requires them. The **Publish even without a signing key** checkbox on
+the manual run overrides that, for getting a build in front of someone before a keystore
+exists. What it costs: the runner makes a fresh debug key every run, so such a build cannot
+be installed over an existing Clickalize and the next one cannot be installed over it —
+testers uninstall every time. The install notes tell them so. Add the secrets to stop
+paying that.
 
 ## One-time setup
 

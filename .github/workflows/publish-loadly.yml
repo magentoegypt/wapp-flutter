@@ -23,6 +23,15 @@ on:
         description: What testers should look at in this build
         type: string
         default: ''
+      allow_debug_signing:
+        # Escape hatch for publishing before an upload keystore exists. The cost
+        # is real and falls on testers: the runner generates a fresh debug key
+        # every run, so no build signed this way can be installed over another —
+        # each update needs an uninstall first. Fine for a one-off look at the
+        # app, wrong as a habit.
+        description: Publish even without a signing key (testers must uninstall to update)
+        type: boolean
+        default: false
   push:
     branches: [main]
     tags: ['v*']
@@ -110,22 +119,31 @@ jobs:
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           LOADLY_API_KEY: ${{ secrets.LOADLY_API_KEY }}
           PUBLISH: ${{ steps.cfg.outputs.publish }}
+          ALLOW_DEBUG: ${{ inputs.allow_debug_signing }}
         run: |
           set -euo pipefail
           echo "signed=false" >> "$GITHUB_OUTPUT"
 
           if [ -z "${KEYSTORE_B64:-}" ]; then
-            if [ "$PUBLISH" = "true" ]; then
-              echo "::error::ANDROID_KEYSTORE_BASE64 is not set. A published build must be"
+            if [ "$PUBLISH" = "true" ] && [ "$ALLOW_DEBUG" != "true" ]; then
+              echo "::error::ANDROID_KEYSTORE_BASE64 is not set. A published build should be"
               echo "::error::signed with a stable key — each runner's debug key differs, so"
               echo "::error::testers would hit a signature mismatch on every update."
-              echo "::error::See docs/ci-loadly.md."
+              echo "::error::Add the secrets (docs/ci-loadly.md), or re-run with"
+              echo "::error::'Publish even without a signing key' ticked to accept that cost."
               exit 1
             fi
-            # A check run should tell you the code is broken, not that a secret
-            # is missing, so it falls back rather than failing. It also keeps the
-            # signing key out of every push to main.
-            echo "::warning::No signing secrets — this check run builds with the debug key."
+            if [ "$PUBLISH" = "true" ]; then
+              echo "::warning::Publishing a DEBUG-SIGNED build by explicit request. Testers"
+              echo "::warning::must uninstall before they can install the next one."
+              # The upload still needs to authenticate.
+              test -n "${LOADLY_API_KEY:-}" || { echo "::error::LOADLY_API_KEY is not set"; exit 1; }
+            else
+              # A check run should tell you the code is broken, not that a secret
+              # is missing, so it falls back rather than failing. It also keeps
+              # the signing key out of every push to main.
+              echo "::warning::No signing secrets — this check run builds with the debug key."
+            fi
             exit 0
           fi
 
@@ -266,9 +284,15 @@ jobs:
           APK: ${{ steps.apk.outputs.path }}
           NOTES: ${{ inputs.notes || github.ref_name }}
           SHA: ${{ github.sha }}
+          SIGNED: ${{ steps.keystore.outputs.signed }}
         run: |
           set -euo pipefail
           DESC="${NOTES:-} (${SHA:0:7}, build ${{ steps.version.outputs.code }})"
+          # Loadly shows buildUpdateDescription to testers on the install page,
+          # so the caveat belongs here, not only in the run log they never see.
+          if [ "$SIGNED" != "true" ]; then
+            DESC="$DESC — debug-signed: uninstall any existing Clickalize first, and again before the next build"
+          fi
 
           RESP="$RUNNER_TEMP/loadly-response.json"
 
@@ -354,6 +378,13 @@ jobs:
           {
             if [ "$PUBLISHED" = "true" ]; then
               echo "## Clickalize published to Loadly"
+              if [ "$SIGNED" != "true" ]; then
+                echo
+                echo "> **Debug-signed build.** Every run generates a different debug key, so"
+                echo "> this cannot be installed over an existing Clickalize and the next"
+                echo "> build cannot be installed over this one — testers must uninstall each"
+                echo "> time. Add the signing secrets in \`docs/ci-loadly.md\` to fix that."
+              fi
             else
               echo "## Clickalize built and verified"
               echo
