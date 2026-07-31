@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+// `show Bidi` deliberately: intl exports its own TextDirection, which would
+// shadow Flutter's and turn every textDirection argument into a type error.
+import 'package:intl/intl.dart' show Bidi;
 
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_dimens.dart';
@@ -6,6 +9,18 @@ import '../../app/theme/app_dimens.dart';
 /// Delivery state of an outgoing message, mirroring
 /// `whatsapp_message_logs.status` on the backend.
 enum MessageStatus { pending, sent, delivered, read, failed }
+
+/// The direction a message body should be laid out in, from its own content.
+///
+/// Deliberately not the app's direction. A workspace running in Arabic still
+/// receives English messages and vice versa, and laying a Latin run out
+/// right-to-left moves its trailing punctuation to the front.
+///
+/// Uses [Bidi.detectRtlDirectionality], which decides on the balance of strong
+/// characters rather than the first one — so a mostly-Arabic message with an
+/// English product name in it still reads correctly.
+TextDirection _directionOf(String text) =>
+    Bidi.detectRtlDirectionality(text) ? TextDirection.rtl : TextDirection.ltr;
 
 /// A single chat bubble.
 ///
@@ -106,6 +121,17 @@ class MessageBubble extends StatelessWidget {
             if (text.isNotEmpty)
               Text(
                 text,
+                // The message picks its OWN direction rather than inheriting
+                // the app's.
+                //
+                // Message bodies are customer data and their language is
+                // independent of the interface language: an agent running the
+                // app in Arabic still reads English messages. Inheriting RTL
+                // put trailing punctuation at the front — "PLease check and
+                // click below options." rendered as ".PLease check and click
+                // below options" — because a Latin run inside an RTL paragraph
+                // resolves its neutral characters against the paragraph.
+                textDirection: _directionOf(text),
                 style:
                     Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.35),
               ),
