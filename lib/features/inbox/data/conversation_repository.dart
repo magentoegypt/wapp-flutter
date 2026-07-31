@@ -12,7 +12,8 @@ enum InboxFilter { all, unread, unassigned }
 abstract interface class ConversationRepository {
   Future<List<Conversation>> list({InboxFilter filter, String? query});
 
-  Future<ChatThread> thread(String contactUid);
+  /// One page of a thread. Page 1 is the newest 50 messages.
+  Future<ChatThread> thread(String contactUid, {int page});
 
   Future<void> sendMessage(String contactUid, String body);
 
@@ -57,9 +58,17 @@ class ConversationRepositoryImpl implements ConversationRepository {
   }
 
   @override
-  Future<ChatThread> thread(String contactUid) async {
-    final dynamic body = await _api.get('/conversations/$contactUid');
-    return chatThreadFromJson(contactUid, body as Map<String, dynamic>);
+  Future<ChatThread> thread(String contactUid, {int page = 1}) async {
+    final dynamic body = await _api.get(
+      '/conversations/$contactUid',
+      query: <String, dynamic>{'page': page},
+    );
+    final Map<String, dynamic> map = body as Map<String, dynamic>;
+    final ChatThread t = chatThreadFromJson(contactUid, map);
+    return t.copyWith(
+      page: page,
+      hasMore: _hasMore(map, page, t.messages.length),
+    );
   }
 
   @override
@@ -151,10 +160,12 @@ ChatThread chatThreadFromJson(String contactUid, Map<String, dynamic> j) {
     contactUid: contactUid,
     name: (contact['name'] ?? contact['waId'] ?? '').toString(),
     phone: (contact['waId'] ?? contact['phone']) as String?,
-    messages: ((j['messages'] as List<dynamic>?) ?? const <dynamic>[])
-        .whereType<Map<String, dynamic>>()
-        .map(chatMessageFromJson)
-        .toList(),
+    messages: _newestFirst(
+      ((j['messages'] as List<dynamic>?) ?? const <dynamic>[])
+          .whereType<Map<String, dynamic>>()
+          .map(chatMessageFromJson)
+          .toList(),
+    ),
     // The API renames the engine's isDirectMessageDeliveryWindowOpened to
     // `windowOpen`, but passes conversationExpiresAt through verbatim.
     windowOpen: (j['windowOpen'] as bool?) ?? false,
@@ -170,6 +181,64 @@ ChatThread chatThreadFromJson(String contactUid, Map<String, dynamic> j) {
         ? ((lock['lockedByName'] as String?) ?? 'another agent')
         : null,
   );
+}
+
+/// Default page size the API documents for messages. Only used as the
+/// last-resort "was this page full?" heuristic below.
+const int _messagesPerPage = 50;
+
+/// Whether an older page of messages exists.
+///
+/// Read tolerantly because the exact `messagesMeta` shape is documented but not
+/// yet observed from a real token — an explicit flag is preferred, then
+/// last-page and total/per-page arithmetic, and only then a guess from whether
+/// this page came back full. Guessing wrong costs one request that returns
+/// nothing; the alternative, hard-coding a shape that turns out different, is a
+/// thread that silently refuses to page.
+bool _hasMore(Map<String, dynamic> body, int page, int received) {
+  final Map<String, dynamic>? meta =
+      (body['messagesMeta'] ?? body['messages_meta'] ?? body['meta'])
+          as Map<String, dynamic>?;
+
+  if (meta != null) {
+    final Object? explicit = meta['hasMore'] ?? meta['has_more'];
+    if (explicit is bool) return explicit;
+
+    final int lastPage = _int(meta['lastPage'] ?? meta['last_page']);
+    if (lastPage > 0) return page < lastPage;
+
+    final int total = _int(meta['total'] ?? meta['totalCount']);
+    final int perPage = _int(meta['perPage'] ?? meta['per_page']);
+    if (total > 0 && perPage > 0) return page * perPage < total;
+  }
+
+  // No usable meta: a short page means the end, a full one probably does not.
+  return received >= _messagesPerPage;
+}
+
+/// Guarantees newest-first, whichever way the endpoint happened to sort.
+///
+/// The thread used to render upside down because two inversions stopped
+/// cancelling: the mapper assumed oldest-first and the view applied `.reversed`
+/// on top of a `reverse: true` list. When the API moved to newest-first
+/// pagination the pair no longer cancelled, and nothing failed loudly — order
+/// is not something a parser checks.
+///
+/// Detecting and reversing rather than sorting is deliberate: it is O(n), and
+/// it leaves messages sharing a timestamp in exactly the order the server sent
+/// them. A sort would be free to shuffle those, which shows up as two bubbles
+/// swapping places between reloads.
+List<ChatMessage> _newestFirst(List<ChatMessage> messages) {
+  DateTime? first;
+  DateTime? last;
+  for (final ChatMessage m in messages) {
+    if (m.sentAt == null) continue;
+    first ??= m.sentAt;
+    last = m.sentAt;
+  }
+  // Undated, single, or all-equal timestamps: nothing to infer, leave as sent.
+  if (first == null || last == null || !first.isBefore(last)) return messages;
+  return messages.reversed.toList();
 }
 
 ChatMessage chatMessageFromJson(Map<String, dynamic> j) {
@@ -197,7 +266,86 @@ final inboxListProvider =
   return ref.watch(conversationRepositoryProvider).list(filter: filter);
 });
 
-final chatThreadProvider =
-    FutureProvider.autoDispose.family<ChatThread, String>((Ref ref, String uid) {
-  return ref.watch(conversationRepositoryProvider).thread(uid);
-});
+/// The chat thread, paged.
+///
+/// A notifier rather than a `FutureProvider` because pages have to accumulate:
+/// a FutureProvider can only replace its value, so every older page would
+/// discard the one before it. This is the app's first paginated provider — the
+/// other lists still load whole.
+///
+/// Exposes [ChatThreadController.loadOlder] for the scroll listener and
+/// [ChatThreadController.reload] for pull-to-refresh and post-action refreshes.
+final chatThreadProvider = AsyncNotifierProvider.autoDispose
+    .family<ChatThreadController, ChatThread, String>(
+  ChatThreadController.new,
+);
+
+class ChatThreadController
+    extends AutoDisposeFamilyAsyncNotifier<ChatThread, String> {
+  @override
+  Future<ChatThread> build(String contactUid) {
+    return ref.watch(conversationRepositoryProvider).thread(contactUid);
+  }
+
+  /// Fetches the next older page and appends it to the tail.
+  ///
+  /// Appending is why [ChatThread.messages] is newest-first: older messages go
+  /// on the end, so nothing already rendered moves and the reversed list does
+  /// not jump under the reader's thumb.
+  Future<void> loadOlder() async {
+    final ChatThread? current = state.valueOrNull;
+    // The re-entry guard: a fast flick fires the scroll listener many times,
+    // and without this each one would request the same page.
+    if (current == null || !current.hasMore || current.loadingMore) return;
+
+    state = AsyncData<ChatThread>(current.copyWith(loadingMore: true));
+    try {
+      final ChatThread next = await ref
+          .read(conversationRepositoryProvider)
+          .thread(arg, page: current.page + 1);
+
+      // Dedupe by uid: overlapping pages are a normal consequence of new
+      // messages arriving between requests, and a duplicate key in a list this
+      // long is a visible glitch rather than a crash.
+      final Set<String> seen =
+          current.messages.map((ChatMessage m) => m.uid).toSet();
+      final List<ChatMessage> merged = <ChatMessage>[
+        ...current.messages,
+        ...next.messages.where((ChatMessage m) => !seen.contains(m.uid)),
+      ];
+
+      state = AsyncData<ChatThread>(current.copyWith(
+        messages: merged,
+        page: next.page,
+        hasMore: next.hasMore,
+        loadingMore: false,
+      ));
+    } catch (_) {
+      // Keep what is already on screen; a failed older page should not empty
+      // the thread. The caller surfaces the error.
+      state = AsyncData<ChatThread>(current.copyWith(loadingMore: false));
+      rethrow;
+    }
+  }
+
+  /// Re-reads page 1, discarding accumulated pages.
+  ///
+  /// Deliberately NOT called after sending a message: that would throw away
+  /// every older page the reader had scrolled back through, so the thread would
+  /// collapse to 50 messages on each send. Use [prepend] for that.
+  Future<void> reload() async {
+    state = const AsyncLoading<ChatThread>();
+    state = await AsyncValue.guard(
+      () => ref.read(conversationRepositoryProvider).thread(arg),
+    );
+  }
+
+  /// Puts a message at the head without refetching, preserving loaded pages.
+  void prepend(ChatMessage message) {
+    final ChatThread? current = state.valueOrNull;
+    if (current == null) return;
+    state = AsyncData<ChatThread>(current.copyWith(
+      messages: <ChatMessage>[message, ...current.messages],
+    ));
+  }
+}

@@ -74,13 +74,22 @@ class ChatThread {
     this.quickReplies = const <String>[],
     this.assignedAgentName,
     this.replyLockHeldBy,
+    this.page = 1,
+    this.hasMore = false,
+    this.loadingMore = false,
   });
 
   final String contactUid;
   final String name;
   final String? phone;
 
-  /// Oldest first. The chat view renders reversed.
+  /// Newest first — index 0 is the most recent message.
+  ///
+  /// Matches both the API's pagination order and the `reverse: true` list that
+  /// renders it, so index 0 lands at the bottom of the screen next to the
+  /// composer. Normalised in `chatThreadFromJson`, not assumed: this contract
+  /// was silently inverted once already when the endpoint changed sort order.
+  /// Older pages append to the tail.
   final List<ChatMessage> messages;
 
   final bool windowOpen;
@@ -92,7 +101,40 @@ class ChatThread {
   /// the chat is unclaimed — the UI invites this agent to reply first.
   final String? replyLockHeldBy;
 
+  /// Highest page of [messages] loaded so far. Page 1 is the newest 50.
+  final int page;
+
+  /// Whether an older page exists. Once false the scroll listener stops for
+  /// good rather than re-asking at every scroll.
+  final bool hasMore;
+
+  /// An older page is in flight. Renders the top spinner and blocks re-entry,
+  /// so a fast flick cannot fire the same page request several times.
+  final bool loadingMore;
+
   bool get isReplyLockOpen => replyLockHeldBy == null;
+
+  ChatThread copyWith({
+    List<ChatMessage>? messages,
+    int? page,
+    bool? hasMore,
+    bool? loadingMore,
+  }) {
+    return ChatThread(
+      contactUid: contactUid,
+      name: name,
+      phone: phone,
+      messages: messages ?? this.messages,
+      windowOpen: windowOpen,
+      windowExpiresAt: windowExpiresAt,
+      quickReplies: quickReplies,
+      assignedAgentName: assignedAgentName,
+      replyLockHeldBy: replyLockHeldBy,
+      page: page ?? this.page,
+      hasMore: hasMore ?? this.hasMore,
+      loadingMore: loadingMore ?? this.loadingMore,
+    );
+  }
 }
 
 class ChatMessage {

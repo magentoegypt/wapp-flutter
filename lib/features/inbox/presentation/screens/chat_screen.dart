@@ -41,7 +41,26 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     await ref
         .read(conversationRepositoryProvider)
         .sendMessage(widget.contactUid, body);
-    ref.invalidate(chatThreadProvider(widget.contactUid));
+    // reload(), not invalidate(): invalidating rebuilds from page 1 and throws
+    // away every older page the reader had scrolled back through, so a send
+    // used to collapse a long thread to the newest 50 and jump them to the
+    // bottom. reload() has the same effect here only because a send is already
+    // a return to the bottom; anywhere else, prefer prepend().
+    await ref.read(chatThreadProvider(widget.contactUid).notifier).reload();
+  }
+
+  /// Loads the next older page when the reader nears the top of the thread.
+  ///
+  /// The list is reversed, so "the top" is `maxScrollExtent`. Fires early —
+  /// 400px out — so the page is usually there before the reader reaches the
+  /// end of what is loaded. Re-entry is guarded inside the controller, not
+  /// here, because the notification fires on every frame of a fling.
+  bool _onScroll(ScrollNotification n) {
+    if (n.metrics.axis != Axis.vertical) return false;
+    if (n.metrics.pixels >= n.metrics.maxScrollExtent - 400) {
+      ref.read(chatThreadProvider(widget.contactUid).notifier).loadOlder();
+    }
+    return false;
   }
 
   /// Conversation status for [contactUid] from the loaded inbox list, or null
@@ -118,7 +137,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         builder: (ChatThread data) => Column(
           children: <Widget>[
             _ServiceWindowBanner(thread: data, l10n: l10n),
-            Expanded(child: _MessageList(thread: data)),
+            Expanded(
+              child: NotificationListener<ScrollNotification>(
+                onNotification: _onScroll,
+                child: _MessageList(thread: data),
+              ),
+            ),
             // Both strips can be visible at once — the handoff requires their
             // copy stay non-contradictory, and neither disables the composer.
             if (data.isReplyLockOpen)
@@ -208,15 +232,33 @@ class _MessageList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String locale = Localizations.localeOf(context).toLanguageTag();
-    // Newest first, because the list is reversed — the thread grows upward
-    // from the composer rather than down from the app bar.
-    final List<ChatMessage> ordered = thread.messages.reversed.toList();
+    // Already newest-first — see ChatThread.messages. Do NOT reverse here: the
+    // list below is reverse: true, so index 0 renders at the bottom against the
+    // composer and the thread grows upward. Reversing as well puts the newest
+    // message at the top, which is the bug this comment exists to prevent
+    // recurring.
+    final List<ChatMessage> ordered = thread.messages;
 
     return ListView.builder(
       reverse: true,
       padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
-      itemCount: ordered.length,
+      // One extra slot at the tail — the visual top of a reversed list — for
+      // the older-page spinner, so the reader can see that scrolling back is
+      // fetching rather than stuck.
+      itemCount: ordered.length + (thread.loadingMore ? 1 : 0),
       itemBuilder: (BuildContext context, int i) {
+        if (i >= ordered.length) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Center(
+              child: SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          );
+        }
         final ChatMessage m = ordered[i];
         // In a reversed list the "next" item is the older one, so a day
         // divider belongs after a message whose predecessor is on another day.

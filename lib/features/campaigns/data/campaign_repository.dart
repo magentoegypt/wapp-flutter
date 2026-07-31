@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
+import '../../../core/util/enum_from_json.dart';
 import '../../contacts/domain/contact.dart' show NamedRef;
 
 /// Record lifecycle — the `status` field, `campaigns.status`.
@@ -150,18 +151,6 @@ class CampaignRepositoryImpl implements CampaignRepository {
 
 int _int(Object? v) => v is num ? v.round() : int.tryParse('${v ?? ''}') ?? 0;
 
-/// Parses an enum by name, case- and whitespace-insensitively.
-///
-/// Unrecognised values fall to [fallback] rather than to a guess: an unknown
-/// label used to become `draft`, and Campaign detail gated its Send button on
-/// exactly that, so a finished campaign offered to send again.
-T _enumByName<T extends Enum>(Object? raw, List<T> values, T fallback) {
-  final String key = '${raw ?? ''}'.trim().toLowerCase();
-  for (final T v in values) {
-    if (v.name.toLowerCase() == key) return v;
-  }
-  return fallback;
-}
 
 Campaign campaignFromJson(Map<String, dynamic> j) {
   // Detail is now a strict superset of a list row, but the stats still nest:
@@ -178,12 +167,12 @@ Campaign campaignFromJson(Map<String, dynamic> j) {
   return Campaign(
     uid: (j['uid'] ?? j['_uid'] ?? '').toString(),
     title: (j['title'] ?? '').toString(),
-    lifecycle: _enumByName(
+    lifecycle: enumByName(
       j['status'],
       CampaignLifecycle.values,
       CampaignLifecycle.active,
     ),
-    execution: _enumByName(
+    execution: enumByName(
       j['executionStatus'] ?? j['execution_status'],
       CampaignExecution.values,
       CampaignExecution.na,

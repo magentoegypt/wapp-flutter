@@ -58,8 +58,11 @@ class ApiClient {
   Future<dynamic> put(String path, {Object? body}) =>
       _send(() => _dio.put<dynamic>(path, data: body));
 
-  Future<dynamic> delete(String path) =>
-      _send(() => _dio.delete<dynamic>(path));
+  /// [body] because two endpoints need one on a DELETE: clearing chat history
+  /// requires `{"confirm": true}`, and unsnoozing is also a DELETE. Dio allows
+  /// it; only this wrapper was refusing to pass it through.
+  Future<dynamic> delete(String path, {Object? body}) =>
+      _send(() => _dio.delete<dynamic>(path, data: body));
 
   Future<dynamic> _send(Future<Response<dynamic>> Function() request) async {
     final Response<dynamic> response;
@@ -97,7 +100,30 @@ class ApiClient {
 
     // Unwrap only when there is a `data` key; some endpoints wrap the status
     // flag around a flat payload with no nesting.
-    return body.containsKey('data') ? body['data'] : body;
+    if (!body.containsKey('data')) return body;
+
+    final dynamic data = body['data'];
+
+    // Carry any sibling of `data` down with it.
+    //
+    // Returning `body['data']` alone silently dropped everything alongside it,
+    // which is how a paginated response loses its `messagesMeta` before a
+    // repository ever sees it — no error, just a thread that never loads a
+    // second page. `data` wins on a key clash: it is the payload, the siblings
+    // are envelope.
+    //
+    // Only possible when `data` is itself a Map. When it is a List there is
+    // nowhere to put them, so such an endpoint has to be read unwrapped.
+    if (data is Map<String, dynamic>) {
+      final Map<String, dynamic> siblings = <String, dynamic>{
+        for (final MapEntry<String, dynamic> e in body.entries)
+          if (e.key != 'success' && e.key != 'data') e.key: e.value,
+      };
+      if (siblings.isEmpty) return data;
+      return <String, dynamic>{...siblings, ...data};
+    }
+
+    return data;
   }
 
   Failure _fromDioException(DioException e) {
