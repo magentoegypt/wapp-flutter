@@ -1,4 +1,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Voice calling. RECORD_AUDIO is the one the user is prompted for;
+         MODIFY_AUDIO_SETTINGS lets the app route audio to the earpiece or
+         speaker during a call, and BLUETOOTH_CONNECT is what makes a headset
+         work on Android 12+. No CAMERA entry on purpose — these are voice
+         calls, and asking for the camera would be an unexplained prompt. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
     <application
         android:label="Clickalize"
         android:name="${applicationName}"

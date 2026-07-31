@@ -8,6 +8,10 @@ import '../features/agents/presentation/screens/agents_screen.dart';
 import '../features/campaigns/presentation/screens/campaign_detail_screen.dart';
 import '../features/campaigns/presentation/screens/campaigns_screen.dart';
 import '../features/campaigns/presentation/screens/create_campaign_screen.dart';
+import '../features/calls/presentation/screens/active_call_screen.dart';
+import '../features/calls/presentation/screens/call_ended_screen.dart';
+import '../features/calls/presentation/screens/incoming_call_screen.dart';
+import '../features/calls/presentation/screens/outgoing_call_screen.dart';
 import '../features/conversation_actions/presentation/screens/assign_screen.dart';
 import '../features/conversation_actions/presentation/screens/call_history_screen.dart';
 import '../features/conversation_actions/presentation/screens/call_permission_screen.dart';
@@ -285,6 +289,42 @@ final Provider<GoRouter> routerProvider = Provider<GoRouter>((Ref ref) {
                 ClearHistoryScreen(contactUid: s.pathParameters['uid']!),
           ),
         ],
+      ),
+
+      // Calling. Full-screen and outside the shell entirely — a ringing phone
+      // is not a tab, and the bottom bar under an active call would invite
+      // navigating away from it.
+      GoRoute(
+        path: '/calls/:uid/incoming',
+        parentNavigatorKey: _rootKey,
+        builder: (_, GoRouterState s) => IncomingCallScreen(
+          contactUid: s.pathParameters['uid']!,
+          name: s.extra as String?,
+        ),
+      ),
+      GoRoute(
+        path: '/calls/:uid/outgoing',
+        parentNavigatorKey: _rootKey,
+        builder: (_, GoRouterState s) => OutgoingCallScreen(
+          contactUid: s.pathParameters['uid']!,
+          name: s.extra as String?,
+        ),
+      ),
+      GoRoute(
+        path: '/calls/:uid/active',
+        parentNavigatorKey: _rootKey,
+        builder: (_, GoRouterState s) => ActiveCallScreen(
+          contactUid: s.pathParameters['uid']!,
+          name: s.extra as String?,
+        ),
+      ),
+      GoRoute(
+        path: '/calls/:uid/ended',
+        parentNavigatorKey: _rootKey,
+        builder: (_, GoRouterState s) => CallEndedScreen(
+          contactUid: s.pathParameters['uid']!,
+          name: s.extra as String?,
+        ),
       ),
 
       GoRoute(

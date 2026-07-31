@@ -68,5 +68,7 @@
 		</array>
 		<key>UIStatusBarHidden</key>
 		<false/>
-	</dict>
+		<key>NSMicrophoneUsageDescription</key>
+	<string>Clickalize needs the microphone so you can take and make calls with customers.</string>
+</dict>
 </plist>

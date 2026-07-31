@@ -14,6 +14,25 @@ abstract interface class ContactRepository {
     String? countryCode,
     List<String> groupIds,
   });
+
+  /// Partial update — unsent fields are preserved server-side, so a screen may
+  /// send only what it changed.
+  ///
+  /// The body is **snake_case**, unlike every other write in this app, with
+  /// `enableAiBot` as the one camelCase exception. That is the API's shape, not
+  /// a transcription slip.
+  Future<Contact> update(
+    String uid, {
+    String? firstName,
+    String? lastName,
+    String? email,
+    String? languageCode,
+    String? city,
+    List<String>? tags,
+    List<String>? groupIds,
+    bool? enableAiBot,
+    Map<String, String>? customFields,
+  });
 }
 
 class ContactRepositoryImpl implements ContactRepository {
@@ -51,6 +70,7 @@ class ContactRepositoryImpl implements ContactRepository {
       groups: _refs(j['groups']),
       labels: _refs(j['labels']),
       countries: _refs(j['countries']),
+      customFields: _customFields(j['customFields'] ?? j['custom_fields']),
     );
   }
 
@@ -75,6 +95,43 @@ class ContactRepositoryImpl implements ContactRepository {
     return contactFromJson(_record(body, 'contact'));
   }
 
+  @override
+  Future<Contact> update(
+    String uid, {
+    String? firstName,
+    String? lastName,
+    String? email,
+    String? languageCode,
+    String? city,
+    List<String>? tags,
+    List<String>? groupIds,
+    bool? enableAiBot,
+    Map<String, String>? customFields,
+  }) async {
+    // Only non-null values are sent. The endpoint is partial-safe, so omitting
+    // a key preserves it — but sending an explicit null clears it, which is how
+    // a sibling endpoint silently wiped an agent's role, team and manager when
+    // a caller passed only one field. Building the map this way makes "not
+    // supplied" and "cleared" different things at the call site.
+    final Map<String, dynamic> payload = <String, dynamic>{
+      if (firstName != null) 'first_name': firstName,
+      if (lastName != null) 'last_name': lastName,
+      if (email != null) 'email': email,
+      if (languageCode != null) 'language_code': languageCode,
+      if (city != null) 'contact_city': city,
+      if (tags != null) 'contact_tags': tags,
+      if (groupIds != null) 'contact_groups': groupIds,
+      // The one camelCase key in an otherwise snake_case body.
+      if (enableAiBot != null) 'enableAiBot': enableAiBot,
+      // Keyed by field uid: custom_input_fields[<uid>] = value.
+      if (customFields != null && customFields.isNotEmpty)
+        'custom_input_fields': customFields,
+    };
+
+    final dynamic body = await _api.put('/contacts/$uid', body: payload);
+    return contactFromJson(_record(body, 'contact'));
+  }
+
   /// The API nests the list under a domain-named key (`contacts`), not
   /// `data`. Falls back so an envelope change doesn't silently empty the list.
   List<Map<String, dynamic>> _rows(dynamic body) {
@@ -95,6 +152,26 @@ class ContactRepositoryImpl implements ContactRepository {
     return (m[key] as Map<String, dynamic>?) ??
         (m['data'] as Map<String, dynamic>?) ??
         m;
+  }
+
+  /// Vendor-defined fields from `/contacts/meta`.
+  ///
+  /// Kept separate from [_refs] because these carry a type, a required flag and
+  /// options, none of which [NamedRef] can hold — and it is the type that
+  /// decides whether the form shows a text box, a number pad or a dropdown.
+  List<CustomField> _customFields(dynamic raw) {
+    final List<dynamic> list = (raw as List<dynamic>?) ?? const <dynamic>[];
+    return list.whereType<Map<String, dynamic>>().map((Map<String, dynamic> j) {
+      final List<dynamic> opts =
+          (j['options'] ?? j['values']) as List<dynamic>? ?? const <dynamic>[];
+      return CustomField(
+        uid: '${j['uid'] ?? j['id'] ?? ''}',
+        name: '${j['name'] ?? j['title'] ?? ''}',
+        type: '${j['type'] ?? 'text'}',
+        required: (j['required'] as bool?) ?? false,
+        options: opts.map((dynamic o) => '$o').toList(),
+      );
+    }).where((CustomField f) => f.uid.isNotEmpty).toList();
   }
 
   List<NamedRef> _refs(dynamic raw) {

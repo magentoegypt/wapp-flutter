@@ -66,13 +66,52 @@ class ContactMeta {
     this.groups = const <NamedRef>[],
     this.labels = const <NamedRef>[],
     this.countries = const <NamedRef>[],
+    this.customFields = const <CustomField>[],
   });
 
   final List<NamedRef> groups;
   final List<NamedRef> labels;
   final List<NamedRef> countries;
 
+  /// Per-workspace extra fields. The form renders this list — never a
+  /// hard-coded set, because the definitions differ per vendor and two of this
+  /// workspace's eight are required.
+  final List<CustomField> customFields;
+
   static const ContactMeta empty = ContactMeta();
+}
+
+/// A vendor-defined contact field.
+///
+/// [NamedRef] cannot stand in for this: it carries only an id and a name, and
+/// rendering the right input needs the type, whether it is required, and the
+/// options for a dropdown.
+class CustomField {
+  const CustomField({
+    required this.uid,
+    required this.name,
+    this.type = 'text',
+    this.required = false,
+    this.options = const <String>[],
+  });
+
+  final String uid;
+  final String name;
+
+  /// The console's own vocabulary: text, number, url, datetime-local, dropdown.
+  final String type;
+
+  /// Enforced by the console form, NOT by the API — `store()` forwards custom
+  /// fields without validating them, so a contact created without a required
+  /// one is accepted. The client has to enforce it or the data quietly rots.
+  final bool required;
+
+  final List<String> options;
+
+  bool get isDropdown => type.toLowerCase() == 'dropdown';
+  bool get isNumber => type.toLowerCase() == 'number';
+  bool get isUrl => type.toLowerCase() == 'url';
+  bool get isDateTime => type.toLowerCase().startsWith('datetime');
 }
 
 class NamedRef {

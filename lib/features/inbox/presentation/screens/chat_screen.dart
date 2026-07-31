@@ -15,6 +15,8 @@ import '../../../../core/widgets/initials_avatar.dart';
 import '../../../../core/widgets/message_composer.dart';
 import '../../../../core/widgets/status_pill.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../calls/data/call_repository.dart';
+import '../../../calls/domain/call.dart';
 import '../../../quick_replies/data/quick_reply_repository.dart';
 import '../../data/conversation_repository.dart';
 import '../../domain/conversation.dart';
@@ -117,9 +119,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         // that screen.
         onTitleTap: () => context.push(AppRoutes.chatInfo(widget.contactUid)),
         actions: <Widget>[
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.call, color: Colors.white),
+          _CallButton(
+            contactUid: widget.contactUid,
+            name: thread.valueOrNull?.name,
           ),
           IconButton(
             onPressed: () => showChatActionsSheet(
@@ -221,6 +223,59 @@ class _ServiceWindowBanner extends StatelessWidget {
     return AppBanner(
       message: l10n.chatServiceWindowOpen(DurationFormat.coarse(secondsLeft)),
       tone: BannerTone.warning,
+    );
+  }
+}
+
+/// The app-bar call button, gated on what the workspace may actually do.
+///
+/// Meta refuses business-initiated calls from USA/Canada numbers, and this
+/// workspace's sending number is one — so `canPlaceCall` is false here and
+/// placing a call always fails. Rather than let an agent tap a button that
+/// cannot work, the button stays disabled and says why on tap.
+///
+/// It reads the capability rather than hard-coding the rule, so it starts
+/// working by itself the day the sending number changes. Capability is also
+/// re-read rather than cached, because `withinBusinessHours` flips during the
+/// day.
+class _CallButton extends ConsumerWidget {
+  const _CallButton({required this.contactUid, this.name});
+
+  final String contactUid;
+  final String? name;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final CallCapability? cap = ref.watch(callCapabilityProvider).valueOrNull;
+    // Until capability resolves the button is inert rather than absent —
+    // appearing a moment later would shift the whole app bar.
+    final bool canCall = cap?.canPlaceCall ?? false;
+
+    return IconButton(
+      tooltip: canCall ? null : l10n.clUnavailable,
+      onPressed: () {
+        if (canCall) {
+          context.push('/calls/$contactUid/outgoing', extra: name);
+          return;
+        }
+        // Say which gate closed. "Calling is off for this workspace" is
+        // fixable by the user; "Meta will not allow it from this number" is
+        // not, and conflating them sends someone hunting through settings.
+        final String reason = cap == null
+            ? l10n.clUnavailable
+            : !cap.enabled
+                ? l10n.clDisabled
+                : l10n.clRestricted(
+                    cap.outboundRestrictedReason ?? l10n.clUnavailable,
+                  );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(reason)));
+      },
+      icon: Icon(
+        Icons.call,
+        color: canCall ? Colors.white : Colors.white54,
+      ),
     );
   }
 }
