@@ -12,6 +12,30 @@ const List<String> kInstagramReactions = <String>[
   '❤️', '😂', '😮', '😢', '😡', '👍', '👎',
 ];
 
+/// Draws emoji in the platform's colour emoji font rather than the app font.
+///
+/// Without this the heart came out a flat dark navy while the other six were
+/// full colour. It is not a missing glyph — it is the opposite. The app bundles
+/// Inter, Inter *has* a monochrome U+2764, and a primary font that can render a
+/// codepoint wins outright, so the trailing U+FE0F asking for emoji
+/// presentation never gets a say and the fallback chain is never consulted. The
+/// other six live in the emoji planes, which Inter does not cover, so they fall
+/// through to the system font and render correctly — which is exactly why this
+/// looked like a one-off glitch with the heart rather than a font-resolution
+/// rule.
+///
+/// Naming the emoji fonts first inverts that. Both names are resolved by the
+/// platform, and if neither exists the style degrades to the default font,
+/// which reaches the same emoji font by fallback anyway.
+///
+/// Only safe because these strings are pure emoji. Do not reuse it for message
+/// bodies, where it would strip Arabic and Latin of their typeface.
+const TextStyle _kEmojiStyle = TextStyle(
+  fontSize: 26,
+  fontFamily: 'Noto Color Emoji',
+  fontFamilyFallback: <String>['Apple Color Emoji'],
+);
+
 /// Long-press reaction picker.
 ///
 /// Instagram-only: there is no WhatsApp equivalent endpoint, so the chat screen
@@ -57,7 +81,7 @@ Future<String?> showReactionPicker(BuildContext context) {
                           color: Theme.of(sheetContext).colorScheme.surface,
                           shape: BoxShape.circle,
                         ),
-                        child: Text(emoji, style: const TextStyle(fontSize: 26)),
+                        child: Text(emoji, style: _kEmojiStyle),
                       ),
                     ),
                 ],

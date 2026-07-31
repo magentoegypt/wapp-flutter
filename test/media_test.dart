@@ -1,5 +1,7 @@
 import 'package:clickalize/features/inbox/data/media_repository.dart';
 import 'package:clickalize/features/inbox/presentation/widgets/reaction_picker.dart';
+import 'package:clickalize/l10n/app_localizations.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Media and reaction wire details.
@@ -39,6 +41,46 @@ void main() {
 
     test('carries no duplicates', () {
       expect(kInstagramReactions.toSet().length, kInstagramReactions.length);
+    });
+
+    // On the device the heart came out flat dark navy while the other six were
+    // full colour. Not a missing glyph — the reverse. Inter is the bundled app
+    // font and Inter *has* a monochrome U+2764, and a primary font that can
+    // render a codepoint wins outright, so the trailing U+FE0F requesting
+    // emoji presentation never gets a say. The other six sit in the emoji
+    // planes Inter does not cover, so they fall through to the system font,
+    // which is why it read as one odd heart rather than a font-resolution rule.
+    //
+    // Nothing about this is visible in review — the wrong version is the
+    // shorter, more obvious `TextStyle(fontSize: 26)`. So the guard is that the
+    // emoji must not resolve to the app font.
+    testWidgets('emoji are not drawn in the bundled app font',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: ThemeData(fontFamily: 'Inter'),
+          home: Builder(
+            builder: (BuildContext context) => TextButton(
+              onPressed: () => showReactionPicker(context),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+
+      for (final String emoji in kInstagramReactions) {
+        final TextStyle? style = tester.widget<Text>(find.text(emoji)).style;
+        expect(
+          style?.fontFamily,
+          isNotNull,
+          reason: '$emoji would inherit Inter and lose emoji presentation',
+        );
+        expect(style!.fontFamily, isNot('Inter'));
+      }
     });
   });
 }
