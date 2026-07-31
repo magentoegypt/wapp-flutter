@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 // PlatformException — url_launcher throws it when no installed app claims the
 // URL, and it is not re-exported by material.dart.
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/theme/app_dimens.dart';
 import '../../../../core/widgets/app_header.dart';
@@ -12,6 +10,8 @@ import '../../../../core/widgets/app_list_tile.dart';
 import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/status_pill.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../../core/error/failure.dart';
+import '../../../calls/data/recording_player.dart';
 import '../../../calls/domain/call.dart';
 import '../../data/conversation_action_repository.dart';
 
@@ -77,7 +77,7 @@ class CallHistoryScreen extends ConsumerWidget {
 /// beneath it. That slot is a single widget and the Arabic labels are longer
 /// than the English ones, so stacking four things there pushed the duration off
 /// the row at 390pt.
-class _CallCard extends StatelessWidget {
+class _CallCard extends ConsumerWidget {
   const _CallCard({required this.record, required this.locale});
 
   final CallRecord record;
@@ -85,38 +85,30 @@ class _CallCard extends StatelessWidget {
   /// Only used by the timestamp fallback below — see [_timeLabel].
   final String locale;
 
-  /// Opens the recording outside the app.
+  /// Plays the recording in-app, with the bearer token attached.
   ///
-  /// In-app playback would need an audio dependency (just_audio, audioplayers)
-  /// and this screen deliberately does not pull one into pubspec for a control
-  /// that is tapped rarely: url_launcher is already here, and handing the URL
-  /// to the OS gets real transport controls, background playback and AirPlay
-  /// for free. Swap this for a real player only when the calling module needs
-  /// one anyway.
-  Future<void> _play(BuildContext context, AppLocalizations l10n) async {
-    final Uri? uri = Uri.tryParse(record.recordingUrl ?? '');
-    // Guarded even though the button only appears when `isPlayable`: a URL the
-    // server wrote can still be unparseable, and that must not throw out of a
-    // tap handler.
-    if (uri == null) {
+  /// This used to hand the URL to the OS with url_launcher, which was right
+  /// when `recordingUrl` was a plain asset URL. It is now
+  /// `GET /api/v1/calls/{uid}/recording` behind a token — the recordings were
+  /// world-readable and were moved off the public disk — and the system player
+  /// sends no Authorization header, so that path now returns 401 and plays
+  /// silence. An authenticated URL cannot be delegated to the OS.
+  Future<void> _play(
+    BuildContext context,
+    WidgetRef ref,
+    AppLocalizations l10n,
+  ) async {
+    final String? url = record.recordingUrl;
+    if (url == null || url.isEmpty) {
       _tell(context, l10n.chNoRecording);
       return;
     }
 
     try {
-      // externalApplication, not the in-app web view: this is an audio file and
-      // the in-app view renders it as a blank page with no transport.
-      final bool opened =
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
+      await ref.read(recordingPlayerProvider).toggle(record.uid, url);
+    } on Failure catch (e) {
       if (!context.mounted) return;
-      if (!opened) _tell(context, l10n.chNoRecording);
-    } on PlatformException {
-      // Nothing on the device claims the URL. The ARB (owned elsewhere) has no
-      // "could not open" copy, so the user gets the recording-shaped message
-      // rather than an invented literal — either way the recording is not
-      // arriving, which is the part that matters.
-      if (!context.mounted) return;
-      _tell(context, l10n.chNoRecording);
+      _tell(context, e.message);
     }
   }
 
@@ -142,7 +134,7 @@ class _CallCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final TextTheme text = Theme.of(context).textTheme;
     final StatusTone tone = _toneFor(record.status);
@@ -211,7 +203,7 @@ class _CallCard extends StatelessWidget {
                     Text(l10n.chRecording, style: text.labelMedium),
                     if (record.isPlayable)
                       TextButton.icon(
-                        onPressed: () => _play(context, l10n),
+                        onPressed: () => _play(context, ref, l10n),
                         icon: const Icon(Icons.play_circle_outline, size: 18),
                         label: Text(l10n.chPlay),
                       )
