@@ -19,6 +19,7 @@ import '../../../quick_replies/data/quick_reply_repository.dart';
 import '../../data/conversation_repository.dart';
 import '../../domain/conversation.dart';
 import '../widgets/chat_actions_sheet.dart';
+import '../widgets/message_kind_style.dart';
 
 /// Chat — Figma 37:1032.
 ///
@@ -271,24 +272,36 @@ class _MessageList extends StatelessWidget {
           children: <Widget>[
             if (startsDay && m.sentAt != null)
               ChatDayDivider(label: _dayLabel(context, m.sentAt!)),
-            MessageBubble(
-              // An empty body renders as a bubble containing only a timestamp,
-              // which reads as a rendering fault. Almost always this is a media
-              // message, but ChatMessage carries no type, so the placeholder
-              // says what is certain — there is no text — rather than claiming
-              // an attachment we cannot see.
-              text: m.body.trim().isEmpty
-                  ? AppLocalizations.of(context).chatNoTextBody
-                  : m.body,
-              timeLabel: m.sentAt == null
-                  ? ''
-                  : DateFormat.Hm(locale).format(m.sentAt!),
-              isOutgoing: !m.isIncoming,
-              status: _status(m.status),
-            ),
+            _bubbleFor(context, m, locale),
           ],
         );
       },
+    );
+  }
+
+  /// Builds a bubble that says what kind of message it is.
+  ///
+  /// The old fallback rendered "no text" for every empty body, because
+  /// ChatMessage carried no type. The API now resolves one, so a photo says
+  /// photo and an order says order — which matters most for the commerce kinds,
+  /// whose bodies are empty by construction: the cart lives in a webhook the
+  /// API strips, so those bubbles were blank rather than merely terse.
+  Widget _bubbleFor(BuildContext context, ChatMessage m, String locale) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final MessageKindStyle style = MessageKindStyle.of(m.kind, l10n);
+    final String body = m.body.trim();
+
+    return MessageBubble(
+      kindIcon: style.icon,
+      kindLabel: style.label,
+      // With a type line present an empty body is fine — the label carries the
+      // meaning. Only an untyped, textless message still needs the old
+      // placeholder, and that combination should no longer occur.
+      text: body.isEmpty && style.label == null ? l10n.chatNoTextBody : body,
+      timeLabel:
+          m.sentAt == null ? '' : DateFormat.Hm(locale).format(m.sentAt!),
+      isOutgoing: !m.isIncoming,
+      status: _status(m.status),
     );
   }
 

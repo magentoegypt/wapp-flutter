@@ -40,6 +40,24 @@ abstract final class AppRoutes {
   static String chat(String contactUid) => '/chats/$contactUid';
   static String chatInfo(String contactUid) => '/chats/$contactUid/info';
   static String chatNotes(String contactUid) => '/chats/$contactUid/notes';
+
+  // Conversation actions — the ⋮ sheet's destinations. All push over the shell.
+  static String chatSnooze(String uid) => '/chats/$uid/snooze';
+  static String chatTransfer(String uid) => '/chats/$uid/transfer';
+  static String chatAssign(String uid) => '/chats/$uid/assign';
+  static String chatReview(String uid) => '/chats/$uid/review';
+  static String chatLabels(String uid) => '/chats/$uid/labels';
+  static String chatTemplate(String uid) => '/chats/$uid/template';
+  static String chatCalls(String uid) => '/chats/$uid/calls';
+  static String chatCallPermission(String uid) => '/chats/$uid/call-permission';
+  static String chatHistoryAccess(String uid) => '/chats/$uid/history-access';
+  static String chatReminder(String uid) => '/chats/$uid/reminder';
+
+  // Calling — full-screen, outside the shell entirely.
+  static String callIncoming(String uid) => '/calls/$uid/incoming';
+  static String callOutgoing(String uid) => '/calls/$uid/outgoing';
+  static String callActive(String uid) => '/calls/$uid/active';
+  static String callEnded(String uid) => '/calls/$uid/ended';
   static String contact(String uid) => '/contacts/$uid';
   static String quickReply(String uid) => '/quick-replies/$uid';
   static String campaign(String uid) => '/campaigns/$uid';

@@ -19,6 +19,8 @@ class MessageBubble extends StatelessWidget {
     required this.timeLabel,
     required this.isOutgoing,
     this.status,
+    this.kindIcon,
+    this.kindLabel,
     super.key,
   });
 
@@ -28,6 +30,15 @@ class MessageBubble extends StatelessWidget {
   final String timeLabel;
   final bool isOutgoing;
   final MessageStatus? status;
+
+  /// Type affordance for a non-text message — a glyph and a translated name
+  /// shown above the body.
+  ///
+  /// Passed in rather than derived here so this widget keeps knowing nothing
+  /// about the message model or about localisation. Both null for plain text,
+  /// which renders exactly as it always has.
+  final IconData? kindIcon;
+  final String? kindLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -62,10 +73,42 @@ class MessageBubble extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(
-              text,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.35),
-            ),
+            // The type line. A photo, an order or a location says almost
+            // nothing through its text — an order carries none at all — so
+            // without this the bubble is blank and reads as a rendering fault
+            // rather than as content the app cannot show inline.
+            if (kindLabel != null) ...<Widget>[
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  if (kindIcon != null) ...<Widget>[
+                    Icon(
+                      kindIcon,
+                      size: 15,
+                      color: isOutgoing ? AppColor.brandDeep : AppColor.inkMuted,
+                    ),
+                    const SizedBox(width: 5),
+                  ],
+                  Flexible(
+                    child: Text(
+                      kindLabel!,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: isOutgoing
+                                ? AppColor.brandDeep
+                                : AppColor.inkMuted,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+              if (text.isNotEmpty) const SizedBox(height: 4),
+            ],
+            if (text.isNotEmpty)
+              Text(
+                text,
+                style:
+                    Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.35),
+              ),
             const SizedBox(height: 2),
             Row(
               mainAxisSize: MainAxisSize.min,

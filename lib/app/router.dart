@@ -8,6 +8,17 @@ import '../features/agents/presentation/screens/agents_screen.dart';
 import '../features/campaigns/presentation/screens/campaign_detail_screen.dart';
 import '../features/campaigns/presentation/screens/campaigns_screen.dart';
 import '../features/campaigns/presentation/screens/create_campaign_screen.dart';
+import '../features/conversation_actions/presentation/screens/assign_screen.dart';
+import '../features/conversation_actions/presentation/screens/call_history_screen.dart';
+import '../features/conversation_actions/presentation/screens/call_permission_screen.dart';
+import '../features/conversation_actions/presentation/screens/clear_history_screen.dart';
+import '../features/conversation_actions/presentation/screens/history_access_screen.dart';
+import '../features/conversation_actions/presentation/screens/manage_labels_screen.dart';
+import '../features/conversation_actions/presentation/screens/quality_review_screen.dart';
+import '../features/conversation_actions/presentation/screens/reminder_screen.dart';
+import '../features/conversation_actions/presentation/screens/send_template_screen.dart';
+import '../features/conversation_actions/presentation/screens/snooze_screen.dart';
+import '../features/conversation_actions/presentation/screens/transfer_screen.dart';
 import '../features/inbox/presentation/screens/conversation_info_screen.dart';
 import '../features/quick_replies/presentation/screens/quick_replies_screen.dart';
 import '../features/quick_replies/presentation/screens/quick_reply_editor_screen.dart';
@@ -196,6 +207,82 @@ final Provider<GoRouter> routerProvider = Provider<GoRouter>((Ref ref) {
             parentNavigatorKey: _rootKey,
             builder: (_, GoRouterState s) =>
                 InternalNotesScreen(contactUid: s.pathParameters['uid']!),
+          ),
+
+          // Conversation actions. Every one is a pushed route over the shell —
+          // the ⋮ sheet is the launcher, not a destination, so it stays a
+          // bottom sheet and these are where its rows actually go.
+          GoRoute(
+            path: 'snooze',
+            parentNavigatorKey: _rootKey,
+            builder: (_, GoRouterState s) =>
+                SnoozeScreen(contactUid: s.pathParameters['uid']!),
+          ),
+          GoRoute(
+            path: 'transfer',
+            parentNavigatorKey: _rootKey,
+            builder: (_, GoRouterState s) =>
+                TransferScreen(contactUid: s.pathParameters['uid']!),
+          ),
+          GoRoute(
+            path: 'assign',
+            parentNavigatorKey: _rootKey,
+            builder: (_, GoRouterState s) =>
+                AssignScreen(contactUid: s.pathParameters['uid']!),
+          ),
+          GoRoute(
+            path: 'review',
+            parentNavigatorKey: _rootKey,
+            builder: (_, GoRouterState s) =>
+                QualityReviewScreen(contactUid: s.pathParameters['uid']!),
+          ),
+          GoRoute(
+            path: 'labels',
+            parentNavigatorKey: _rootKey,
+            builder: (_, GoRouterState s) => ManageLabelsScreen(
+              contactUid: s.pathParameters['uid']!,
+              // Already-applied labels come through as `extra` so the screen can
+              // pre-tick them; setLabels REPLACES the set, so opening it without
+              // them and saving would silently clear every label the
+              // conversation had.
+              initial: (s.extra as List<String>?) ?? const <String>[],
+            ),
+          ),
+          GoRoute(
+            path: 'template',
+            parentNavigatorKey: _rootKey,
+            builder: (_, GoRouterState s) =>
+                SendTemplateScreen(contactUid: s.pathParameters['uid']!),
+          ),
+          GoRoute(
+            path: 'calls',
+            parentNavigatorKey: _rootKey,
+            builder: (_, GoRouterState s) =>
+                CallHistoryScreen(contactUid: s.pathParameters['uid']!),
+          ),
+          GoRoute(
+            path: 'call-permission',
+            parentNavigatorKey: _rootKey,
+            builder: (_, GoRouterState s) =>
+                CallPermissionScreen(contactUid: s.pathParameters['uid']!),
+          ),
+          GoRoute(
+            path: 'history-access',
+            parentNavigatorKey: _rootKey,
+            builder: (_, GoRouterState s) =>
+                HistoryAccessScreen(contactUid: s.pathParameters['uid']!),
+          ),
+          GoRoute(
+            path: 'reminder',
+            parentNavigatorKey: _rootKey,
+            builder: (_, GoRouterState s) =>
+                ReminderScreen(contactUid: s.pathParameters['uid']!),
+          ),
+          GoRoute(
+            path: 'clear-history',
+            parentNavigatorKey: _rootKey,
+            builder: (_, GoRouterState s) =>
+                ClearHistoryScreen(contactUid: s.pathParameters['uid']!),
           ),
         ],
       ),

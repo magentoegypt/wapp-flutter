@@ -29,17 +29,14 @@ Future<void> showChatActionsSheet(
   );
 }
 
-/// Dismisses the sheet and explains why the action did not happen.
+/// Closes the sheet, then navigates.
 ///
-/// These rows have no endpoint in the mobile API. Closing the sheet and doing
-/// nothing looks exactly like a failure, so the user is told the capability
-/// lives in the web console rather than being left to guess.
-void _unavailable(BuildContext context) {
-  final AppLocalizations l10n = AppLocalizations.of(context);
+/// Popping first matters: the destination is pushed onto the route below the
+/// sheet, so leaving the sheet up would put it back over the new screen when
+/// that screen pops.
+void _go(BuildContext context, String route) {
   Navigator.of(context).pop();
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(l10n.caNotAvailable)),
-  );
+  context.push(route);
 }
 
 class _ChatActionsSheet extends StatelessWidget {
@@ -98,34 +95,55 @@ class _ChatActionsSheet extends StatelessWidget {
                 context.push(AppRoutes.chatNotes(contactUid));
               },
             ),
-            // Everything below Internal note has no endpoint in the mobile API.
-            // They stay in the sheet because the frame lists them and the
-            // product intends them, but they no longer dismiss in silence —
-            // tapping and having nothing happen is indistinguishable from a bug,
-            // so each says where the action does exist.
+            // Every row below used to dismiss with "not available in the app
+            // yet — use the web console". That was true when the mobile API
+            // exposed five conversation endpoints; it now exposes all of these,
+            // so the rows navigate and the apology string is gone.
             ActionSheetRow(
               label: l10n.caSnooze,
               icon: Icons.snooze_outlined,
               tint: AppColor.info,
-              onTap: () => _unavailable(context),
+              onTap: () => _go(context, AppRoutes.chatSnooze(contactUid)),
             ),
+            ActionSheetRow(
+              label: l10n.caAssign,
+              icon: Icons.person_add_alt,
+              tint: AppColor.success,
+              onTap: () => _go(context, AppRoutes.chatAssign(contactUid)),
+            ),
+            // Transfer sits next to Assign because the two are easy to mistake
+            // for each other, and the difference is consequential: a transfer
+            // is a request subject to approval, an assignment takes effect at
+            // once. Adjacency lets the labels do that work.
             ActionSheetRow(
               label: l10n.caTransfer,
               icon: Icons.swap_horiz,
               tint: AppColor.success,
-              onTap: () => _unavailable(context),
+              onTap: () => _go(context, AppRoutes.chatTransfer(contactUid)),
+            ),
+            ActionSheetRow(
+              label: l10n.caLabels,
+              icon: Icons.label_outline,
+              tint: AppColor.info,
+              onTap: () => _go(context, AppRoutes.chatLabels(contactUid)),
             ),
             ActionSheetRow(
               label: l10n.caQualityReview,
               icon: Icons.star_outline,
               tint: AppColor.warning,
-              onTap: () => _unavailable(context),
+              onTap: () => _go(context, AppRoutes.chatReview(contactUid)),
             ),
             ActionSheetRow(
               label: l10n.caSendTemplate,
               icon: Icons.send_outlined,
               tint: AppColor.info,
-              onTap: () => _unavailable(context),
+              onTap: () => _go(context, AppRoutes.chatTemplate(contactUid)),
+            ),
+            ActionSheetRow(
+              label: l10n.caReminder,
+              icon: Icons.alarm_add_outlined,
+              tint: AppColor.warning,
+              onTap: () => _go(context, AppRoutes.chatReminder(contactUid)),
             ),
             // The three call/history rows are one neutral group in the frame.
             // Tinting two of them green and blue implied a state or severity
@@ -134,25 +152,27 @@ class _ChatActionsSheet extends StatelessWidget {
               label: l10n.caCallHistory,
               icon: Icons.call_outlined,
               tint: AppColor.inkMuted,
-              onTap: () => _unavailable(context),
+              onTap: () => _go(context, AppRoutes.chatCalls(contactUid)),
             ),
             ActionSheetRow(
               label: l10n.caRequestCall,
               icon: Icons.perm_phone_msg_outlined,
               tint: AppColor.inkMuted,
-              onTap: () => _unavailable(context),
+              onTap: () =>
+                  _go(context, AppRoutes.chatCallPermission(contactUid)),
             ),
             ActionSheetRow(
               label: l10n.caHistoryAccess,
               icon: Icons.history,
               tint: AppColor.inkMuted,
-              onTap: () => _unavailable(context),
+              onTap: () =>
+                  _go(context, AppRoutes.chatHistoryAccess(contactUid)),
             ),
             ActionSheetRow(
               label: l10n.caClearHistory,
               icon: Icons.delete_outline,
               destructive: true,
-              onTap: () => _unavailable(context),
+              onTap: () => _go(context, '/chats/$contactUid/clear-history'),
             ),
             const SizedBox(height: 8),
           ],

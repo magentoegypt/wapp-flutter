@@ -246,6 +246,10 @@ ChatMessage chatMessageFromJson(Map<String, dynamic> j) {
     uid: (j['uid'] ?? '').toString(),
     body: MessageText.plain((j['body'] ?? j['message'] ?? '').toString()),
     isIncoming: (j['isIncoming'] as bool?) ?? false,
+    // Absent on an older payload, which maps to text — present and unknown
+    // maps to `unsupported`, so a new server-side type shows as something
+    // rather than as a blank bubble.
+    kind: MessageKindX.fromApi(j['type'] ?? j['messageType']),
     sentAt: _date(j['messagedAt']),
     status: j['status'] as String?,
     agentName: (j['agent'] ?? j['agent_name']) as String?,

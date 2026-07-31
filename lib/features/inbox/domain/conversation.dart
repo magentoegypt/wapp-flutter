@@ -137,12 +137,76 @@ class ChatThread {
   }
 }
 
+/// What kind of bubble a message is.
+///
+/// The server resolves this now; it used to be implicit in the shape of a JSON
+/// blob, so every client re-derived it and would silently render the wrong
+/// bubble the day an upstream key was renamed.
+///
+/// All eighteen are listed even though this install has never produced a
+/// [sticker] and produces [video] once. A client that covers only what it has
+/// seen renders a blank bubble the first time anything else arrives — which is
+/// exactly how fifteen customer orders ended up invisible.
+enum MessageKind {
+  text,
+  image,
+  video,
+  audio,
+  document,
+  sticker,
+  location,
+  locationRequest,
+  contacts,
+  template,
+  interactiveButtons,
+  interactiveList,
+  ctaUrl,
+  order,
+  product,
+  productList,
+  catalog,
+  unsupported,
+}
+
+extension MessageKindX on MessageKind {
+  /// The API spells these snake_case (`interactive_buttons`, `location_request`).
+  static MessageKind fromApi(Object? raw) {
+    final String key =
+        '${raw ?? ''}'.trim().toLowerCase().replaceAll('_', '');
+    for (final MessageKind k in MessageKind.values) {
+      if (k.name.toLowerCase() == key) return k;
+    }
+    // Deliberately not `text`: an unknown kind rendered as text is a bubble
+    // that looks fine and says nothing. `unsupported` is honest and is the
+    // API's own catch-all value.
+    return raw == null ? MessageKind.text : MessageKind.unsupported;
+  }
+
+  /// Whether the bubble's meaning is carried by something other than its text.
+  bool get isMedia =>
+      this == MessageKind.image ||
+      this == MessageKind.video ||
+      this == MessageKind.audio ||
+      this == MessageKind.document ||
+      this == MessageKind.sticker;
+
+  /// Commerce payloads. These are the ones that arrive with an empty body —
+  /// the cart itself lives in a webhook the API strips — so they must never be
+  /// rendered as a plain empty bubble.
+  bool get isCommerce =>
+      this == MessageKind.order ||
+      this == MessageKind.product ||
+      this == MessageKind.productList ||
+      this == MessageKind.catalog;
+}
+
 class ChatMessage {
   const ChatMessage({
     required this.uid,
     required this.body,
     required this.isIncoming,
     required this.sentAt,
+    this.kind = MessageKind.text,
     this.status,
     this.agentName,
     this.receivedOn,
@@ -152,6 +216,10 @@ class ChatMessage {
   final String body;
   final bool isIncoming;
   final DateTime? sentAt;
+
+  /// Resolved server-side. Defaults to [MessageKind.text] so a payload from
+  /// before the typed rollout still renders as it always did.
+  final MessageKind kind;
 
   /// `sent` | `delivered` | `read` | `failed` — outgoing only.
   final String? status;
