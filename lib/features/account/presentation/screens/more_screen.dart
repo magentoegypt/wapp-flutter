@@ -130,7 +130,7 @@ class MoreScreen extends ConsumerWidget {
             AppListTile(
               title: l10n.igsTitle,
               leading: IconTile(
-                icon: MessageChannel.instagram.badgeIcon,
+                asset: MessageChannel.instagram.badgeAsset,
                 // Reuses the badge's own colour rather than restating the hex,
                 // so this row and the inbox badges cannot drift apart.
                 color: MessageChannel.instagram.badgeColor,

@@ -152,6 +152,10 @@ abstract final class AppTheme {
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
         backgroundColor: AppColor.brand,
         foregroundColor: Colors.white,
+        // Circular, as every frame draws it (278:2, 283:89, 281:71 …).
+        // Material 3 defaults a FAB to a rounded square, which is what shipped
+        // — a squircle among a screenful of round avatars and pills.
+        shape: CircleBorder(),
       ),
 
       bottomSheetTheme: BottomSheetThemeData(

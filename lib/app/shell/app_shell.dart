@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
+import '../../core/widgets/app_icon.dart';
 import '../theme/app_dimens.dart';
 import '../routes.dart';
 
@@ -71,19 +72,29 @@ class _BottomBar extends StatelessWidget {
   // Home is a house and Contacts a single figure, per the frames. The previous
   // dashboard/grid pairing made Home and More nearly indistinguishable at tab
   // size — both read as a four-panel glyph.
-  static const List<IconData> _icons = <IconData>[
+  //
+  // Chats is drawn, not Material. Every bubble in the font — chat_bubble,
+  // messenger, mode_comment, and their `_rounded` variants — is a rectangle
+  // with a hard-cornered tail. The frame's is a round bubble with a soft tail,
+  // so it lives in assets/icons instead. Null here marks that slot.
+  static const List<IconData?> _icons = <IconData?>[
     Icons.home_outlined,
-    Icons.chat_bubble_outline,
+    null,
     Icons.person_outline,
     Icons.grid_view_outlined,
   ];
 
-  static const List<IconData> _activeIcons = <IconData>[
+  static const List<IconData?> _activeIcons = <IconData?>[
     Icons.home,
-    Icons.chat_bubble,
+    null,
     Icons.person,
     Icons.grid_view,
   ];
+
+  /// The drawn stand-ins, by tab index. Only Chats has one.
+  static const Map<int, (String, String)> _svgIcons = <int, (String, String)>{
+    1: (AppIcons.chatOutline, AppIcons.chatFilled),
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -108,6 +119,11 @@ class _BottomBar extends StatelessWidget {
                 Expanded(
                   child: _BarItem(
                     icon: i == currentIndex ? _activeIcons[i] : _icons[i],
+                    svgAsset: _svgIcons[i] == null
+                        ? null
+                        : (i == currentIndex
+                            ? _svgIcons[i]!.$2
+                            : _svgIcons[i]!.$1),
                     label: labels[i],
                     selected: i == currentIndex,
                     onTap: () => onTap(i),
@@ -127,9 +143,13 @@ class _BarItem extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.onTap,
+    this.svgAsset,
   });
 
-  final IconData icon;
+  final IconData? icon;
+
+  /// Wins over [icon] when set — see the note on `_icons`.
+  final String? svgAsset;
   final String label;
   final bool selected;
   final VoidCallback onTap;
@@ -146,7 +166,10 @@ class _BarItem extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            Icon(icon, size: 24, color: color),
+            if (svgAsset != null)
+              AppIcon(svgAsset!, size: 24, color: color)
+            else
+              Icon(icon, size: 24, color: color),
             const SizedBox(height: 4),
             Text(
               label,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_dimens.dart';
+import 'app_icon.dart';
 
 /// The standard row: leading icon tile or avatar, title, optional subtitle,
 /// optional trailing widget, and a chevron.
@@ -111,13 +112,19 @@ class AppListTile extends StatelessWidget {
 /// settings and action rows.
 class IconTile extends StatelessWidget {
   const IconTile({
-    required this.icon,
+    this.icon,
     required this.color,
     this.background,
+    this.asset,
     super.key,
-  });
+  }) : assert(icon != null || asset != null, 'give it a glyph');
 
-  final IconData icon;
+  final IconData? icon;
+
+  /// A drawn glyph from `assets/icons`, for the marks Material does not have.
+  /// Wins over [icon] when set.
+  final String? asset;
+
   final Color color;
   final Color? background;
 
@@ -131,7 +138,9 @@ class IconTile extends StatelessWidget {
         color: background ?? color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(9),
       ),
-      child: Icon(icon, size: AppDimens.glyph, color: color),
+      child: asset != null
+          ? AppIcon(asset!, size: AppDimens.glyph, color: color)
+          : Icon(icon, size: AppDimens.glyph, color: color),
     );
   }
 }

@@ -69,6 +69,7 @@ flutter:
   generate: true
   assets:
     - assets/branding/
+    - assets/icons/
   fonts:
     # Variable fonts (all weights in one file). Inter carries the Latin/EN type
     # ramp from the Figma handoff; Cairo is swapped in for Arabic by

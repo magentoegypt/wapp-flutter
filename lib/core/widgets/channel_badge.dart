@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../app/theme/app_dimens.dart';
 import '../../features/inbox/domain/channel.dart';
+import 'app_icon.dart';
 import 'initials_avatar.dart';
 
 /// The network mark that rides on a contact's avatar.
@@ -48,12 +49,11 @@ class ChannelBadge extends StatelessWidget {
           color: channel.badgeColor,
           shape: BoxShape.circle,
         ),
-        child: Icon(
-          channel.badgeIcon,
+        child: AppIcon(
+          channel.badgeAsset,
           // Leaves roughly 2px of colour around the glyph. Any larger and the
-          // filled camera body bleeds into the ring and the disc stops reading
-          // as a disc.
-          size: markSize * 0.62,
+          // mark bleeds into the ring and the disc stops reading as a disc.
+          size: markSize * 0.66,
           color: Colors.white,
         ),
       ),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/widgets/app_icon.dart';
+
 /// Which network a conversation arrives over.
 ///
 /// Defaulted server-side, so it is never null — but it is never absent from a
@@ -57,9 +59,14 @@ extension MessageChannelX on MessageChannel {
       ? const Color(0xFFE0356C)
       : const Color(0xFF25D366);
 
-  /// Filled glyphs on purpose. At 12px a 2px stroke turns to mush — the
-  /// handoff records this being redrawn twice before it was legible.
-  IconData get badgeIcon => this == MessageChannel.instagram
-      ? Icons.camera_alt
-      : Icons.chat;
+  /// The network's own mark, drawn in `assets/icons`.
+  ///
+  /// These used to be `Icons.chat` and `Icons.camera_alt` — a generic speech
+  /// bubble and a generic camera. The badge exists to say *which network this
+  /// conversation is on*, and a glyph that only suggests "messaging" or
+  /// "photos" does not answer that; the two badges were also near-identical in
+  /// silhouette, so the colour was doing all the work.
+  String get badgeAsset => this == MessageChannel.instagram
+      ? AppIcons.instagram
+      : AppIcons.whatsapp;
 }
