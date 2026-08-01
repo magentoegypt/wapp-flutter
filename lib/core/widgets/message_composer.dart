@@ -21,12 +21,17 @@ class QuickReplyChips extends StatelessWidget {
     if (replies.isEmpty) return const SizedBox.shrink();
 
     return SizedBox(
-      height: 40,
+      // 32 for the chip plus 14 top and bottom. Sized to the padding rather
+      // than the other way round — at 48 the 14dp inset clipped the chips.
+      height: 60,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
+        // 14 all round, per the spec. The row used to take the 22 screen
+        // gutter horizontally and 4 vertically, so the chips sat inset from
+        // the bubbles above them and almost touched the composer below.
         padding: const EdgeInsetsDirectional.symmetric(
-          horizontal: AppDimens.gutter,
-          vertical: 4,
+          horizontal: AppDimens.stripGutter,
+          vertical: 14,
         ),
         itemCount: replies.length,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
@@ -37,8 +42,13 @@ class QuickReplyChips extends StatelessWidget {
             fontWeight: FontWeight.w500,
             color: AppColor.brandDeep,
           ),
-          backgroundColor: AppColor.brandWash,
-          side: BorderSide.none,
+          // Outlined, per the frame (37:1032): a green hairline on the page
+          // background, not a filled wash. Filled chips read as the selected
+          // state of a filter bar — these are actions, and the inbox's own
+          // filter chips directly above them *are* filled, so the two were
+          // saying the same thing about different behaviour.
+          backgroundColor: Colors.transparent,
+          side: const BorderSide(color: AppColor.brandDeep, width: 1.2),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(999),
           ),
@@ -60,7 +70,7 @@ class MessageComposer extends StatefulWidget {
     required this.hintText,
     required this.onSend,
     this.onAttach,
-    this.sendIcon = Icons.send_rounded,
+    this.sendIcon = Icons.send_outlined,
     this.sendLabel,
     super.key,
   });
@@ -120,7 +130,7 @@ class MessageComposerState extends State<MessageComposer> {
       top: false,
       child: Container(
         padding: const EdgeInsetsDirectional.symmetric(
-          horizontal: AppDimens.gutter,
+          horizontal: AppDimens.stripGutter,
           vertical: 8,
         ),
         decoration: BoxDecoration(
@@ -201,10 +211,16 @@ class _SendButton extends StatelessWidget {
         height: 40,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: enabled ? AppColor.brand : AppColor.inkFaint,
+          // Green in both states, per the frame — which draws it green with
+          // the placeholder still showing. Grey read as broken rather than as
+          // "nothing to send yet". Faded rather than fully lit so an inert
+          // button does not look like a live one.
+          color: enabled
+              ? AppColor.brand
+              : AppColor.brand.withValues(alpha: 0.45),
           shape: BoxShape.circle,
         ),
-        child: Icon(icon, size: 18, color: Colors.white),
+        child: Icon(icon, size: 19, color: Colors.white),
       ),
     );
   }

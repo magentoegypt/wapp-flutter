@@ -149,8 +149,12 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
       child: SafeArea(
         bottom: false,
         child: Padding(
+          // Tighter than the app gutter (22). The back chevron and the overflow
+          // button carry their own 36dp touch targets, so the gutter stacked on
+          // top of that and pushed the glyphs a quarter-inch off each edge —
+          // the frame sits them close in.
           padding: const EdgeInsetsDirectional.symmetric(
-            horizontal: AppDimens.gutter,
+            horizontal: AppDimens.headerGutter,
           ),
           child: _titleOnly
               ? _buildTitleOnly(context)
@@ -189,7 +193,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
             IconButton(
               onPressed: onBack ?? () => Navigator.of(context).maybePop(),
               // Directional: points left in LTR, right in RTL.
-              icon: const Icon(Icons.arrow_back),
+              icon: const Icon(Icons.chevron_left, size: 30),
               color: Colors.white,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
@@ -220,25 +224,34 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                   ),
                 ),
                 if (subtitle != null || subtitleTrailing != null)
-                  Row(
-                    children: <Widget>[
-                      if (subtitle != null)
-                        Flexible(
-                          child: Text(
+                  // The subtitle and the status pill scale as one unit.
+                  // Flexing them against each other did not work: an even
+                  // split truncated the subtitle, and weighting it 3:1 left
+                  // the pill a quarter of its width and scaled "Solved" to
+                  // illegible. Sized together, they keep their proportions and
+                  // only shrink when the header is genuinely tight.
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        if (subtitle != null)
+                          Text(
                             subtitle!,
                             maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            softWrap: false,
                             style: const TextStyle(
                               fontSize: 11.5,
                               color: Colors.white70,
                             ),
                           ),
-                        ),
-                      if (subtitleTrailing != null) ...<Widget>[
-                        const SizedBox(width: 8),
-                        subtitleTrailing!,
+                        if (subtitleTrailing != null) ...<Widget>[
+                          const SizedBox(width: 8),
+                          subtitleTrailing!,
+                        ],
                       ],
-                    ],
+                    ),
                   ),
               ],
             ),
@@ -259,7 +272,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
             if (showBack) ...<Widget>[
               IconButton(
                 onPressed: () => Navigator.of(context).maybePop(),
-                icon: const Icon(Icons.arrow_back),
+                icon: const Icon(Icons.chevron_left, size: 30),
                 color: Colors.white,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 36, minHeight: 36),

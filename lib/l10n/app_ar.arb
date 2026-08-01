@@ -33,6 +33,11 @@
   "inboxFilterUnassigned": "غير مُسندة",
   "inboxEmptyTitle": "لا توجد محادثات بعد",
   "inboxEmptyMessage": "ستظهر رسائل العملاء الجديدة هنا.",
+  "chatActiveNow": "نشط الآن",
+  "chatActiveAgo": "نشط قبل {when}",
+  "@chatActiveAgo": {
+    "placeholders": { "when": { "type": "String" } }
+  },
   "chatComposerHint": "رسالة",
   "chatServiceWindowOpen": "تنتهي نافذة الرد خلال {duration} — رد للإبقاء عليها مفتوحة.",
   "@chatServiceWindowOpen": {

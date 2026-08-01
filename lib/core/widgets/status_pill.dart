@@ -34,12 +34,20 @@ class StatusPill extends StatelessWidget {
     required this.label,
     required this.tone,
     this.showDot = true,
+    this.showChevron = false,
     super.key,
   });
 
   final String label;
   final StatusTone tone;
   final bool showDot;
+
+  /// A trailing caret, for a pill that opens a menu.
+  ///
+  /// The chat header's status pill *is* a dropdown and drew nothing to say so —
+  /// the frame (37:1032) puts a caret inside it. Without one the only clue that
+  /// a conversation's status is changeable was tapping it to find out.
+  final bool showChevron;
 
   @override
   Widget build(BuildContext context) {
@@ -71,6 +79,14 @@ class StatusPill extends StatelessWidget {
               color: tone.foreground,
             ),
           ),
+          if (showChevron) ...<Widget>[
+            const SizedBox(width: 2),
+            Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 14,
+              color: tone.foreground,
+            ),
+          ],
         ],
       ),
     );

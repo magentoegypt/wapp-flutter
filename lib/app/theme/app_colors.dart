@@ -15,7 +15,10 @@ import 'package:flutter/material.dart';
 ///    at body sizes; use [brandDeep] for any green text or icon on a light
 ///    ground, and reserve [brand] for fills.
 abstract final class AppColor {
-  static const Color brand = Color(0xFF00BF63);
+  /// #2BAC32, taken from the header's own Figma export — the iOS layer gives
+  /// `UIColor(red: 0.169, green: 0.675, blue: 0.196)` and the Android one
+  /// `#2BAC32`, which agree. Was #00BF63, a noticeably minter green.
+  static const Color brand = Color(0xFF2BAC32);
   static const Color brandDeep = Color(0xFF00703A); // ~6.2:1 on white
   static const Color brandWash = Color(0xFFEBFAF3);
 
@@ -46,6 +49,13 @@ abstract final class AppColor {
 
   // Chat + internal notes.
   static const Color bubbleOut = Color(0xFFDCF8C6);
+
+  /// The chat canvas — a warm beige, sampled straight off the frame
+  /// (37:1032, #EFEAE2). The screen used the app's cool near-white scaffold,
+  /// which left the white incoming bubbles with almost nothing to sit against:
+  /// the whole point of this tone is that both bubble colours read as raised
+  /// off it.
+  static const Color chatCanvas = Color(0xFFEFEAE2);
   static const Color noteFill = Color(0xFFFFF8D6);
   static const Color noteLine = Color(0xFFF3E7A1);
   static const Color noteInk = Color(0xFF8A6D00);

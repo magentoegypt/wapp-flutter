@@ -131,6 +131,21 @@ class ChatThread {
 
   bool get isReplyLockOpen => replyLockHeldBy == null;
 
+  /// When the customer last wrote, or null if they never have in what is
+  /// loaded.
+  ///
+  /// This is the closest thing to presence that exists. WhatsApp does not give
+  /// business accounts a customer's online state — there is no `online`,
+  /// `presence` or `lastSeen` anywhere in the payload — so the header reports
+  /// what can actually be known: when they were last here. Messages are
+  /// newest-first, so the first incoming one wins.
+  DateTime? get lastInboundAt {
+    for (final ChatMessage m in messages) {
+      if (m.isIncoming && m.sentAt != null) return m.sentAt;
+    }
+    return null;
+  }
+
   ChatThread copyWith({
     List<ChatMessage>? messages,
     int? page,

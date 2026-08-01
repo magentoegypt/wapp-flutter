@@ -69,6 +69,12 @@
   "inboxFilterUnassigned": "Unassigned",
   "inboxEmptyTitle": "No conversations yet",
   "inboxEmptyMessage": "New messages from customers will appear here.",
+  "chatActiveNow": "Active now",
+  "chatActiveAgo": "Active {when} ago",
+  "@chatActiveAgo": {
+    "description": "The chat header's presence line. WhatsApp exposes no online state for a customer, so this reports when they last wrote instead of inventing one.",
+    "placeholders": { "when": { "type": "String" } }
+  },
   "chatComposerHint": "Message",
   "chatServiceWindowOpen": "Service window closes in {duration} — reply to keep it open.",
   "@chatServiceWindowOpen": {

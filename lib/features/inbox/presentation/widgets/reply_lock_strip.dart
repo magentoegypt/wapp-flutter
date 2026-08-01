@@ -98,7 +98,13 @@ class ReplyLockBanner extends StatelessWidget {
     if (!lock.locked) {
       return AppBanner(
         message: l10n.chatReplyLockOpen,
-        tone: BannerTone.neutral,
+        // Brand, not neutral: the frame draws this strip as green text on a
+        // pale green wash. Neutral rendered it grey-on-grey, which read as
+        // disabled chrome rather than as "this chat is free to take".
+        tone: BannerTone.brand,
+        // 7% brand, per the spec — lighter than the standard brand wash.
+        background: AppColor.brand.withValues(alpha: 0.07),
+        icon: Icons.lock_open_outlined,
       );
     }
 
@@ -122,17 +128,25 @@ class ReplyLockBanner extends StatelessWidget {
       width: double.infinity,
       color: AppColor.warningWash,
       padding: const EdgeInsetsDirectional.symmetric(
-        horizontal: AppDimens.gutter,
+        horizontal: AppDimens.stripGutter,
         vertical: 8,
       ),
       child: Row(
         children: <Widget>[
           const Icon(Icons.lock_outline, size: 17, color: AppColor.warning),
           const SizedBox(width: 8),
+          // One line, same as AppBanner — this strip carries a name, so it is
+          // the one most likely to wrap.
           Expanded(
-            child: Text(
-              message,
-              style: const TextStyle(fontSize: 13, color: AppColor.warning),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: AlignmentDirectional.centerStart,
+              child: Text(
+                message,
+                maxLines: 1,
+                softWrap: false,
+                style: const TextStyle(fontSize: 13, color: AppColor.warning),
+              ),
             ),
           ),
           // Offered only when the server said so. The rule is admin OR one of

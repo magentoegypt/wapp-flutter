@@ -188,7 +188,7 @@ class DashboardScreen extends ConsumerWidget {
                       const SizedBox(height: 8),
                       Padding(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: AppDimens.gutter,
+                          horizontal: AppDimens.stripGutter,
                         ),
                         child: ChartCard(
                           title: l10n.dashboardWeek,

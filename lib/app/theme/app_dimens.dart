@@ -8,6 +8,15 @@ abstract final class AppDimens {
   /// The single horizontal inset for every screen.
   static const double gutter = 22;
 
+  /// The app bar's own horizontal inset. Smaller than [gutter] because the
+  /// icon buttons inside it already carry 36dp touch targets.
+  static const double headerGutter = 12;
+
+  /// Horizontal inset for the chat's full-bleed furniture — both banners, the
+  /// quick-reply row and the composer. Narrower than [gutter] so these strips
+  /// line up with each other rather than with body copy.
+  static const double stripGutter = 14;
+
   /// Persistent bottom tab bar, excluding the home indicator.
   static const double tabBar = 82;
 

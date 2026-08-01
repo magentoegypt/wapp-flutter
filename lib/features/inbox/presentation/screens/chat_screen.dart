@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_dimens.dart';
 import '../../../../core/error/failure.dart';
 import '../../../../core/util/duration_format.dart';
 import '../../../../core/widgets/app_banner.dart';
@@ -170,6 +171,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     return null;
   }
 
+  /// "Active 2h ago" from the newest inbound message, or the phone number when
+  /// the customer has never written.
+  String? _presenceLine(AppLocalizations l10n, ChatThread? t) {
+    if (t == null) return null;
+    final DateTime? at = t.lastInboundAt;
+    if (at == null) return t.phone;
+
+    final Duration ago = DateTime.now().difference(at);
+    if (ago.inMinutes < 2) return l10n.chatActiveNow;
+    // Bare relative time from here on. "Active 47m ago" plus the status pill
+    // overflowed a 360dp header; the frame's line is one short word too.
+    if (ago.inHours < 1) return '${ago.inMinutes}m';
+    if (ago.inDays < 1) return '${ago.inHours}h';
+    if (ago.inDays < 7) return '${ago.inDays}d';
+    return DateFormat.yMMMd(Localizations.localeOf(context).toLanguageTag())
+        .format(at);
+  }
+
   Future<void> _setStatus(ConversationStatus status) async {
     await ref
         .read(conversationRepositoryProvider)
@@ -187,9 +206,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         ref.watch(chatThreadProvider(widget.contactUid));
 
     return Scaffold(
+      backgroundColor: AppColor.chatCanvas,
       appBar: AppHeader.back(
         title: thread.valueOrNull?.name ?? '',
-        subtitle: thread.valueOrNull?.phone,
+        // Last activity, not the phone number. WhatsApp gives business
+        // accounts no presence for a customer — there is no `online`,
+        // `presence` or `lastSeen` field anywhere in the payload — so an
+        // Online/Offline dot here would be invented. When they last wrote is
+        // real, is what the frame's line is reaching for, and falls back to
+        // the number on a thread they have never written in.
+        subtitle: _presenceLine(l10n, thread.valueOrNull),
         // The countdown leads the avatar so the first thing in the header,
         // after the way back, is how long free-form replies still work. The
         // ring renders nothing at all once the window has closed, so on a
@@ -316,6 +342,10 @@ class _ServiceWindowBanner extends StatelessWidget {
       return AppBanner(
         message: l10n.chatServiceWindowClosed,
         tone: BannerTone.warning,
+        // A closed padlock, per the frame (37:1032). The window being shut is
+        // what the strip is about, and the frame pairs it with the reply
+        // lock's open padlock below — shut above, open below.
+        icon: Icons.lock_outline,
       );
     }
 
@@ -329,12 +359,17 @@ class _ServiceWindowBanner extends StatelessWidget {
       return AppBanner(
         message: l10n.chatServiceWindowClosed,
         tone: BannerTone.warning,
+        // A closed padlock, per the frame (37:1032). The window being shut is
+        // what the strip is about, and the frame pairs it with the reply
+        // lock's open padlock below — shut above, open below.
+        icon: Icons.lock_outline,
       );
     }
 
     return AppBanner(
       message: l10n.chatServiceWindowOpen(DurationFormat.coarse(secondsLeft)),
       tone: BannerTone.warning,
+      icon: Icons.lock_outline,
     );
   }
 }
@@ -385,7 +420,7 @@ class _CallButton extends ConsumerWidget {
             .showSnackBar(SnackBar(content: Text(reason)));
       },
       icon: Icon(
-        Icons.call,
+        Icons.call_outlined,
         color: canCall ? Colors.white : Colors.white54,
       ),
     );
@@ -412,7 +447,14 @@ class _MessageList extends StatelessWidget {
 
     return ListView.builder(
       reverse: true,
-      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+      // 14, matching the banners, quick replies and composer above and below
+      // it — the thread was inset 22 while every strip around it sat at 14, so
+      // the bubbles stepped in from the furniture framing them.
+      // 14 on every side. The canvas was inset 22 horizontally and 10
+      // vertically while every strip framing it sat at 14, so the bubbles
+      // stepped in from the furniture around them and crowded it top and
+      // bottom.
+      padding: const EdgeInsets.all(AppDimens.stripGutter),
       // One extra slot at the tail — the visual top of a reversed list — for
       // the older-page spinner, so the reader can see that scrolling back is
       // fetching rather than stuck.
@@ -608,7 +650,13 @@ class _StatusMenu extends StatelessWidget {
             ),
           ),
       ],
-      child: StatusPill(label: badge.label, tone: badge.tone),
+      // The caret is the affordance: this pill opens the status menu, and the
+      // frame draws one inside it.
+      child: StatusPill(
+        label: badge.label,
+        tone: badge.tone,
+        showChevron: true,
+      ),
     );
   }
 }

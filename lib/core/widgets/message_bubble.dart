@@ -98,6 +98,18 @@ class MessageBubble extends StatelessWidget {
             bottomStart: Radius.circular(isOutgoing ? 12 : 3),
             bottomEnd: Radius.circular(isOutgoing ? 3 : 12),
           ),
+          // A hairline of lift, as the frame draws it. Bubbles sat perfectly
+          // flat on the canvas before, which is what made a white incoming
+          // bubble hard to find at a glance. Deliberately tiny — a real drop
+          // shadow on every message in a long thread reads as clutter and
+          // costs a saveLayer per bubble.
+          boxShadow: const <BoxShadow>[
+            BoxShadow(
+              color: Color(0x14000000),
+              blurRadius: 2,
+              offset: Offset(0, 1),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
