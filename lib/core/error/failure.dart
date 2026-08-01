@@ -41,6 +41,26 @@ class ForbiddenFailure extends Failure {
   const ForbiddenFailure([super.message = 'You do not have access to this.']);
 }
 
+/// 403 — the workspace's subscription does not include this module.
+///
+/// The API gates every route by plan and refuses with the same status code it
+/// uses for a permission problem. The two are told apart by a single key: a
+/// plan refusal carries `module`, a permission refusal does not.
+///
+/// Worth separating, because only one of them is the user's to fix. "You do not
+/// have access to this" sends an owner to ask their admin for a permission they
+/// already have, when the real answer is that the plan does not include the
+/// feature. [module] is the key the server named, kept so a screen can say
+/// which one.
+class PlanLimitFailure extends Failure {
+  const PlanLimitFailure(
+    super.message, [
+    this.module,
+  ]);
+
+  final String? module;
+}
+
 /// 404.
 class NotFoundFailure extends Failure {
   const NotFoundFailure([super.message = 'Not found.']);

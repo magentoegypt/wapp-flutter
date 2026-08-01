@@ -37,7 +37,7 @@ class Contact {
     this.city,
     this.language,
     this.labels = const <String>[],
-    this.groups = const <String>[],
+    this.groups = const <NamedRef>[],
     this.lifecycleStage,
     this.createdAt,
     this.isBlocked = false,
@@ -53,7 +53,14 @@ class Contact {
   final String? city;
   final String? language;
   final List<String> labels;
-  final List<String> groups;
+
+  /// Carries the uid, not just the display name.
+  ///
+  /// `POST /contacts/{uid}/groups/{groupUid}/remove` needs the group's uid, and
+  /// this list used to be flattened to names on the way in — so the endpoint
+  /// was not merely unwired, it was **uncallable**. [NamedRef] is the type the
+  /// rest of the contacts feature already uses for exactly this pair.
+  final List<NamedRef> groups;
 
   /// Null when the payload carried no recognised stage — the detail and list
   /// screens then omit the pill rather than guess one.

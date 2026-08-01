@@ -33,6 +33,9 @@ dependencies:
   # Media + platform
   cached_network_image: ^3.3.0
   image_picker: ^1.2.3
+  # Documents for the composer, and the xlsx workbook for contact import.
+  # image_picker cannot offer either: it is photo/video only.
+  file_picker: ^8.1.7
   url_launcher: ^6.3.2
   flutter_svg: ^2.0.10
   flutter_webrtc: ^1.5.2

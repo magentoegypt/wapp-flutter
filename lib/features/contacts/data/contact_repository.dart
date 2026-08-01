@@ -195,6 +195,18 @@ Contact contactFromJson(Map<String, dynamic> j) {
           .toList()
       : const <String>[];
 
+  /// Groups keep their uid; labels stay names, having no endpoint that needs one.
+  List<NamedRef> refs(Object? v) => v is List
+      ? v
+          .whereType<Map<String, dynamic>>()
+          .map((Map<String, dynamic> e) => NamedRef(
+                id: '${e['uid'] ?? e['id'] ?? ''}',
+                name: '${e['name'] ?? e['title'] ?? ''}',
+              ))
+          .where((NamedRef r) => r.name.isNotEmpty)
+          .toList(growable: false)
+      : const <NamedRef>[];
+
   return Contact(
     uid: (j['uid'] ?? '').toString(),
     name: (j['name'] ?? j['waId'] ?? '').toString(),
@@ -206,7 +218,7 @@ Contact contactFromJson(Map<String, dynamic> j) {
     city: j['city'] as String?,
     language: (j['language'] ?? j['languageCode']) as String?,
     labels: strings(j['labels']),
-    groups: strings(j['groups']),
+    groups: refs(j['groups']),
     // The backend packs the lifecycle stage into the same `status` string that
     // carries `blocked`, so both are read from it. An unrecognised value maps
     // to null and the pill is simply omitted.

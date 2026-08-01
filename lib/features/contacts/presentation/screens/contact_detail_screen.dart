@@ -167,9 +167,9 @@ class ContactDetailScreen extends ConsumerWidget {
                   spacing: 8,
                   runSpacing: 8,
                   children: <Widget>[
-                    for (final String g in c.groups)
+                    for (final NamedRef g in c.groups)
                       StatusPill(
-                        label: g,
+                        label: g.name,
                         tone: StatusTone.neutral,
                         showDot: false,
                       ),

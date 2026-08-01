@@ -172,6 +172,18 @@ class ApiClient {
         onUnauthenticated?.call();
         return const AuthFailure();
       case 403:
+        // Two different refusals share this status. The plan gate names the
+        // module it blocked; a permission refusal sends no such key. Only the
+        // first is something the workspace owner can act on, so collapsing them
+        // sends people to ask an admin for a permission they already hold.
+        final String? module = map['module'] as String?;
+        if (module != null && module.isNotEmpty) {
+          return PlanLimitFailure(
+            serverMessage ??
+                'This module is not included in your current subscription plan.',
+            module,
+          );
+        }
         return ForbiddenFailure(serverMessage ?? 'You do not have access to this.');
       case 404:
         return NotFoundFailure(serverMessage ?? 'Not found.');
