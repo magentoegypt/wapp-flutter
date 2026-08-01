@@ -12,6 +12,7 @@ import '../../../../core/widgets/app_list_tile.dart';
 import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/channel_badge.dart';
 import '../../../../core/widgets/filter_chip_bar.dart';
+import '../../../../core/util/screen_poll.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../data/conversation_repository.dart';
 import '../../domain/conversation.dart';
@@ -39,11 +40,41 @@ int? _countFor(
 }
 
 /// Inbox — Figma 36:1032.
-class InboxScreen extends ConsumerWidget {
+class InboxScreen extends ConsumerStatefulWidget {
   const InboxScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<InboxScreen> createState() => _InboxScreenState();
+}
+
+class _InboxScreenState extends ConsumerState<InboxScreen>
+    with ScreenPoll<InboxScreen> {
+  @override
+  Duration get pollInterval => kInboxPollInterval;
+
+  /// `invalidate` rather than a bespoke merge: the provider refetches while
+  /// keeping its current value on screen, so rows do not blink every fifteen
+  /// seconds. A list is cheap to rebuild — a thread is not, which is why the
+  /// chat has [ChatThreadController.refreshHead] and this does not.
+  @override
+  Future<void> onPoll() async => ref.invalidate(inboxListProvider);
+
+  /// Stop while anything is pushed over the shell.
+  ///
+  /// This tab lives in a shell branch, so opening a chat — which pushes onto
+  /// the *root* navigator — leaves the inbox's own route current and the
+  /// generic route check blind to it. Measured before this: five chat ticks
+  /// and two inbox ticks in the same thirty seconds, refreshing a list nobody
+  /// could see.
+  @override
+  bool get pollEnabled {
+    final NavigatorState? root =
+        Navigator.maybeOf(context, rootNavigator: true);
+    return root == null || !root.canPop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final AsyncValue<List<Conversation>> rows = ref.watch(inboxListProvider);
     final InboxFilter filter = ref.watch(inboxFilterProvider);

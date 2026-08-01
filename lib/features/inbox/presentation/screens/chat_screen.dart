@@ -15,6 +15,7 @@ import '../../../../core/widgets/message_bubble.dart';
 import '../../../../core/widgets/message_composer.dart';
 import '../../../../core/widgets/reply_window_ring.dart';
 import '../../../../core/widgets/status_pill.dart';
+import '../../../../core/util/screen_poll.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../calls/data/call_repository.dart';
 import '../../../calls/domain/call.dart';
@@ -44,7 +45,17 @@ class ChatScreen extends ConsumerStatefulWidget {
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends ConsumerState<ChatScreen> {
+class _ChatScreenState extends ConsumerState<ChatScreen>
+    with ScreenPoll<ChatScreen> {
+  @override
+  Duration get pollInterval => kChatPollInterval;
+
+  /// Merge the newest page in. Never surfaces an error: see
+  /// [ChatThreadController.refreshHead].
+  @override
+  Future<void> onPoll() =>
+      ref.read(chatThreadProvider(widget.contactUid).notifier).refreshHead();
+
   final GlobalKey<MessageComposerState> _composerKey =
       GlobalKey<MessageComposerState>();
 
@@ -52,12 +63,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     await ref
         .read(conversationRepositoryProvider)
         .sendMessage(widget.contactUid, body);
-    // reload(), not invalidate(): invalidating rebuilds from page 1 and throws
-    // away every older page the reader had scrolled back through, so a send
-    // used to collapse a long thread to the newest 50 and jump them to the
-    // bottom. reload() has the same effect here only because a send is already
-    // a return to the bottom; anywhere else, prefer prepend().
-    await ref.read(chatThreadProvider(widget.contactUid).notifier).reload();
+    // refreshHead(), not reload(): reload sets AsyncLoading and re-reads page
+    // 1, so the thread blanked to a spinner and lost every older page the
+    // reader had scrolled back through. It also raced the server — the send
+    // returns before the message is readable, so the re-read often came back
+    // without it and the message only appeared after leaving and re-entering
+    // the conversation. refreshHead merges instead, and the screen's poll
+    // picks the message up a tick later if this one was too early.
+    await ref.read(chatThreadProvider(widget.contactUid).notifier).refreshHead();
     // Sending is what takes the lock — the engine claims a fresh five minutes
     // on every send and extends it on the next. Without this the strip still
     // reads "no one is replying" immediately after this agent replied.
@@ -94,7 +107,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       messenger
         ..hideCurrentSnackBar()
         ..showSnackBar(SnackBar(content: Text(l10n.mediaSent)));
-      await ref.read(chatThreadProvider(widget.contactUid).notifier).reload();
+      // Same reason as the text send: reload would blank the thread and drop
+      // the loaded pages, and an upload is exactly when a reader has been
+      // waiting and is looking at it.
+      await ref.read(chatThreadProvider(widget.contactUid).notifier).refreshHead();
     } on Failure catch (e) {
       // Surface the server's wording verbatim. Instagram's accepted formats
       // are narrower than WhatsApp's, and only the server knows which list

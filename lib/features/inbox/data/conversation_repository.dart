@@ -1,4 +1,6 @@
-import 'package:flutter/foundation.dart';
+import 'dart:async';
+
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/error/failure.dart';
@@ -316,6 +318,14 @@ final conversationRepositoryProvider = Provider<ConversationRepository>(
 /// Active inbox filter, shared between the chip bar and the list.
 final inboxFilterProvider = StateProvider<InboxFilter>((Ref ref) => InboxFilter.all);
 
+/// How often the inbox re-reads itself while it is on screen.
+///
+/// Slower than the chat poll: the inbox is a glance, not a conversation. Same
+/// reason it exists at all — without a push channel, a new conversation never
+/// appears and an unread count never moves until the tab is left and returned
+/// to. Driven from the screen, for the reason on [kChatPollInterval].
+const Duration kInboxPollInterval = Duration(seconds: 15);
+
 final inboxListProvider =
     FutureProvider.autoDispose<List<Conversation>>((Ref ref) {
   final InboxFilter filter = ref.watch(inboxFilterProvider);
@@ -336,10 +346,29 @@ final chatThreadProvider = AsyncNotifierProvider.autoDispose
   ChatThreadController.new,
 );
 
+/// How often an open thread re-reads its newest page.
+///
+/// There is no websocket and no push channel in this API, so a timer is the
+/// only way a conversation stays live. Six seconds is a compromise: fast
+/// enough that a reply feels like it arrived, slow enough that a thread left
+/// open costs ten requests a minute rather than sixty.
+///
+/// The timer itself lives on the *screen*, not here. A provider does not know
+/// when it is visible — something else can keep it alive — and autoDispose
+/// runs a frame later, which leaves a timer ticking over a torn-down tree.
+/// `State.dispose` is synchronous and exact.
+const Duration kChatPollInterval = Duration(seconds: 6);
+
 class ChatThreadController
     extends AutoDisposeFamilyAsyncNotifier<ChatThread, String> {
+  /// Riverpod 2's Ref has no `mounted`, and a refresh in flight when the
+  /// reader leaves would otherwise write to a disposed notifier.
+  bool _gone = false;
+
   @override
   Future<ChatThread> build(String contactUid) {
+    _gone = false;
+    ref.onDispose(() => _gone = true);
     return ref.watch(conversationRepositoryProvider).thread(contactUid);
   }
 
@@ -402,6 +431,74 @@ class ChatThreadController
     if (current == null) return;
     state = AsyncData<ChatThread>(current.copyWith(
       messages: <ChatMessage>[message, ...current.messages],
+    ));
+  }
+
+  /// Re-reads page 1 and folds anything new into what is already loaded.
+  ///
+  /// This is what makes the thread live. Three things it deliberately does not
+  /// do, each of which is why [reload] cannot be used on a timer:
+  ///
+  /// * **No `AsyncLoading`.** This runs behind the reader's back every few
+  ///   seconds; a spinner over a thread someone is reading is far worse than
+  ///   the staleness it fixes.
+  /// * **No page loss.** Older pages scrolled back through are kept — only the
+  ///   newest page is re-read and merged.
+  /// * **No pointless rebuilds.** When nothing has changed the state is left
+  ///   alone, so a quiet conversation does not repaint on every tick.
+  ///
+  /// Messages already on screen are *replaced* by their fresh copies rather
+  /// than skipped, because that is how a delivery tick moves from sent to
+  /// delivered to read without a manual refresh.
+  Future<void> refreshHead() async {
+    final ChatThread? current = state.valueOrNull;
+    // Nothing loaded yet, or a load already in flight — `build` will deliver.
+    if (current == null || current.loadingMore) return;
+
+    final ChatThread head;
+    try {
+      head = await ref.read(conversationRepositoryProvider).thread(arg);
+    } catch (_) {
+      // A poll that fails is not an error state: the thread on screen is still
+      // valid and the next tick will try again. Surfacing this would replace a
+      // readable conversation with a retry button because one request timed
+      // out, which is the opposite of the point.
+      return;
+    }
+    if (_gone) return;
+
+    final Set<String> known = <String>{
+      for (final ChatMessage m in current.messages) m.uid,
+    };
+    final List<ChatMessage> fresh = <ChatMessage>[
+      for (final ChatMessage m in head.messages)
+        if (!known.contains(m.uid)) m,
+    ];
+
+    final Map<String, ChatMessage> byUid = <String, ChatMessage>{
+      for (final ChatMessage m in head.messages) m.uid: m,
+    };
+    final List<ChatMessage> merged = <ChatMessage>[
+      ...fresh,
+      for (final ChatMessage m in current.messages) byUid[m.uid] ?? m,
+    ];
+
+    // Cheap change detection: a new message, a status that moved, or the
+    // service window opening or closing. Anything else and this tick is a
+    // no-op.
+    final bool statusMoved = current.messages.any(
+      (ChatMessage m) => byUid[m.uid] != null && byUid[m.uid]!.status != m.status,
+    );
+    if (fresh.isEmpty &&
+        !statusMoved &&
+        head.windowOpen == current.windowOpen) {
+      return;
+    }
+
+    state = AsyncData<ChatThread>(current.copyWith(
+      messages: merged,
+      windowOpen: head.windowOpen,
+      windowExpiresAt: head.windowExpiresAt,
     ));
   }
 }

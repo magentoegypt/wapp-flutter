@@ -136,6 +136,11 @@ class ChatThread {
     int? page,
     bool? hasMore,
     bool? loadingMore,
+    // Carried so a polled refresh can move them. The 24-hour window can close
+    // while the thread is open, and a banner that still says "closes in 2h"
+    // an hour after it shut is worse than no banner.
+    bool? windowOpen,
+    DateTime? windowExpiresAt,
   }) {
     return ChatThread(
       contactUid: contactUid,
@@ -143,8 +148,8 @@ class ChatThread {
       phone: phone,
       channel: channel,
       messages: messages ?? this.messages,
-      windowOpen: windowOpen,
-      windowExpiresAt: windowExpiresAt,
+      windowOpen: windowOpen ?? this.windowOpen,
+      windowExpiresAt: windowExpiresAt ?? this.windowExpiresAt,
       quickReplies: quickReplies,
       assignedAgentName: assignedAgentName,
       replyLockHeldBy: replyLockHeldBy,
