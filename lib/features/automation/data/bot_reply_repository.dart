@@ -79,6 +79,45 @@ extension BotMessageKindX on BotMessageKind {
         return BotMessageKind.other;
     }
   }
+
+  /// What a reply actually sends, worked out from its payload.
+  ///
+  /// **There is no `message_type` field.** The API describes a rich reply only
+  /// by what sits in `data.interaction_message` — buttons, a list, a CTA, a
+  /// header image. Keying the read-only guard off a type field that is never
+  /// sent meant the guard never fired: a live reply carrying an image header
+  /// and three buttons opened as a plain editable text reply, and saving it
+  /// would have posted `reply_text` alone and destroyed the rest.
+  ///
+  /// So the payload is the evidence. Anything interactive wins over media,
+  /// because an interactive reply with an image header is still interactive.
+  static BotMessageKind fromPayload(Map<String, dynamic>? interaction) {
+    if (interaction == null || interaction.isEmpty) return BotMessageKind.simple;
+
+    bool present(Object? v) {
+      if (v == null) return false;
+      if (v is String) return v.trim().isNotEmpty;
+      if (v is Iterable) return v.isNotEmpty;
+      if (v is Map) return v.isNotEmpty;
+      return true;
+    }
+
+    if (present(interaction['interactive_type']) ||
+        // `buttons` arrives as a map keyed "1","2","3", not a list.
+        present(interaction['buttons']) ||
+        present(interaction['list_data']) ||
+        present(interaction['cta_url'])) {
+      return BotMessageKind.interactive;
+    }
+
+    final String header =
+        '${interaction['header_type'] ?? ''}'.trim().toLowerCase();
+    if (present(interaction['media_link']) ||
+        const <String>{'image', 'video', 'document', 'audio'}.contains(header)) {
+      return BotMessageKind.media;
+    }
+    return BotMessageKind.simple;
+  }
 }
 
 class BotReply {
@@ -89,7 +128,8 @@ class BotReply {
     this.keyword,
     this.messageKind = BotMessageKind.simple,
     this.replyText,
-    this.flowUid,
+    this.active = true,
+    this.isInFlow = false,
   });
 
   final String uid;
@@ -100,17 +140,24 @@ class BotReply {
 
   final BotTrigger trigger;
 
-  /// `reply_trigger`. Absent for the two welcome triggers.
+  /// The text the trigger matches against.
+  ///
+  /// Read from **`trigger`**, which is the field the API actually sends —
+  /// not `reply_trigger`, which is what the *write* side takes. A live row is
+  /// `{triggerType: starts_with, trigger: "محتاج تواصل"}`. Reading the write
+  /// name back showed an empty Keyword box on every reply that has one, which
+  /// is how this was found.
   final String? keyword;
 
   final BotMessageKind messageKind;
   final String? replyText;
 
-  /// Set when this reply belongs to a flow, in which case the flow's edges
-  /// decide when it fires and `trigger_type` is forced to `is` server-side.
-  final String? flowUid;
+  /// Whether the reply is switched on. Read-only here — see [BotReply.toJson].
+  final bool active;
 
-  bool get isInFlow => flowUid != null && flowUid!.isNotEmpty;
+  /// True when this reply belongs to a flow, in which case the flow's edges
+  /// decide when it fires and `triggerType` is forced to `is` server-side.
+  final bool isInFlow;
 
   static BotReply fromJson(Map<String, dynamic> j) {
     String? str(Object? v) {
@@ -118,23 +165,50 @@ class BotReply {
       return s.isEmpty ? null : s;
     }
 
+    bool flag(Object? v) =>
+        v == true || v == 1 || '$v'.toLowerCase() == 'true' || '$v' == '1';
+
+    // `data` on the wire. `__data` is kept as a fallback because the templates
+    // endpoint uses that spelling and the two have been seen to swap.
     final Map<String, dynamic> data =
-        (j['__data'] as Map<String, dynamic>?) ?? const <String, dynamic>{};
+        (j['data'] as Map<String, dynamic>?) ??
+            (j['__data'] as Map<String, dynamic>?) ??
+            const <String, dynamic>{};
+    final Map<String, dynamic>? interaction =
+        data['interaction_message'] as Map<String, dynamic>?;
 
     return BotReply(
       uid: '${j['uid'] ?? j['_uid'] ?? ''}',
       name: '${j['name'] ?? ''}',
-      trigger: BotTriggerX.fromApi(j['trigger_type'] ?? j['triggerType']),
-      keyword: str(j['reply_trigger'] ?? j['replyTrigger']),
-      messageKind:
-          BotMessageKindX.fromApi(j['message_type'] ?? j['messageType']),
-      // The reply body lives on the row for a simple reply and inside `__data`
-      // for the richer kinds, so both are read.
-      replyText: str(j['reply_text'] ?? j['replyText'] ?? data['reply_text']),
-      flowUid: str(j['bot_flow_uid'] ?? j['botFlowUid'] ?? j['bot_flows__id']),
+      trigger: BotTriggerX.fromApi(j['triggerType'] ?? j['trigger_type']),
+      keyword: str(j['trigger'] ?? j['reply_trigger'] ?? j['replyTrigger']),
+      // The payload decides, because no type field is sent. An explicit
+      // `message_type` still wins if one ever appears.
+      messageKind: j['message_type'] != null || j['messageType'] != null
+          ? BotMessageKindX.fromApi(j['message_type'] ?? j['messageType'])
+          : BotMessageKindX.fromPayload(interaction),
+      // The body sits on the row for a simple reply and inside the interaction
+      // payload for the richer kinds, so both are read.
+      replyText: str(
+        j['replyText'] ?? j['reply_text'] ?? interaction?['body_text'],
+      ),
+      active: flag(j['active'] ?? true),
+      isInFlow: flag(j['inFlow'] ?? j['in_flow']) ||
+          str(j['bot_flow_uid'] ?? j['botFlowUid']) != null,
     );
   }
 
+  /// The create/update body.
+  ///
+  /// Note the asymmetry: the keyword is read back as `trigger` and written as
+  /// `reply_trigger`. That is the API's shape, not a mistake here — the write
+  /// side is snake_case validation input, the read side is a camelCase
+  /// resource.
+  ///
+  /// `active` is deliberately absent. It is read from the payload so a switched
+  /// off reply does not look live, but this form does not offer to change it:
+  /// the write contract for it has not been exercised, and a toggle that
+  /// silently does nothing is worse than no toggle.
   Map<String, dynamic> toJson() => <String, dynamic>{
         'name': name,
         'trigger_type': trigger.wire,

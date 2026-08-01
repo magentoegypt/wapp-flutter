@@ -551,7 +551,11 @@
   "attachPhoto": "مكتبة الصور",
   "attachCamera": "التقاط صورة",
   "attachVideo": "فيديو",
-  "attachDocNote": "يمكن إرسال المستندات من لوحة التحكم على الويب.",
+  "attachDocument": "مستند",
+  "attachDocumentPdf": "مستند (PDF)",
+  "attachDocType": "لا يمكن إرسال هذا النوع من الملفات على هذه القناة.",
+  "attachDocIgOnlyPdf": "إنستجرام يقبل مستندات PDF فقط.",
+  "attachDocTooLarge": "هذا الملف أكبر من اللازم. الحد الأقصى ١٠٠ ميجابايت.",
   "mediaCaption": "التعليق",
   "mediaCaptionHint": "اختياري",
   "mediaSend": "إرسال",
@@ -695,6 +699,51 @@
   "brDuplicated": "تم التكرار.",
   "brIncomplete": "أكمل الاسم والكلمة المفتاحية والرد.",
   "brReadOnly": "يرسل هذا الرد أزرارًا أو قائمة أو وسائط. عدّله من لوحة الويب — الحفظ هنا سيحوّله إلى نص عادي.",
+  "brInactive": "موقوف",
+  "brKindInteractive": "أزرار",
+  "brKindMedia": "وسائط",
+  "brKindOther": "متقدم",
   "brInFlow": "ضمن مسار",
-  "brNameTaken": "يوجد رد بوت بهذا الاسم بالفعل."
+  "brNameTaken": "يوجد رد بوت بهذا الاسم بالفعل.",
+  "bfTitle": "مسارات البوت",
+  "bfNew": "مسار بوت جديد",
+  "bfEdit": "تعديل مسار البوت",
+  "bfEmpty": "لا توجد مسارات بعد",
+  "bfEmptyHint": "يردّ المسار بعدة خطوات، تقود كل واحدة إلى التالية.",
+  "bfName": "الاسم",
+  "bfTrigger": "يبدأ عندما",
+  "bfKeyword": "الكلمة المفتاحية",
+  "bfActiveLabel": "قيد التشغيل",
+  "bfActiveHint": "يدخل هذا المسارَ كل عميل يطابق المُشغِّل.",
+  "bfActiveEmptyHint": "لا خطوات في هذا المسار بعد، لذا سيبدأ دون أن يرسل شيئًا.",
+  "bfActive": "قيد التشغيل",
+  "bfInactive": "متوقف",
+  "bfActiveEmpty": "بلا خطوات",
+  "bfSteps": "{count, plural, =0{لا خطوات} =1{خطوة واحدة} =2{خطوتان} few{{count} خطوات} other{{count} خطوة}}",
+  "@bfSteps": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "bfStepsLabel": "الخطوات",
+  "bfStepN": "الخطوة {n}",
+  "@bfStepN": {
+    "placeholders": { "n": { "type": "int" } }
+  },
+  "bfNoSteps": "لا خطوات بعد. أضِفها من لوحة التحكم على الويب.",
+  "bfConsoleNote": "سمِّ المسار واختر ما يبدؤه من هنا. أما خطواته فتُبنى في لوحة التحكم على الويب.",
+  "bfSaved": "تم حفظ المسار.",
+  "bfCreatedInactive": "تم إنشاء المسار، لكن تعذّر تشغيله. شغِّله من القائمة.",
+  "bfDelete": "حذف المسار",
+  "bfDeleteConfirm": "حذف \"{name}\"؟ ستُحذف معه {count, plural, =0{خطواته} =1{خطوته} =2{خطوتاه} few{{count} خطوات} other{{count} خطوة}}.",
+  "@bfDeleteConfirm": {
+    "placeholders": {
+      "name": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
+  "bfDeleteConfirmPlain": "حذف \"{name}\"؟ ستُحذف معه خطواته.",
+  "@bfDeleteConfirmPlain": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "bfDeleted": "تم حذف المسار.",
+  "bfIncomplete": "أدخل اسم المسار والكلمة المفتاحية."
 }

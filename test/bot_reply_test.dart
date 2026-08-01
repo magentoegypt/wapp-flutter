@@ -63,45 +63,159 @@ void main() {
       expect(BotTriggerX.fromApi(null), BotTrigger.is_);
     });
 
-    test('the reply body is found on the row or inside __data', () {
+    test('the live shape, verbatim', () {
+      // Straight off the wire. Three things here read differently to their
+      // names: the keyword is `trigger` (not `reply_trigger`, which is the
+      // *write* name), membership of a flow is a boolean `inFlow`, and there
+      // is no message-type field at all.
+      final BotReply r = BotReply.fromJson(<String, dynamic>{
+        'uid': '2afc1e30',
+        'name': 'CIB',
+        'triggerType': 'starts_with',
+        'trigger': 'محتاج تواصل',
+        'active': true,
+        'inFlow': false,
+        'replyText': 'اهلا بك{first_name}',
+        'data': <String, dynamic>{
+          'interaction_message': <String, dynamic>{
+            'buttons': <String, dynamic>{'1': 'خدمة العملاء', '2': 'الدعم'},
+            'header_type': 'image',
+            'media_link': 'https://example.com/a.jpg',
+            'interactive_type': 'button',
+          },
+        },
+      });
+
+      expect(r.trigger, BotTrigger.startsWith);
+      expect(r.keyword, 'محتاج تواصل');
+      expect(r.active, isTrue);
+      expect(r.isInFlow, isFalse);
+      expect(r.replyText, 'اهلا بك{first_name}');
+
+      // The one that matters. This reply sends an image header and buttons;
+      // opening it as editable and saving would post `message_type: simple`
+      // with reply_text alone and destroy all of it.
+      expect(r.messageKind, BotMessageKind.interactive);
+      expect(r.messageKind.isEditable, isFalse);
+    });
+
+    test('the payload decides the kind, because no type field is sent', () {
+      BotMessageKind kind(Map<String, dynamic>? m) =>
+          BotMessageKindX.fromPayload(m);
+
+      expect(kind(null), BotMessageKind.simple);
+      expect(kind(<String, dynamic>{}), BotMessageKind.simple);
+
+      // Nothing but a body is a plain reply and stays editable.
+      expect(
+        kind(<String, dynamic>{'body_text': 'hi', 'footer_text': ''}),
+        BotMessageKind.simple,
+      );
+
+      for (final Map<String, dynamic> rich in <Map<String, dynamic>>[
+        <String, dynamic>{'buttons': <String, dynamic>{'1': 'A'}},
+        <String, dynamic>{'list_data': <String, dynamic>{'x': 1}},
+        <String, dynamic>{'cta_url': 'https://example.com'},
+        <String, dynamic>{'interactive_type': 'button'},
+      ]) {
+        expect(kind(rich), BotMessageKind.interactive, reason: '$rich');
+      }
+
+      expect(
+        kind(<String, dynamic>{'media_link': 'https://example.com/a.jpg'}),
+        BotMessageKind.media,
+      );
+      expect(
+        kind(<String, dynamic>{'header_type': 'document'}),
+        BotMessageKind.media,
+      );
+
+      // Empty strings are not a payload. The live rows send `footer_text: ""`
+      // and `header_text: ""` on replies that carry neither, and treating those
+      // as present would lock every simple reply out of its own editor.
+      expect(
+        kind(<String, dynamic>{
+          'buttons': <String, dynamic>{},
+          'media_link': '',
+          'header_type': '',
+          'cta_url': null,
+          'list_data': null,
+        }),
+        BotMessageKind.simple,
+      );
+
+      // Interactive beats media — a button reply with an image header is still
+      // a button reply.
+      expect(
+        kind(<String, dynamic>{
+          'interactive_type': 'button',
+          'media_link': 'https://example.com/a.jpg',
+        }),
+        BotMessageKind.interactive,
+      );
+    });
+
+    test('an explicit message_type still wins if one ever appears', () {
+      final BotReply r = BotReply.fromJson(<String, dynamic>{
+        'uid': 'b1',
+        'name': 'A',
+        'message_type': 'media',
+        'data': <String, dynamic>{
+          'interaction_message': <String, dynamic>{'body_text': 'plain'},
+        },
+      });
+      expect(r.messageKind, BotMessageKind.media);
+    });
+
+    test('the reply body is found on the row or inside the payload', () {
       final BotReply flat = BotReply.fromJson(<String, dynamic>{
         'uid': 'b1',
         'name': 'A',
-        'reply_text': 'On the row',
+        'replyText': 'On the row',
       });
       expect(flat.replyText, 'On the row');
 
       final BotReply nested = BotReply.fromJson(<String, dynamic>{
         'uid': 'b2',
         'name': 'B',
-        '__data': <String, dynamic>{'reply_text': 'Inside data'},
+        'data': <String, dynamic>{
+          'interaction_message': <String, dynamic>{'body_text': 'Inside data'},
+        },
       });
       expect(nested.replyText, 'Inside data');
     });
 
-    test('a rich reply is not editable', () {
-      // Saving one through the simple form would post message_type: simple and
-      // replace its buttons with plain text.
-      expect(BotMessageKindX.fromApi('interactive').isEditable, isFalse);
-      expect(BotMessageKindX.fromApi('media').isEditable, isFalse);
-      expect(BotMessageKindX.fromApi('simple').isEditable, isTrue);
-    });
-
     test('a reply inside a flow reports itself as such', () {
-      final BotReply r = BotReply.fromJson(<String, dynamic>{
-        'uid': 'b3',
-        'name': '',
-        'bot_flow_uid': 'f1',
-      });
-      expect(r.isInFlow, isTrue);
+      expect(
+        BotReply.fromJson(<String, dynamic>{'uid': 'b3', 'inFlow': true})
+            .isInFlow,
+        isTrue,
+      );
+      // The uid spelling still works, in case a payload carries it instead.
+      expect(
+        BotReply.fromJson(<String, dynamic>{'uid': 'b3', 'bot_flow_uid': 'f1'})
+            .isInFlow,
+        isTrue,
+      );
+      expect(
+        BotReply.fromJson(<String, dynamic>{'uid': 'b4', 'inFlow': false})
+            .isInFlow,
+        isFalse,
+      );
     });
 
-    test('a standalone reply is not in a flow', () {
-      final BotReply r = BotReply.fromJson(<String, dynamic>{
-        'uid': 'b4',
-        'name': 'Solo',
-      });
-      expect(r.isInFlow, isFalse);
+    test('a switched-off reply is not reported as live', () {
+      // `active` is absent on some payloads; absent means on, because that is
+      // the state a reply is created in. Only an explicit false is off.
+      expect(BotReply.fromJson(<String, dynamic>{'uid': 'b'}).active, isTrue);
+      expect(
+        BotReply.fromJson(<String, dynamic>{'uid': 'b', 'active': false}).active,
+        isFalse,
+      );
+      expect(
+        BotReply.fromJson(<String, dynamic>{'uid': 'b', 'active': 0}).active,
+        isFalse,
+      );
     });
   });
 

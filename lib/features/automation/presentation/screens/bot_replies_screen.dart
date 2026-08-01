@@ -64,15 +64,22 @@ class BotRepliesScreen extends ConsumerWidget {
                     color: AppColor.info,
                   ),
                   showChevron: r.messageKind.isEditable,
-                  // A reply this screen cannot edit says so on the row rather
-                  // than only after it is opened.
-                  trailing: r.messageKind.isEditable
-                      ? null
-                      : const StatusPill(
-                          label: '…',
+                  // Two things the row has to say without being opened: a reply
+                  // that is switched off answers nobody, and one this screen
+                  // cannot edit needs the console. Off wins the single slot —
+                  // it is the one that changes whether the reply runs at all.
+                  trailing: !r.active
+                      ? StatusPill(
+                          label: l10n.brInactive,
                           tone: StatusTone.neutral,
-                          showDot: false,
-                        ),
+                        )
+                      : (r.messageKind.isEditable
+                          ? null
+                          : StatusPill(
+                              label: kindLabel(l10n, r.messageKind),
+                              tone: StatusTone.info,
+                              showDot: false,
+                            )),
                   onTap: () => context.push(AppRoutes.botReply(r.uid)),
                 );
               },
@@ -83,6 +90,14 @@ class BotRepliesScreen extends ConsumerWidget {
     );
   }
 }
+
+/// Names what a rich reply sends, so the pill says why the row is locked
+/// rather than showing an ellipsis that could mean anything.
+String kindLabel(AppLocalizations l10n, BotMessageKind k) => switch (k) {
+      BotMessageKind.interactive => l10n.brKindInteractive,
+      BotMessageKind.media => l10n.brKindMedia,
+      BotMessageKind.simple || BotMessageKind.other => l10n.brKindOther,
+    };
 
 String triggerLabel(AppLocalizations l10n, BotTrigger t) => switch (t) {
       BotTrigger.welcome => l10n.brTriggerWelcome,

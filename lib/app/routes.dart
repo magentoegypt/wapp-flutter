@@ -48,6 +48,10 @@ abstract final class AppRoutes {
   static const String botReplies = '/bot-replies';
   static const String botReplyNew = '/bot-replies/new';
 
+  /// Multi-step flows. The envelope only — the node graph stays in the console.
+  static const String botFlows = '/bot-flows';
+  static const String botFlowNew = '/bot-flows/new';
+
   /// Component gallery — every shared widget in light/dark × LTR/RTL.
   /// Debug builds only; not reachable from the UI.
   static const String devGallery = '/dev/gallery';
@@ -58,6 +62,7 @@ abstract final class AppRoutes {
 
   static String team(String uid) => '/teams/$uid';
   static String botReply(String uid) => '/bot-replies/$uid';
+  static String botFlow(String uid) => '/bot-flows/$uid';
   static String chatInfo(String contactUid) => '/chats/$contactUid/info';
   static String chatNotes(String contactUid) => '/chats/$contactUid/notes';
 

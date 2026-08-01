@@ -18,9 +18,10 @@ import '../../../core/widgets/stat_card.dart';
 import '../../../core/widgets/status_pill.dart';
 import '../../../core/widgets/weekly_bar_chart.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../automation/data/bot_flow_repository.dart';
 import '../../automation/data/bot_reply_repository.dart';
 import '../../automation/presentation/screens/bot_replies_screen.dart'
-    show triggerLabel;
+    show kindLabel, triggerLabel;
 import '../../inbox/data/conversation_repository.dart';
 import '../../inbox/domain/conversation.dart';
 import '../../inbox/domain/reply_lock.dart';
@@ -424,6 +425,10 @@ class _ComponentGalleryScreenState extends State<ComponentGalleryScreen> {
                   Column(children: _botReplyRows()),
                 ]),
 
+                _group('Bot flows', <Widget>[
+                  Column(children: _botFlowRows()),
+                ]),
+
                 _group('Empty and error states', <Widget>[
                   EmptyState(
                     icon: Icons.forum_outlined,
@@ -670,26 +675,44 @@ class _ComponentGalleryScreenState extends State<ComponentGalleryScreen> {
 
   /// One row per trigger family, plus the two that cannot be edited here.
   List<Widget> _botReplyRows() {
+    // The live read shape: `triggerType` for the enum, `trigger` for the
+    // keyword, `inFlow` as a boolean, and **no message-type field** — the kind
+    // is inferred from `data.interaction_message`.
     final List<BotReply> replies = <BotReply>[
       BotReply.fromJson(<String, dynamic>{
         'uid': 'g-b1',
         'name': 'Greeting',
-        'trigger_type': 'welcome',
-        'reply_text': 'Hi! How can we help?',
+        'triggerType': 'welcome',
+        'replyText': 'Hi! How can we help?',
       }),
       BotReply.fromJson(<String, dynamic>{
         'uid': 'g-b2',
         'name': 'Pricing',
-        'trigger_type': 'contains',
-        'reply_trigger': 'price',
-        'reply_text': 'Our price list is attached.',
+        'triggerType': 'contains',
+        'trigger': 'price',
+        'replyText': 'Our price list is attached.',
+        // The empty strings the API really sends on a plain reply. If these
+        // counted as a payload, every simple reply would lock itself.
+        'data': <String, dynamic>{
+          'interaction_message': <String, dynamic>{
+            'body_text': 'Our price list is attached.',
+            'footer_text': '',
+            'header_text': '',
+            'media_link': '',
+            'cta_url': null,
+            'list_data': null,
+          },
+        },
       }),
       BotReply.fromJson(<String, dynamic>{
         'uid': 'g-b3',
         'name': 'Order status',
-        'trigger_type': 'starts_with',
-        'reply_trigger': 'order',
-        'reply_text': 'Send your order number and we will check.',
+        'triggerType': 'starts_with',
+        'trigger': 'order',
+        'replyText': 'Send your order number and we will check.',
+        // Switched off. Identical to a live reply everywhere else, and it
+        // answers nobody.
+        'active': false,
       }),
       // Rich replies. These carry a payload this form has no fields for, so
       // they open read-only — the row says so before it is tapped, which is the
@@ -697,16 +720,28 @@ class _ComponentGalleryScreenState extends State<ComponentGalleryScreen> {
       BotReply.fromJson(<String, dynamic>{
         'uid': 'g-b4',
         'name': 'Main menu',
-        'trigger_type': 'is',
-        'reply_trigger': 'menu',
-        'message_type': 'interactive',
+        'triggerType': 'is',
+        'trigger': 'menu',
+        'data': <String, dynamic>{
+          'interaction_message': <String, dynamic>{
+            'interactive_type': 'button',
+            'buttons': <String, dynamic>{'1': 'Track', '2': 'Talk to an agent'},
+            'header_type': 'image',
+            'media_link': 'https://example.com/menu.jpg',
+          },
+        },
       }),
       BotReply.fromJson(<String, dynamic>{
         'uid': 'g-b5',
         'name': 'Catalogue',
-        'trigger_type': 'contains_word',
-        'reply_trigger': 'catalogue',
-        'message_type': 'media',
+        'triggerType': 'contains_word',
+        'trigger': 'catalogue',
+        'data': <String, dynamic>{
+          'interaction_message': <String, dynamic>{
+            'header_type': 'document',
+            'media_link': 'https://example.com/catalogue.pdf',
+          },
+        },
       }),
     ];
 
@@ -725,13 +760,98 @@ class _ComponentGalleryScreenState extends State<ComponentGalleryScreen> {
                 color: AppColor.info,
               ),
               showChevron: r.messageKind.isEditable,
-              trailing: r.messageKind.isEditable
-                  ? null
-                  : const StatusPill(
-                      label: '…',
+              trailing: !r.active
+                  ? StatusPill(
+                      label: l10n.brInactive,
                       tone: StatusTone.neutral,
-                      showDot: false,
-                    ),
+                    )
+                  : (r.messageKind.isEditable
+                      ? null
+                      : StatusPill(
+                          label: kindLabel(l10n, r.messageKind),
+                          tone: StatusTone.info,
+                          showDot: false,
+                        )),
+              onTap: () {},
+            );
+          },
+        ),
+    ];
+  }
+
+  /// Flow rows, including the state the pill exists for.
+  ///
+  /// A flow switched on with no steps triggers and then sends nothing. It is
+  /// the only row here that looks healthy and answers nobody, so it gets its
+  /// own amber pill rather than the green one — this is the case worth being
+  /// able to see without a live workspace that happens to contain one.
+  List<Widget> _botFlowRows() {
+    final List<BotFlow> flows = <BotFlow>[
+      BotFlow.fromJson(<String, dynamic>{
+        'uid': 'g-f1',
+        'title': 'Onboarding',
+        'triggerType': 'welcome',
+        // tinyint, not a bool — the shape that used to read as stopped.
+        'active': 1,
+        'stepCount': 4,
+      }),
+      // Running, and known to have nothing to send. The only row that earns the
+      // amber pill.
+      BotFlow.fromJson(<String, dynamic>{
+        'uid': 'g-f2',
+        'title': 'Order tracking',
+        'triggerType': 'starts_with',
+        'startTrigger': 'track',
+        'active': 1,
+        'stepCount': 0,
+      }),
+      BotFlow.fromJson(<String, dynamic>{
+        'uid': 'g-f3',
+        'name': 'Returns',
+        'triggerType': 'contains_word',
+        'startTrigger': 'refund',
+        'active': 0,
+        'botReplies': <dynamic>[<String, dynamic>{}, <String, dynamic>{}],
+      }),
+      // The shape the live list actually sends: no step count at all. Nothing
+      // may be claimed about its steps — this row is here so that stays true.
+      BotFlow.fromJson(<String, dynamic>{
+        'uid': 'g-f4',
+        'title': 'Ads Welcome Flow',
+        'triggerType': 'ads_welcome',
+        'startTrigger': 'Test Ad',
+        'active': true,
+      }),
+    ];
+
+    return <Widget>[
+      for (final BotFlow f in flows)
+        Builder(
+          builder: (BuildContext c) {
+            final AppLocalizations l10n = AppLocalizations.of(c);
+            final int? steps = f.stepCount;
+            return AppListTile(
+              title: f.title,
+              subtitle: <String>[
+                triggerLabel(l10n, f.startTrigger),
+                if (f.keyword != null) f.keyword!,
+                if (steps != null) l10n.bfSteps(steps),
+              ].join(' · '),
+              subtitleMaxLines: 2,
+              leading: const IconTile(
+                icon: Icons.account_tree_outlined,
+                color: AppColor.brandDeep,
+              ),
+              trailing: StatusPill(
+                label: f.active
+                    ? (f.isKnownEmpty ? l10n.bfActiveEmpty : l10n.bfActive)
+                    : l10n.bfInactive,
+                tone: f.active
+                    ? (f.isKnownEmpty
+                        ? StatusTone.warning
+                        : StatusTone.success)
+                    : StatusTone.neutral,
+              ),
               onTap: () {},
             );
           },

@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../features/account/presentation/screens/more_screen.dart';
 import '../features/agents/presentation/screens/agent_detail_screen.dart';
 import '../features/agents/presentation/screens/agents_screen.dart';
+import '../features/automation/presentation/screens/bot_flow_editor_screen.dart';
+import '../features/automation/presentation/screens/bot_flows_screen.dart';
 import '../features/automation/presentation/screens/bot_replies_screen.dart';
 import '../features/automation/presentation/screens/bot_reply_editor_screen.dart';
 import '../features/campaigns/presentation/screens/campaign_detail_screen.dart';
@@ -449,6 +451,23 @@ final Provider<GoRouter> routerProvider = Provider<GoRouter>((Ref ref) {
         parentNavigatorKey: _rootKey,
         builder: (_, GoRouterState s) =>
             BotReplyEditorScreen(uid: s.pathParameters['uid']!),
+      ),
+
+      GoRoute(
+        path: AppRoutes.botFlows,
+        parentNavigatorKey: _rootKey,
+        builder: (_, __) => const BotFlowsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.botFlowNew,
+        parentNavigatorKey: _rootKey,
+        builder: (_, __) => const BotFlowEditorScreen(),
+      ),
+      GoRoute(
+        path: '/bot-flows/:uid',
+        parentNavigatorKey: _rootKey,
+        builder: (_, GoRouterState s) =>
+            BotFlowEditorScreen(uid: s.pathParameters['uid']!),
       ),
 
       // Workspace settings, so it sits beside /agents rather than under

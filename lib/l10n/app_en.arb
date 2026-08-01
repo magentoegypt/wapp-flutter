@@ -648,7 +648,14 @@
   "attachPhoto": "Photo library",
   "attachCamera": "Take a photo",
   "attachVideo": "Video",
-  "attachDocNote": "Documents can be sent from the web console.",
+  "attachDocument": "Document",
+  "attachDocumentPdf": "Document (PDF)",
+  "@attachDocumentPdf": {
+    "description": "Instagram accepts PDF only, so the row names the limit before the picker opens rather than letting the send fail after the upload."
+  },
+  "attachDocType": "That file type can't be sent on this channel.",
+  "attachDocIgOnlyPdf": "Instagram accepts PDF documents only.",
+  "attachDocTooLarge": "That file is too large to send. The limit is 100 MB.",
   "mediaCaption": "Caption",
   "mediaCaptionHint": "Optional",
   "mediaSend": "Send",
@@ -832,6 +839,64 @@
   "brDuplicated": "Duplicated.",
   "brIncomplete": "Fill in the name, keyword and reply.",
   "brReadOnly": "This reply sends buttons, a list or media. Edit it in the web console — saving here would flatten it to plain text.",
+  "brInactive": "Off",
+  "@brInactive": {
+    "description": "A bot reply that is switched off. It looks identical to a live one otherwise, and answers nobody."
+  },
+  "brKindInteractive": "Buttons",
+  "brKindMedia": "Media",
+  "brKindOther": "Rich",
+  "@brKindOther": {
+    "description": "Names why a reply cannot be edited here, instead of an ellipsis that could mean anything."
+  },
   "brInFlow": "Part of a flow",
-  "brNameTaken": "A bot reply with that name already exists."
+  "brNameTaken": "A bot reply with that name already exists.",
+  "bfTitle": "Bot flows",
+  "bfNew": "New bot flow",
+  "bfEdit": "Edit bot flow",
+  "bfEmpty": "No bot flows yet",
+  "bfEmptyHint": "A flow answers with several steps, each one leading to the next.",
+  "bfName": "Name",
+  "bfTrigger": "Starts when",
+  "bfKeyword": "Keyword",
+  "bfActiveLabel": "Running",
+  "bfActiveHint": "Customers who match the trigger enter this flow.",
+  "bfActiveEmptyHint": "This flow has no steps yet, so it will trigger and send nothing.",
+  "bfActive": "Running",
+  "bfInactive": "Stopped",
+  "bfActiveEmpty": "No steps",
+  "@bfActiveEmpty": {
+    "description": "Pill for a flow switched on with nothing to send — it looks live and answers nobody, so it does not get the green Running pill."
+  },
+  "bfSteps": "{count, plural, =0{No steps} =1{1 step} other{{count} steps}}",
+  "@bfSteps": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "bfStepsLabel": "STEPS",
+  "bfStepN": "Step {n}",
+  "@bfStepN": {
+    "description": "A reply inside a flow usually has no name of its own, so its position is the label.",
+    "placeholders": { "n": { "type": "int" } }
+  },
+  "bfNoSteps": "No steps yet. Add them in the web console.",
+  "bfConsoleNote": "Name the flow and choose what starts it here. Its steps are built in the web console.",
+  "bfSaved": "Bot flow saved.",
+  "bfCreatedInactive": "Flow created, but it could not be started. Switch it on from the list.",
+  "@bfCreatedInactive": {
+    "description": "The create endpoint ignores `active`, so starting a flow needs a second call. If the create answered without a uid there is nothing to send it to — say so rather than reporting a clean save."
+  },
+  "bfDelete": "Delete bot flow",
+  "bfDeleteConfirm": "Delete \"{name}\"? Its {count, plural, =0{steps} =1{1 step} other{{count} steps}} go with it.",
+  "@bfDeleteConfirm": {
+    "placeholders": {
+      "name": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
+  "bfDeleteConfirmPlain": "Delete \"{name}\"? Its steps go with it.",
+  "@bfDeleteConfirmPlain": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "bfDeleted": "Bot flow deleted.",
+  "bfIncomplete": "Give the flow a name and a keyword."
 }

@@ -94,6 +94,18 @@ class MoreScreen extends ConsumerWidget {
             ),
             onTap: () => context.push(AppRoutes.botReplies),
           ),
+          // The frame's last missing row. It stayed out while the screen behind
+          // it would have had to be the node canvas; the screen that exists now
+          // edits the flow's envelope and lists its steps, which is the part of
+          // a flow that makes sense on a phone.
+          AppListTile(
+            title: l10n.bfTitle,
+            leading: const IconTile(
+              icon: Icons.account_tree_outlined,
+              color: AppColor.brandDeep,
+            ),
+            onTap: () => context.push(AppRoutes.botFlows),
+          ),
           // The frame has this row. It was omitted because no endpoint backed
           // it; the 31 Jul API pass added template CRUD, so it exists now.
           AppListTile(
@@ -119,10 +131,6 @@ class MoreScreen extends ConsumerWidget {
               ),
               onTap: () => context.push(AppRoutes.instagramSettings),
             ),
-          // No Bot Flows row yet. The frame lists one and the endpoints now
-          // exist, but the screen behind it is the flow builder — a node
-          // canvas, deliberately out of scope.
-
           SectionLabel(l10n.moreAccount),
           // Language is a choice between two named options, not an on/off state
           // — a Switch here gave no clue what enabling it would do.

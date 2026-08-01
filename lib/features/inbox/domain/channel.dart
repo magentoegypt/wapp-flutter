@@ -16,6 +16,37 @@ extension MessageChannelX on MessageChannel {
 
   bool get isInstagram => this == MessageChannel.instagram;
 
+  /// Document extensions this channel accepts, lowercase and without the dot.
+  ///
+  /// Instagram takes **PDF only**; WhatsApp takes Meta's wider office set. It
+  /// lives here rather than in the attach sheet because it is a fact about the
+  /// network, and because the sheet needs it twice — once to filter the picker
+  /// and once to re-check afterwards, since some pickers ignore the filter.
+  ///
+  /// The server remains authoritative. This narrows what can be chosen so a
+  /// refusal arrives before the upload rather than after it.
+  List<String> get documentExtensions => this == MessageChannel.instagram
+      ? const <String>['pdf']
+      : const <String>[
+          'pdf',
+          'doc',
+          'docx',
+          'xls',
+          'xlsx',
+          'ppt',
+          'pptx',
+          'txt',
+          'csv',
+        ];
+
+  bool acceptsDocument(String fileName) {
+    final int dot = fileName.lastIndexOf('.');
+    // No extension at all is not a document this can vouch for. Letting it
+    // through would upload the file and learn the answer from a 422.
+    if (dot < 0 || dot == fileName.length - 1) return false;
+    return documentExtensions.contains(fileName.substring(dot + 1).toLowerCase());
+  }
+
   /// Brand marks, not theme tokens.
   ///
   /// These are WhatsApp's and Instagram's own colours and must not be swapped

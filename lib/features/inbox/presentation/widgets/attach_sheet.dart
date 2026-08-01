@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -22,13 +25,18 @@ class PickedMedia {
   final MediaKind kind;
 }
 
+/// Meta's published ceiling for a document on WhatsApp.
+///
+/// Only used to stop an upload that cannot succeed. Erring generous on purpose:
+/// a client cap set too low blocks a legitimate send, while one set too high
+/// merely wastes an upload the server then refuses — and Instagram's own limit
+/// is lower than this, which the server enforces.
+const int _maxDocumentBytes = 100 * 1024 * 1024;
+
 /// Attachment picker.
 ///
-/// Images and video only. Documents need a file picker this app does not carry
-/// a dependency for, and the sheet says so rather than offering a row that
-/// opens nothing — the alternative was a PDF option that silently did not work
-/// on the one channel (Instagram) where PDF is the *only* accepted document
-/// format.
+/// Images, video and documents. The document row was absent while the app had
+/// no file-picker dependency; the contacts import added one, so it exists now.
 Future<PickedMedia?> showAttachSheet(
   BuildContext context, {
   required MessageChannel channel,
@@ -73,6 +81,63 @@ class _AttachSheet extends StatelessWidget {
         SnackBar(content: Text(AppLocalizations.of(context).mediaPermission)),
       );
     }
+  }
+
+  Future<void> _pickDocument(BuildContext context) async {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final NavigatorState navigator = Navigator.of(context);
+
+    final FilePickerResult? picked = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: channel.documentExtensions,
+      // The upload streams from the path; pulling 100 MB into memory to hand it
+      // straight back to a file read would be the one way to make this OOM.
+      withData: false,
+    );
+    final PlatformFile? file = picked?.files.singleOrNull;
+    if (file == null || file.path == null) return; // cancelled
+
+    if (!channel.acceptsDocument(file.name)) {
+      // Some pickers ignore `allowedExtensions` — the same reason the contacts
+      // import re-checks. On Instagram this is the difference between a refusal
+      // now and one after a full upload.
+      navigator.pop();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            channel.isInstagram ? l10n.attachDocIgOnlyPdf : l10n.attachDocType,
+          ),
+        ),
+      );
+      return;
+    }
+
+    // `file.size` is 0 on some platforms when withData is false, so the file
+    // itself is the source of truth; a zero there means "unknown", not empty.
+    int size = file.size;
+    if (size <= 0) {
+      try {
+        size = await File(file.path!).length();
+      } catch (_) {
+        size = 0;
+      }
+    }
+    if (size > _maxDocumentBytes) {
+      navigator.pop();
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.attachDocTooLarge)),
+      );
+      return;
+    }
+
+    navigator.pop(
+      PickedMedia(
+        path: file.path!,
+        fileName: file.name,
+        kind: MediaKind.document,
+      ),
+    );
   }
 
   @override
@@ -129,12 +194,15 @@ class _AttachSheet extends StatelessWidget {
             tint: AppColor.warning,
             onTap: () => _pick(context, ImageSource.gallery, true),
           ),
-          Padding(
-            padding: const EdgeInsetsDirectional.all(AppDimens.gutter),
-            child: Text(
-              l10n.attachDocNote,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
+          ActionSheetRow(
+            // The label names the accepted set, so the narrower Instagram rule
+            // is visible before the picker opens rather than after it refuses.
+            label: channel.isInstagram
+                ? l10n.attachDocumentPdf
+                : l10n.attachDocument,
+            icon: Icons.description_outlined,
+            tint: AppColor.brandDeep,
+            onTap: () => _pickDocument(context),
           ),
         ],
       ),
