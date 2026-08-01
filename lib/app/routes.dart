@@ -37,11 +37,18 @@ abstract final class AppRoutes {
   /// conversation action — admin-gated, and the API answers 403 to anyone else.
   static const String instagramSettings = '/settings/instagram';
 
+  /// WhatsApp template management. The More frame lists this row; the screen
+  /// behind it had no endpoints until the 31 Jul API pass.
+  static const String templates = '/templates';
+  static const String templateNew = '/templates/new';
+
   /// Component gallery — every shared widget in light/dark × LTR/RTL.
   /// Debug builds only; not reachable from the UI.
   static const String devGallery = '/dev/gallery';
 
   static String chat(String contactUid) => '/chats/$contactUid';
+
+  static String template(String uid) => '/templates/$uid';
   static String chatInfo(String contactUid) => '/chats/$contactUid/info';
   static String chatNotes(String contactUid) => '/chats/$contactUid/notes';
 

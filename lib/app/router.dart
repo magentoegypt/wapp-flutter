@@ -43,6 +43,8 @@ import '../features/inbox/presentation/screens/inbox_screen.dart';
 import '../features/inbox/presentation/screens/instagram_send_screen.dart';
 import '../features/inbox/presentation/screens/internal_notes_screen.dart';
 import '../features/settings/presentation/screens/instagram_settings_screen.dart';
+import '../features/templates/presentation/screens/template_editor_screen.dart';
+import '../features/templates/presentation/screens/templates_screen.dart';
 import 'routes.dart';
 import 'shell/app_shell.dart';
 
@@ -391,6 +393,24 @@ final Provider<GoRouter> routerProvider = Provider<GoRouter>((Ref ref) {
         parentNavigatorKey: _rootKey,
         builder: (_, GoRouterState s) =>
             AgentDetailScreen(uid: s.pathParameters['uid']!),
+      ),
+
+      // Literal before parameterised, or '/templates/new' matches ':uid'.
+      GoRoute(
+        path: AppRoutes.templates,
+        parentNavigatorKey: _rootKey,
+        builder: (_, __) => const TemplatesScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.templateNew,
+        parentNavigatorKey: _rootKey,
+        builder: (_, __) => const TemplateEditorScreen(),
+      ),
+      GoRoute(
+        path: '/templates/:uid',
+        parentNavigatorKey: _rootKey,
+        builder: (_, GoRouterState s) =>
+            TemplateEditorScreen(uid: s.pathParameters['uid']!),
       ),
 
       // Workspace settings, so it sits beside /agents rather than under

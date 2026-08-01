@@ -78,6 +78,16 @@ class MoreScreen extends ConsumerWidget {
             ),
             onTap: () => context.push(AppRoutes.agents),
           ),
+          // The frame has this row. It was omitted because no endpoint backed
+          // it; the 31 Jul API pass added template CRUD, so it exists now.
+          AppListTile(
+            title: l10n.tplTitle,
+            leading: const IconTile(
+              icon: Icons.article_outlined,
+              color: AppColor.brandDeep,
+            ),
+            onTap: () => context.push(AppRoutes.templates),
+          ),
           // Admins only, because every endpoint behind it answers 403 to anyone
           // else. Hidden rather than disabled: a visible row that always
           // refuses reads as a broken feature, not a permission boundary. The
@@ -93,9 +103,9 @@ class MoreScreen extends ConsumerWidget {
               ),
               onTap: () => context.push(AppRoutes.instagramSettings),
             ),
-          // No Templates or Bot Flows rows. The frame lists both, but neither
-          // screen exists in this app and neither has an endpoint, so the rows
-          // would be dead links.
+          // No Bot Flows row yet. The frame lists one and the endpoints now
+          // exist, but the screen behind it is the flow builder — a node
+          // canvas, deliberately out of scope.
 
           SectionLabel(l10n.moreAccount),
           // Language is a choice between two named options, not an on/off state
