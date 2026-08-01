@@ -3,8 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/error/failure.dart';
 import '../../../core/network/api_client.dart';
 
-/// A teammate in the workspace, plus the performance figures the backend
-/// already computes in AgentTargetEngine (csatPerAgent / responseTimePerAgent).
+/// A teammate in the workspace.
+///
+/// Deliberately thin, because the endpoint is. A list row is `{uid, name,
+/// email, active, role, team, activeChats}`; the detail adds `firstName`,
+/// `lastName`, `mobile`, `createdAt`, `lastLoginAt`, `teams`,
+/// `openConversations` and `assignedTotal`. There is no `resolvedToday`, no
+/// `avgResponseSecs` and no CSAT anywhere — the backend computes those in
+/// AgentTargetEngine but does not expose them here, and modelling them meant
+/// three cards that could only ever read 0, 0s and —.
 class Agent {
   const Agent({
     required this.uid,
@@ -13,9 +20,7 @@ class Agent {
     this.role = 'agent',
     this.teams = const <String>[],
     this.openConversations = 0,
-    this.resolvedToday = 0,
-    this.avgResponseSeconds = 0,
-    this.csatPercent,
+    this.assignedTotal = 0,
     this.online = false,
   });
 
@@ -25,12 +30,11 @@ class Agent {
   final String role;
   final List<String> teams;
   final int openConversations;
-  final int resolvedToday;
-  final int avgResponseSeconds;
 
-  /// Null when this agent has no quality reviews yet — render "—" rather than
-  /// a misleading 0%.
-  final int? csatPercent;
+  /// `assignedTotal` — every thread assigned to this agent, open or not. Detail
+  /// only; the list does not carry it.
+  final int assignedTotal;
+
   final bool online;
 }
 
@@ -80,7 +84,6 @@ class AgentRepositoryImpl implements AgentRepository {
 int _int(Object? v) => v is num ? v.round() : int.tryParse('${v ?? ''}') ?? 0;
 
 Agent agentFromJson(Map<String, dynamic> j) {
-  final Object? csat = j['csat'];
   return Agent(
     uid: (j['uid'] ?? j['_uid'] ?? '').toString(),
     name: (j['name'] ?? '').toString(),
@@ -96,12 +99,13 @@ Agent agentFromJson(Map<String, dynamic> j) {
         : <String>[
             if ((j['team'] as String?)?.isNotEmpty ?? false) j['team'] as String,
           ],
-    openConversations: _int(j['activeChats'] ?? j['openConversations']),
-    // Not exposed by /agents today — AgentTargetEngine computes CSAT and
-    // response time server-side but the mobile endpoint does not surface them.
-    resolvedToday: _int(j['resolvedToday']),
-    avgResponseSeconds: _int(j['avgResponseSecs']),
-    csatPercent: csat == null ? null : _int(csat),
+    // `openConversations` first. The detail sends both and they disagree —
+    // `{activeChats: 0, openConversations: 1, assignedTotal: 1}` for an agent
+    // the dashboard also reports as holding one. Reading activeChats first made
+    // the detail contradict every other surface in the app. The list carries
+    // only activeChats, so that is what it shows.
+    openConversations: _int(j['openConversations'] ?? j['activeChats']),
+    assignedTotal: _int(j['assignedTotal'] ?? j['openConversations']),
     // `active` is the account-enabled flag, the closest thing to presence.
     online: (j['active'] as bool?) ?? false,
   );

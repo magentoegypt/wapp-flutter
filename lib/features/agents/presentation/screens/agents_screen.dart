@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_dimens.dart';
-import '../../../../core/util/duration_format.dart';
 import '../../../../core/widgets/agent_avatar.dart';
 import '../../../../core/widgets/app_header.dart';
 import '../../../../core/widgets/app_list_tile.dart';
@@ -119,37 +118,35 @@ class _Summary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Agents · Online · Open chats, which is what the frame (283:89) counts —
+    // and, not coincidentally, the only three numbers this payload supports.
+    //
+    // The cards used to be Open / Resolved today / Avg. reply, summed from
+    // `resolvedToday` and `avgResponseSecs`. Neither key exists: an agent is
+    // `{uid, name, email, active, role, team, activeChats}`. Two of the three
+    // cards were therefore permanently zero — the exact thing the dashboard
+    // refuses to ship a card for, for the same reason.
+    final int online = items.where((Agent a) => a.online).length;
     final int open =
         items.fold<int>(0, (int s, Agent a) => s + a.openConversations);
-    final int resolved =
-        items.fold<int>(0, (int s, Agent a) => s + a.resolvedToday);
-    // Mean of the per-agent means. Crude, but a true team mean would need a
-    // total the API does not expose, and this matches what the web console
-    // shows for the same row.
-    final int avg = items.isEmpty
-        ? 0
-        : items.fold<int>(0, (int s, Agent a) => s + a.avgResponseSeconds) ~/
-            items.length;
 
-    // Short labels: 'Resolved today' and 'Avg. response' both ellipsised at
-    // three-up on a 720px screen. The section heading already scopes them.
     return StatCardRow(
       cards: <StatCard>[
         StatCard(
-          value: '$open',
-          label: l10n.agOpen,
-          icon: Icons.forum_outlined,
+          value: '${items.length}',
+          label: l10n.agAgents,
+          icon: Icons.groups_outlined,
         ),
         StatCard(
-          value: '$resolved',
-          label: l10n.agResolvedShort,
-          icon: Icons.check_circle_outline,
+          value: '$online',
+          label: l10n.agOnline,
+          icon: Icons.circle,
           iconColor: AppColor.success,
         ),
         StatCard(
-          value: DurationFormat.coarse(avg),
-          label: l10n.agAvgShort,
-          icon: Icons.timer_outlined,
+          value: '$open',
+          label: l10n.agOpenChats,
+          icon: Icons.forum_outlined,
           iconColor: AppColor.info,
         ),
       ],

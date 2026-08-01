@@ -207,6 +207,8 @@
   "cpScheduled": "Scheduled",
   "cpSend": "Send campaign",
   "agEmptyTitle": "No teammates yet",
+  "agAgents": "Agents",
+  "agOpenChats": "Open chats",
   "agOnline": "Online",
   "agAway": "Away",
   "agPerformance": "Performance",
@@ -214,6 +216,11 @@
   "agResolvedToday": "Resolved today",
   "agAvgResponse": "Avg. response",
   "agCsat": "CSAT",
+  "agWorkload": "Workload",
+  "@agWorkload": {
+    "description": "Was 'Performance today'. The agent payload has no resolved count, response time or CSAT, so there is no performance to report — only how much is on this agent's plate."
+  },
+  "agAssignedTotal": "Assigned",
   "agTeams": "Teams",
   "agAssign": "Assign a conversation",
   "prAccount": "Account",

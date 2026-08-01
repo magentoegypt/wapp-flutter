@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_dimens.dart';
-import '../../../../core/util/duration_format.dart';
 import '../../../../core/widgets/app_header.dart';
 import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/initials_avatar.dart';
@@ -88,7 +87,13 @@ class AgentDetailScreen extends ConsumerWidget {
                       ),
                     ),
 
-                    SectionLabel(l10n.agPerformanceToday),
+                    // Two cards, not four. The frame's Performance block wants
+                    // Open · Resolved today · Avg. response · CSAT; the agent
+                    // payload carries only `openConversations` and
+                    // `assignedTotal`. The other three came from keys that do
+                    // not exist and rendered 0, 0s and — on every agent, for
+                    // every workspace, permanently.
+                    SectionLabel(l10n.agWorkload),
                     Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: AppDimens.gutter,
@@ -103,32 +108,10 @@ class AgentDetailScreen extends ConsumerWidget {
                                 icon: Icons.forum_outlined,
                               ),
                               StatCard(
-                                value: '${a.resolvedToday}',
-                                label: l10n.agRepliesToday,
-                                icon: Icons.check_circle_outline,
-                                iconColor: AppColor.success,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          StatCardRow(
-                            cards: <StatCard>[
-                              StatCard(
-                                value: DurationFormat.compact(
-                                  a.avgResponseSeconds,
-                                ),
-                                label: l10n.agAvgResponse,
-                                icon: Icons.timer_outlined,
+                                value: '${a.assignedTotal}',
+                                label: l10n.agAssignedTotal,
+                                icon: Icons.assignment_ind_outlined,
                                 iconColor: AppColor.info,
-                              ),
-                              StatCard(
-                                // No reviews yet reads as "—", not 0%.
-                                value: a.csatPercent == null
-                                    ? '—'
-                                    : '${a.csatPercent}%',
-                                label: l10n.agCsat,
-                                icon: Icons.star_outline,
-                                iconColor: AppColor.warning,
                               ),
                             ],
                           ),
