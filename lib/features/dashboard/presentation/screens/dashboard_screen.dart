@@ -226,6 +226,11 @@ class DashboardScreen extends ConsumerWidget {
                         actionLabel: l10n.actionSeeAll,
                         onAction: () => context.go(AppRoutes.chats),
                       ),
+                      // The frame puts an elapsed time on the right of each
+                      // queue row ("2m", "8m"). `agentQueue` carries no
+                      // timestamp — only name, lastMessage and unread — so the
+                      // last message and the unread count stand in for it.
+                      // Deliberate; do not re-open on the next frame diff.
                       for (final QueueEntry q in d.agentQueue)
                         AppListTile(
                           title: q.name,

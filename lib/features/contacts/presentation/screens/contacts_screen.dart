@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/routes.dart';
+import '../../../../app/theme/app_dimens.dart';
 import '../../../../core/widgets/agent_avatar.dart';
 import '../../../../core/widgets/app_header.dart';
 import '../../../../core/widgets/app_list_tile.dart';
@@ -83,6 +84,10 @@ class ContactsScreen extends ConsumerWidget {
                 return RefreshIndicator(
                   onRefresh: () async => ref.invalidate(contactListProvider),
                   child: ListView.separated(
+                    // Same FAB clearance as the inbox.
+                    padding: const EdgeInsets.only(
+                      bottom: AppDimens.fabClearance,
+                    ),
                     itemCount: shown.length,
                     separatorBuilder: (_, __) => const Divider(indent: 76),
                     itemBuilder: (BuildContext context, int i) {

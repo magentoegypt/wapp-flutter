@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_dimens.dart';
 import '../../../../core/widgets/agent_avatar.dart';
 import '../../../../core/widgets/app_header.dart';
 import '../../../../core/widgets/app_list_tile.dart';
@@ -111,6 +112,11 @@ class InboxScreen extends ConsumerWidget {
                   // Whitespace between rows, per the frame — the hairline made
                   // the list read as a settings table rather than a feed.
                   child: ListView.builder(
+                    // Clears the FAB. Without it the button sits on top of the
+                    // last conversation and hides its timestamp.
+                    padding: const EdgeInsets.only(
+                      bottom: AppDimens.fabClearance,
+                    ),
                     itemCount: items.length,
                     itemBuilder: (BuildContext context, int i) =>
                         _ConversationRow(item: items[i]),
@@ -195,6 +201,11 @@ class _ConversationRow extends StatelessWidget {
 
     if (age.inDays == 0 && now.day == at.day) {
       return DateFormat.Hm(locale).format(at);
+    }
+    // "Yesterday" before the weekday names start, per the frame. A bare "Thu"
+    // for something that arrived last night reads as a week old at a glance.
+    if (age.inDays < 2 && now.day - at.day == 1) {
+      return AppLocalizations.of(context).commonYesterday;
     }
     if (age.inDays < 7) return DateFormat.E(locale).format(at);
     return DateFormat.yMd(locale).format(at);

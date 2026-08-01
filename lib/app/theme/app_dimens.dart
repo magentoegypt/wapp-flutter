@@ -19,6 +19,14 @@ abstract final class AppDimens {
   /// Floating compose button, inset by [gutter] from both edges.
   static const double fab = 56;
 
+  /// Bottom padding for a scrolling list that sits under a FAB.
+  ///
+  /// The button floats over the list rather than inside it, so without this the
+  /// last row is permanently half-covered — on Inbox that hid a conversation's
+  /// timestamp, and no amount of scrolling revealed it because the list had
+  /// already hit its end.
+  static const double fabClearance = fab + gutter + 12;
+
   static const double avatarList = 42;
   static const double avatarHero = 64;
 
