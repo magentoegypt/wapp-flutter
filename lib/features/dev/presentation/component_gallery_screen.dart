@@ -19,8 +19,10 @@ import '../../../core/widgets/weekly_bar_chart.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../inbox/data/conversation_repository.dart';
 import '../../inbox/domain/conversation.dart';
+import '../../inbox/domain/reply_lock.dart';
 import '../../inbox/presentation/widgets/message_kind_style.dart';
 import '../../inbox/presentation/widgets/message_payload_view.dart';
+import '../../inbox/presentation/widgets/reply_lock_strip.dart';
 
 /// Every shared component on one page, under a live brightness × direction
 /// toggle.
@@ -334,6 +336,31 @@ class _ComponentGalleryScreenState extends State<ComponentGalleryScreen> {
                       horizontal: AppDimens.gutter,
                     ),
                     child: Column(children: _payloadSamples()),
+                  ),
+                ]),
+
+                // All four reply-lock states. Three of them need a second agent
+                // holding the lock on the same conversation, which cannot be
+                // arranged from one device — and the "someone else is replying"
+                // case is precisely the one that used to render nothing at all.
+                _group('Reply lock', <Widget>[
+                  const ReplyLockBanner(lock: ReplyLock.free),
+                  const SizedBox(height: 8),
+                  const ReplyLockBanner(
+                    lock: ReplyLock(locked: true, lockedByCurrentUser: true),
+                  ),
+                  const SizedBox(height: 8),
+                  const ReplyLockBanner(
+                    lock: ReplyLock(locked: true, lockedByName: 'Sara Mahmoud'),
+                  ),
+                  const SizedBox(height: 8),
+                  ReplyLockBanner(
+                    lock: const ReplyLock(
+                      locked: true,
+                      lockedByName: 'Sara Mahmoud',
+                      canTakeover: true,
+                    ),
+                    onTakeover: () {},
                   ),
                 ]),
 

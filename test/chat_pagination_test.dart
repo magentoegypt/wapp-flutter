@@ -1,6 +1,7 @@
 import 'package:clickalize/core/util/message_text.dart';
 import 'package:clickalize/features/inbox/data/conversation_repository.dart';
 import 'package:clickalize/features/inbox/domain/conversation.dart';
+import 'package:clickalize/features/inbox/domain/reply_lock.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -50,6 +51,10 @@ class _FakeRepo implements ConversationRepository {
   Future<void> setStatus(String contactUid, ConversationStatus status) async {}
   @override
   Future<int> unreadCount() async => 0;
+  @override
+  Future<ReplyLock> replyLock(String contactUid) async => ReplyLock.free;
+  @override
+  Future<ReplyLock> takeoverReplyLock(String contactUid) async => ReplyLock.free;
 }
 
 /// Container with a standing subscription to the thread.

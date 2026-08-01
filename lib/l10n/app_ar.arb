@@ -594,5 +594,13 @@
   "mtCampaign": "حملة",
 
   "campCampaigns": "الحملات",
-  "campTargeted": "جهات الاتصال المستهدفة"
+  "campTargeted": "جهات الاتصال المستهدفة",
+
+  "chatReplyLockMine": "أنت ترد الآن — هذه المحادثة محجوزة لك.",
+  "chatReplyLockHeld": "{name} يرد الآن.",
+  "chatReplyLockSomeone": "شخص آخر يرد الآن.",
+  "chatTakeOver": "تولّي المحادثة",
+  "chatTakeOverTitle": "تولّي هذه المحادثة؟",
+  "chatTakeOverBody": "{name} يرد الآن. التولّي يحرر حجزه ويمنحك الدقائق الخمس التالية.",
+  "chatTakenOver": "أصبح حجز الرد لك."
 }

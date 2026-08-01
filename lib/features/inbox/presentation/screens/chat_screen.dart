@@ -28,6 +28,7 @@ import '../widgets/attach_sheet.dart';
 import '../widgets/chat_actions_sheet.dart';
 import '../widgets/message_kind_style.dart';
 import '../widgets/message_payload_view.dart';
+import '../widgets/reply_lock_strip.dart';
 import '../widgets/reaction_picker.dart';
 
 /// Chat — Figma 37:1032.
@@ -57,6 +58,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     // bottom. reload() has the same effect here only because a send is already
     // a return to the bottom; anywhere else, prefer prepend().
     await ref.read(chatThreadProvider(widget.contactUid).notifier).reload();
+    // Sending is what takes the lock — the engine claims a fresh five minutes
+    // on every send and extends it on the next. Without this the strip still
+    // reads "no one is replying" immediately after this agent replied.
+    ref.invalidate(replyLockProvider(widget.contactUid));
   }
 
   /// Picks a file, uploads it, then sends the returned name.
@@ -240,11 +245,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             ),
             // Both strips can be visible at once — the handoff requires their
             // copy stay non-contradictory, and neither disables the composer.
-            if (data.isReplyLockOpen)
-              AppBanner(
-                message: l10n.chatReplyLockOpen,
-                tone: BannerTone.neutral,
-              ),
+            // Read from its own endpoint rather than from the thread payload:
+            // the payload's copy is only as fresh as the last full thread
+            // fetch, and a five-minute lock changes far more often than that.
+            ReplyLockStrip(contactUid: widget.contactUid),
             // Chat detail carries no canned replies, so the chips come from
             // the quick-replies endpoint. Failure is non-fatal — the chips
             // simply don't render rather than taking the chat down.

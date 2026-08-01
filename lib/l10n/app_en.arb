@@ -698,5 +698,19 @@
   "mtCampaign": "Campaign",
 
   "campCampaigns": "Campaigns",
-  "campTargeted": "Contacts targeted"
+  "campTargeted": "Contacts targeted",
+
+  "chatReplyLockMine": "You are replying now — this chat is locked to you.",
+  "chatReplyLockHeld": "{name} is replying now.",
+  "@chatReplyLockHeld": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "chatReplyLockSomeone": "Someone else is replying now.",
+  "chatTakeOver": "Take over",
+  "chatTakeOverTitle": "Take over this conversation?",
+  "chatTakeOverBody": "{name} is replying right now. Taking over releases their lock and gives you the next five minutes.",
+  "@chatTakeOverBody": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "chatTakenOver": "You have the reply lock."
 }

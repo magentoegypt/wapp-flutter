@@ -7,6 +7,7 @@ import '../../../core/util/message_text.dart';
 import '../domain/channel.dart';
 import '../domain/conversation.dart';
 import '../domain/message_payload.dart';
+import '../domain/reply_lock.dart';
 
 /// Which slice of the inbox to load. Mirrors the filter chips on 36:1032.
 enum InboxFilter { all, unread, unassigned }
@@ -22,6 +23,17 @@ abstract interface class ConversationRepository {
   Future<void> setStatus(String contactUid, ConversationStatus status);
 
   Future<int> unreadCount();
+
+  /// Who holds the five-minute reply lock, read fresh rather than from the
+  /// thread payload — that copy is only as new as the last full thread fetch.
+  Future<ReplyLock> replyLock(String contactUid);
+
+  /// Seize the lock, releasing whoever held it.
+  ///
+  /// Refused with 403 unless the agent is an admin or carries one of the
+  /// team-structure permissions, so this is only offered when the server said
+  /// [ReplyLock.canTakeover].
+  Future<ReplyLock> takeoverReplyLock(String contactUid);
 }
 
 class ConversationRepositoryImpl implements ConversationRepository {
@@ -87,6 +99,28 @@ class ConversationRepositoryImpl implements ConversationRepository {
       '/conversations/$contactUid/status',
       body: <String, dynamic>{'status': status.value},
     );
+  }
+
+  @override
+  Future<ReplyLock> replyLock(String contactUid) async {
+    final dynamic body = await _api.get('/conversations/$contactUid/lock');
+    // The engine returns the status under `smartRoutingLock` when it rides
+    // along on another response, and bare on its own endpoint. Both are read
+    // so this does not break if the wrapper is added later.
+    return ReplyLock.fromJson(
+      body is Map<String, dynamic>
+          ? (body['smartRoutingLock'] ?? body['lock'] ?? body)
+          : body,
+    );
+  }
+
+  @override
+  Future<ReplyLock> takeoverReplyLock(String contactUid) async {
+    await _api.post('/conversations/$contactUid/lock/takeover');
+    // The POST answers with a message rather than the new status, so the lock
+    // is re-read instead of assumed. Assuming would mean drawing "you are
+    // replying now" off the back of a request whose body never said so.
+    return replyLock(contactUid);
   }
 
   @override
@@ -371,3 +405,18 @@ class ChatThreadController
     ));
   }
 }
+
+/// The reply lock for one conversation.
+///
+/// autoDispose because it is only meaningful while a chat is on screen, and
+/// family because two chats can be open across a back-stack.
+///
+/// Deliberately NOT polled. The hold is five minutes and
+/// [ReplyLock.atNow] expires it locally, which covers the common case at no
+/// cost; a timer against this API would add a request per chat per interval to
+/// a server that has already been seen saturating its FPM pool. It refreshes
+/// when the chat opens, after a takeover, and on pull-to-refresh.
+final replyLockProvider =
+    FutureProvider.autoDispose.family<ReplyLock, String>((Ref ref, String uid) {
+  return ref.watch(conversationRepositoryProvider).replyLock(uid);
+});
