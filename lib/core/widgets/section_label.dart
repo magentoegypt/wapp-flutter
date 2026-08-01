@@ -25,11 +25,13 @@ class SectionLabel extends StatelessWidget {
     );
 
     return Padding(
+      // 20/8 was 28dp of chrome per label. The dashboard carries two of them
+      // above eight cards, so that alone was pushing the chart off the fold.
       padding: EdgeInsetsDirectional.only(
         start: padded ? AppDimens.gutter : 0,
         end: padded ? AppDimens.gutter : 0,
-        top: 20,
-        bottom: 8,
+        top: 14,
+        bottom: 6,
       ),
       child: label,
     );

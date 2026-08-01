@@ -34,11 +34,17 @@ class StatCard extends StatelessWidget {
     final bool isLight = Theme.of(context).brightness == Brightness.light;
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       // Floor the height so two cards side by side stay level even when one
       // label wraps. Doing it here rather than via the parent keeps the card
       // safe inside any unbounded-height parent.
-      constraints: const BoxConstraints(minHeight: 118),
+      //
+      // 96, measured off the frame (38:1032) rather than chosen: its cards are
+      // ~97dp and the app's were 118, which is a fifth taller each. Multiplied
+      // by the eight cards this dashboard shows — the API supports eight
+      // metrics, not the frame's four — that alone pushed the chart and the
+      // queue below the fold.
+      constraints: const BoxConstraints(minHeight: 96),
       decoration: BoxDecoration(
         color: isLight ? Colors.white : AppColor.surfaceDark,
         borderRadius: BorderRadius.circular(AppDimens.radiusCardLarge),
@@ -57,23 +63,23 @@ class StatCard extends StatelessWidget {
           // Tinted wash behind the glyph, per the frame — the icon is a marker
           // for the metric, not a decoration floating on the card.
           Container(
-            width: 30,
-            height: 30,
+            width: 26,
+            height: 26,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: iconColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(9),
+              borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, size: 17, color: iconColor),
+            child: Icon(icon, size: 15, color: iconColor),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Text(
             value,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: text.displayLarge?.copyWith(fontSize: 24),
+            style: text.displayLarge?.copyWith(fontSize: 22, height: 1.1),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 1),
           Text(label, style: text.bodyMedium, maxLines: 1, overflow: TextOverflow.ellipsis),
         ],
       ),

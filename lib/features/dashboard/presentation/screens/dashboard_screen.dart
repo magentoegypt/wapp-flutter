@@ -7,12 +7,10 @@ import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_dimens.dart';
 import '../../../../core/util/duration_format.dart';
-import '../../../../core/widgets/app_list_tile.dart';
 import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/initials_avatar.dart';
 import '../../../../core/widgets/section_label.dart';
 import '../../../../core/widgets/stat_card.dart';
-import '../../../../core/widgets/status_pill.dart';
 import '../../../../core/widgets/weekly_bar_chart.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../auth/presentation/auth_controller.dart';
@@ -88,7 +86,7 @@ class DashboardScreen extends ConsumerWidget {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 10),
                           StatCardRow(
                             cards: <StatCard>[
                               StatCard(
@@ -132,7 +130,7 @@ class DashboardScreen extends ConsumerWidget {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 10),
                           StatCardRow(
                             cards: <StatCard>[
                               StatCard(
@@ -219,37 +217,14 @@ class DashboardScreen extends ConsumerWidget {
                       ),
                     ],
 
-                    // "My queue · See all", per the frame.
                     if (d.agentQueue.isNotEmpty) ...<Widget>[
-                      SectionHeader(
-                        title: l10n.dashboardWorkload,
-                        actionLabel: l10n.actionSeeAll,
-                        onAction: () => context.push(AppRoutes.agents),
-                      ),
-                      // `agentQueue` is a per-agent open count, not a list of
-                      // this agent's conversations. It was read as the latter,
-                      // which showed agent names with a blank second line and
-                      // pushed `/chats/<agent-uid>` on tap — a conversation
-                      // route holding a uid no conversation has. There is no
-                      // per-agent screen keyed by uid either, so the rows do
-                      // not navigate at all and the header goes to Agents.
-                      //
-                      // The frame's elapsed-time column ("2m", "8m") has no
-                      // field behind it anywhere in this payload. The open
-                      // count is what the API knows.
-                      for (final AgentWorkload a in d.agentQueue)
-                        AppListTile(
-                          title: a.name,
-                          leading: InitialsAvatar(name: a.name),
-                          showChevron: false,
-                          trailing: StatusPill(
-                            label: l10n.dashboardOpenCount(a.openConversations),
-                            tone: a.openConversations > 0
-                                ? StatusTone.info
-                                : StatusTone.neutral,
-                            showDot: false,
-                          ),
+                      const SizedBox(height: 12),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppDimens.gutter,
                         ),
+                        child: _WorkloadCard(rows: d.agentQueue, l10n: l10n),
+                      ),
                     ],
 
                     const SizedBox(height: 20),
@@ -292,11 +267,14 @@ class _GreetingHeader extends StatelessWidget {
       child: SafeArea(
         bottom: false,
         child: Padding(
+          // Trimmed from 10/18. The header is the only fixed block on this
+          // screen, so every dp it keeps is one the eight cards below it do
+          // not get — and the frame's is shallower than this was.
           padding: const EdgeInsetsDirectional.only(
             start: AppDimens.gutter,
             end: AppDimens.gutter,
-            top: 10,
-            bottom: 18,
+            top: 6,
+            bottom: 14,
           ),
           child: Row(
             children: <Widget>[
@@ -314,7 +292,8 @@ class _GreetingHeader extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 22,
+                        fontSize: 20,
+                        height: 1.15,
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
                       ),
@@ -327,6 +306,93 @@ class _GreetingHeader extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Agent workload, drawn the way the frame draws its queue block.
+///
+/// The frame (38:1032) puts this in a **white rounded card with the heading
+/// inside it** — not a bare section label over full-bleed list rows, which is
+/// what this was. The difference is structural rather than cosmetic: the card
+/// is what visually separates the block from the chart above it, and without
+/// it the rows read as a continuation of the page rather than as a group.
+///
+/// The rows deliberately do not navigate. `agentQueue` is a per-agent open
+/// count, and there is no per-agent screen keyed by its uid — the heading's
+/// "See all" goes to Agents instead. The frame's elapsed-time column ("2m",
+/// "8m") has no field behind it anywhere in this payload; the open count is
+/// what the API knows.
+class _WorkloadCard extends StatelessWidget {
+  const _WorkloadCard({required this.rows, required this.l10n});
+
+  final List<AgentWorkload> rows;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isLight = Theme.of(context).brightness == Brightness.light;
+    final TextTheme text = Theme.of(context).textTheme;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 6),
+      decoration: BoxDecoration(
+        color: isLight ? Colors.white : AppColor.surfaceDark,
+        borderRadius: BorderRadius.circular(AppDimens.radiusCardLarge),
+        border: Border.all(
+          color: isLight ? AppColor.hairline : AppColor.hairlineDark,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  l10n.dashboardWorkload,
+                  style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w700),
+                ),
+              ),
+              GestureDetector(
+                onTap: () => context.push(AppRoutes.agents),
+                child: Text(
+                  l10n.actionSeeAll,
+                  style: text.bodyMedium?.copyWith(
+                    color: AppColor.brandDeep,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          for (final AgentWorkload a in rows)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 7),
+              child: Row(
+                children: <Widget>[
+                  InitialsAvatar(name: a.name, size: 32),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      a.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: text.bodyLarge,
+                    ),
+                  ),
+                  // Right-aligned muted value, where the frame puts its
+                  // elapsed time. A pill here would out-weigh the name.
+                  Text(
+                    l10n.dashboardOpenCount(a.openConversations),
+                    style: text.bodyMedium?.copyWith(color: AppColor.inkFaint),
+                  ),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }
