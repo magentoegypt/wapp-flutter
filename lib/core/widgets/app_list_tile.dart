@@ -156,6 +156,7 @@ class ActionSheetRow extends StatelessWidget {
     required this.onTap,
     this.tint,
     this.destructive = false,
+    this.trailingLabel,
     super.key,
   });
 
@@ -164,6 +165,11 @@ class ActionSheetRow extends StatelessWidget {
   final VoidCallback onTap;
   final Color? tint;
   final bool destructive;
+
+  /// A muted count or state to the right of the label — "3", "2 pending".
+  /// The frame carries one on five of these rows; without it the sheet gives
+  /// no hint that a screen has anything in it before you open it.
+  final String? trailingLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -179,6 +185,15 @@ class ActionSheetRow extends StatelessWidget {
       // other row.
       titleColor: destructive ? AppColor.danger : null,
       leading: IconTile(icon: icon, color: color),
+      trailing: trailingLabel == null
+          ? null
+          : Text(
+              trailingLabel!,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: AppColor.inkFaint),
+            ),
     );
   }
 }

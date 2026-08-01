@@ -92,6 +92,21 @@
   "qrMessage": "الرسالة",
   "qrShortcutRequired": "أدخل اسمًا قصيرًا.",
   "qrMessageRequired": "أدخل الرسالة المراد إرسالها.",
+  "caFavourite": "ÙÙØ¶ÙØ©",
+  "caCall": "Ø§ØªØµØ§Ù",
+  "caStatus": "Ø§ÙØ­Ø§ÙØ©",
+  "caAssignShort": "Ø¥Ø³ÙØ§Ø¯",
+  "caGroupConversation": "Ø§ÙÙØ­Ø§Ø¯Ø«Ø©",
+  "caGroupMessaging": "Ø§ÙÙØ±Ø§Ø³ÙØ©",
+  "caGroupCalling": "Ø§ÙÙÙØ§ÙÙØ§Øª",
+  "caGroupAccess": "Ø§ÙÙØµÙÙ ÙØ§ÙØ¨ÙØ§ÙØ§Øª",
+  "caPending": "{count} ÙÙØ¯ Ø§ÙØ§ÙØªØ¸Ø§Ø±",
+  "@caPending": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "caFavouriteOn": "ØªÙØª Ø§ÙØ¥Ø¶Ø§ÙØ© Ø¥ÙÙ Ø§ÙÙÙØ¶ÙØ©.",
+  "caFavouriteOff": "ØªÙØª Ø§ÙØ¥Ø²Ø§ÙØ© ÙÙ Ø§ÙÙÙØ¶ÙØ©.",
+  "caFavouriteUnsupported": "ÙØ§ ÙÙÙÙ ØªØºÙÙØ± Ø§ÙÙÙØ¶ÙØ© ÙÙ Ø§ÙØªØ·Ø¨ÙÙ Ø¨Ø¹Ø¯.",
   "caTitle": "إجراءات المحادثة",
   "caInternalNote": "ملاحظة داخلية",
   "caSnooze": "تأجيل المحادثة",
@@ -363,9 +378,6 @@
   "caLabels": "إدارة التصنيفات",
   "caReminder": "ضبط تذكير",
   "caUnsnooze": "إلغاء التأجيل",
-  "caFavourite": "إضافة إلى المفضلة",
-  "caFavouriteOff": "إزالة من المفضلة",
-  "caStatus": "تغيير الحالة",
   "caSaved": "تم الحفظ.",
   "snTitle": "تأجيل المحادثة",
   "snPrompt": "إخفاء هذه المحادثة من صندوق الوارد حتى وقت محدد.",

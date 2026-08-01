@@ -189,6 +189,39 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         .format(at);
   }
 
+  /// The status picker as a dialog, for the sheet's Status tile.
+  ///
+  /// The header's pill is a PopupMenuButton anchored to itself, which has no
+  /// anchor once the sheet has closed — so the same choice is offered here in
+  /// the one form that does not need one.
+  Future<void> _showStatusMenu(ConversationStatus current) async {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final ConversationStatus? picked = await showDialog<ConversationStatus>(
+      context: context,
+      builder: (BuildContext c) => SimpleDialog(
+        title: Text(l10n.cvChangeStatus),
+        children: <Widget>[
+          for (final ConversationStatus s in ConversationStatus.values)
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(c).pop(s),
+              child: Row(
+                children: <Widget>[
+                  Icon(
+                    s == current ? Icons.check : null,
+                    size: 18,
+                    color: AppColor.brandDeep,
+                  ),
+                  const SizedBox(width: 10),
+                  Text(_StatusMenu._badge(l10n, s).label),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+    if (picked != null && picked != current) await _setStatus(picked);
+  }
+
   Future<void> _setStatus(ConversationStatus status) async {
     await ref
         .read(conversationRepositoryProvider)
@@ -263,6 +296,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
               phone: thread.valueOrNull?.phone,
               channel:
                   thread.valueOrNull?.channel ?? MessageChannel.whatsapp,
+              // The sheet's Call and Status tiles reuse the header's own
+              // handlers rather than re-deriving them: Call has to consult the
+              // capability gate first, and Status needs the inbox row that
+              // carries the current value.
+              onCall: () => context.push(AppRoutes.chatCalls(widget.contactUid)),
+              onStatus: _statusOf(widget.contactUid) == null
+                  ? null
+                  : () => _showStatusMenu(_statusOf(widget.contactUid)!),
             ),
             icon: const Icon(Icons.more_vert, color: Colors.white),
           ),
