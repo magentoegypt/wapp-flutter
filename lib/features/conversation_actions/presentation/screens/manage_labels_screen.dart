@@ -13,6 +13,36 @@ import '../../../../core/widgets/status_pill.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../data/conversation_action_repository.dart';
 import '../../domain/action_models.dart';
+import '../../../contacts/data/contact_repository.dart';
+import '../../../contacts/domain/contact.dart';
+
+/// Which of [known] a conversation carries, given the labels on its contact.
+///
+/// Matched on uid *or* name, case-insensitively. `Contact.labels` is a list of
+/// strings whose shape is not guaranteed across serialisers — matching both
+/// ways is cheap over a workspace-sized vocabulary and cannot pick the wrong
+/// label, whereas guessing one shape silently unticks everything. An entry
+/// matching nothing is dropped: it can never be shown as ticked, so keeping it
+/// would contradict the screen.
+///
+/// Top-level so it can be tested without pumping the widget — the bug this
+/// guards is that the set comes out empty, which a widget test would have to
+/// reach through a provider override to see.
+Set<String> appliedLabelUids(
+  List<ConversationLabel> known,
+  List<String> onContact,
+  List<String> callerHint,
+) {
+  final Set<String> out = <String>{...callerHint};
+  for (final String raw in onContact) {
+    final String needle = raw.trim().toLowerCase();
+    if (needle.isEmpty) continue;
+    for (final ConversationLabel l in known) {
+      if (l.uid == raw || l.name.trim().toLowerCase() == needle) out.add(l.uid);
+    }
+  }
+  return out;
+}
 
 /// Manage labels — the conversation's whole label set, edited at once.
 ///
@@ -30,9 +60,11 @@ class ManageLabelsScreen extends ConsumerStatefulWidget {
 
   final String contactUid;
 
-  /// Label uids already on this conversation. Passed in by the caller rather
-  /// than fetched: the conversation that opened this screen already holds them,
-  /// and a second round trip would let the ticks appear a beat after the rows.
+  /// Label uids already on this conversation, when the caller happens to hold
+  /// them. **Only a hint.** The applied set is resolved from the contact
+  /// regardless, because a caller that forgets this loses data: the one call
+  /// site pushed this route with no `extra`, so every checkbox opened unticked
+  /// on a conversation that had labels, and Save stripped them.
   final List<String> initial;
 
   @override
@@ -40,18 +72,27 @@ class ManageLabelsScreen extends ConsumerStatefulWidget {
 }
 
 class _ManageLabelsScreenState extends ConsumerState<ManageLabelsScreen> {
-  late final Set<String> _selected = <String>{...widget.initial};
+  /// Null until the user touches something. Before that the screen shows what
+  /// the conversation actually has; after, the user's set wins.
+  ///
+  /// Derived-then-overridden rather than seeded in `initState`, because the
+  /// contact may resolve either before or after this screen mounts and a
+  /// one-shot seed loses that race in one direction.
+  Set<String>? _override;
 
   bool _busy = false;
 
-  void _toggle(String uid) {
+
+  void _toggle(String uid, Set<String> current) {
     // remove() answers whether anything went, so one call covers both ways.
     setState(() {
-      if (!_selected.remove(uid)) _selected.add(uid);
+      final Set<String> next = <String>{...current};
+      if (!next.remove(uid)) next.add(uid);
+      _override = next;
     });
   }
 
-  Future<void> _save(List<ConversationLabel> known) async {
+  Future<void> _save(List<ConversationLabel> known, Set<String> selected) async {
     final AppLocalizations l10n = AppLocalizations.of(context);
 
     // Filtered through the fetched list rather than sent straight from the set.
@@ -61,7 +102,7 @@ class _ManageLabelsScreenState extends ConsumerState<ManageLabelsScreen> {
     // what the user is looking at.
     final List<String> labelUids = known
         .map((ConversationLabel l) => l.uid)
-        .where(_selected.contains)
+        .where(selected.contains)
         .toList();
 
     setState(() => _busy = true);
@@ -71,6 +112,8 @@ class _ManageLabelsScreenState extends ConsumerState<ManageLabelsScreen> {
             labelUids: labelUids,
           );
       if (!mounted) return;
+      // The contact carries the labels, so its cached copy is now stale.
+      ref.invalidate(contactDetailProvider(widget.contactUid));
       // Clearing everything is legitimate, but it is also the outcome a mis-tap
       // produces, so it gets its own acknowledgement — "Labels updated" would
       // read as success on a screen that now has none.
@@ -97,6 +140,18 @@ class _ManageLabelsScreenState extends ConsumerState<ManageLabelsScreen> {
     final List<ConversationLabel> known =
         labels.valueOrNull ?? const <ConversationLabel>[];
 
+    // What the conversation actually carries. Until this resolves the screen
+    // cannot know what Save would remove, so Save waits for it.
+    final AsyncValue<Contact> contact =
+        ref.watch(contactDetailProvider(widget.contactUid));
+    final Set<String> selected = _override ??
+        appliedLabelUids(
+          known,
+          contact.valueOrNull?.labels ?? const <String>[],
+          widget.initial,
+        );
+    final bool ready = contact.hasValue || _override != null;
+
     return Scaffold(
       appBar: AppHeader.back(title: l10n.lbTitle),
       body: Column(
@@ -107,7 +162,7 @@ class _ManageLabelsScreenState extends ConsumerState<ManageLabelsScreen> {
             icon: Icons.label_outline,
           ),
           _AppliedStrip(
-            labels: known.where((ConversationLabel l) => _selected.contains(l.uid)),
+            labels: known.where((ConversationLabel l) => selected.contains(l.uid)),
           ),
           Expanded(
             child: AsyncValueView<List<ConversationLabel>>(
@@ -125,13 +180,13 @@ class _ManageLabelsScreenState extends ConsumerState<ManageLabelsScreen> {
                   itemCount: items.length,
                   itemBuilder: (BuildContext context, int i) {
                     final ConversationLabel label = items[i];
-                    final bool on = _selected.contains(label.uid);
+                    final bool on = selected.contains(label.uid);
                     return AppListTile(
                       title: label.name,
                       // The row performs a toggle, so it must not promise a
                       // push the way a chevron does.
                       showChevron: false,
-                      onTap: _busy ? null : () => _toggle(label.uid),
+                      onTap: _busy ? null : () => _toggle(label.uid, selected),
                       leading: IconTile(
                         icon: on ? Icons.label : Icons.label_outline,
                         color: _labelColor(label.color) ?? AppColor.inkMuted,
@@ -140,7 +195,7 @@ class _ManageLabelsScreenState extends ConsumerState<ManageLabelsScreen> {
                         value: on,
                         onChanged: _busy
                             ? null
-                            : (bool? _) => _toggle(label.uid),
+                            : (bool? _) => _toggle(label.uid, selected),
                       ),
                     );
                   },
@@ -148,16 +203,17 @@ class _ManageLabelsScreenState extends ConsumerState<ManageLabelsScreen> {
               },
             ),
           ),
-          // Hidden while the list is unresolved or genuinely empty: saving from
-          // either state could only send the caller's `initial` back unchanged,
-          // and a workspace with no labels has none to clear.
-          if (known.isNotEmpty)
+          // Hidden while either side is unresolved, and while the workspace
+          // has no labels to clear. `ready` is the important half: saving
+          // before the conversation's own labels have arrived would post an
+          // empty set and remove every one of them.
+          if (known.isNotEmpty && ready)
             SafeArea(
               top: false,
               child: Padding(
                 padding: const EdgeInsets.all(AppDimens.gutter),
                 child: FilledButton(
-                  onPressed: _busy ? null : () => _save(known),
+                  onPressed: _busy ? null : () => _save(known, selected),
                   child: _busy
                       ? const SizedBox(
                           width: 18,
