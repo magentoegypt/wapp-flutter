@@ -28,13 +28,72 @@ class AsyncValueView<T> extends StatelessWidget {
       data: builder,
       loading: () =>
           loading ?? const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-      error: (Object error, StackTrace _) => FailureMessage(
+      // A plan refusal is not an error and retrying cannot fix it — the same
+      // 403 comes back every time. Showing it in the red error state with a
+      // Retry button tells the user the app is broken and invites them to
+      // hammer an endpoint that will never say yes.
+      error: (Object error, StackTrace _) => switch (error) {
+        final PlanLimitFailure f => PlanLimitMessage(failure: f),
+        final Failure f => FailureMessage(message: f.message, onRetry: onRetry),
         // Anything that isn't a Failure escaped the data layer — show a
         // generic message rather than a Dart exception string.
-        message: error is Failure
-            ? error.message
-            : 'Something went wrong. Try again.',
-        onRetry: onRetry,
+        _ => FailureMessage(
+            message: 'Something went wrong. Try again.',
+            onRetry: onRetry,
+          ),
+      },
+    );
+  }
+}
+
+/// The workspace's plan does not include this module.
+///
+/// Deliberately calm: a lock rather than a red cross, and no Retry. The action
+/// that would help is an upgrade, which happens in the web console — the app
+/// has no billing screen, so this says what is missing and stops there rather
+/// than pretending there is something to tap.
+class PlanLimitMessage extends StatelessWidget {
+  const PlanLimitMessage({required this.failure, super.key});
+
+  final PlanLimitFailure failure;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimens.gutter),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const Icon(Icons.lock_outline, size: 30, color: AppColor.warning),
+            const SizedBox(height: 12),
+            Text(
+              l10n.planLimitTitle,
+              textAlign: TextAlign.center,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyLarge
+                  ?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              failure.message,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 10),
+            Text(
+              l10n.planLimitUpgradeHint,
+              textAlign: TextAlign.center,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: AppColor.inkFaint),
+            ),
+          ],
+        ),
       ),
     );
   }

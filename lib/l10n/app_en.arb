@@ -34,6 +34,14 @@
   "loginPasswordRequired": "Enter your password.",
   "loginSubmit": "Log in",
   "actionRetry": "Retry",
+  "planLimitTitle": "Not included in your plan",
+  "@planLimitTitle": {
+    "description": "Shown instead of an error when a 403 carries a module key — the workspace's subscription does not cover this feature, which is different from lacking permission."
+  },
+  "planLimitUpgradeHint": "Upgrade from the web console to turn this on.",
+  "@planLimitUpgradeHint": {
+    "description": "There is no billing screen in the app, so this points at where the change is actually made."
+  },
   "actionCancel": "Cancel",
   "actionSave": "Save",
   "actionDelete": "Delete",

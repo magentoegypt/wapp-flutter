@@ -13,6 +13,8 @@
   "loginPasswordRequired": "أدخل كلمة المرور.",
   "loginSubmit": "تسجيل الدخول",
   "actionRetry": "إعادة المحاولة",
+  "planLimitTitle": "غير مُتاح في باقتك",
+  "planLimitUpgradeHint": "قم بالترقية من لوحة التحكم على الويب لتفعيلها.",
   "actionCancel": "إلغاء",
   "actionSave": "حفظ",
   "actionDelete": "حذف",

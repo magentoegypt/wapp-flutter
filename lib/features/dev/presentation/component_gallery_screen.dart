@@ -6,6 +6,7 @@ import '../../../app/theme/app_theme.dart';
 import '../../../core/widgets/app_banner.dart';
 import '../../../core/widgets/app_header.dart';
 import '../../../core/widgets/app_list_tile.dart';
+import '../../../core/error/failure.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/filter_chip_bar.dart';
 import '../../../core/widgets/initials_avatar.dart';
@@ -17,12 +18,16 @@ import '../../../core/widgets/stat_card.dart';
 import '../../../core/widgets/status_pill.dart';
 import '../../../core/widgets/weekly_bar_chart.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../automation/data/bot_reply_repository.dart';
+import '../../automation/presentation/screens/bot_replies_screen.dart'
+    show triggerLabel;
 import '../../inbox/data/conversation_repository.dart';
 import '../../inbox/domain/conversation.dart';
 import '../../inbox/domain/reply_lock.dart';
 import '../../inbox/presentation/widgets/message_kind_style.dart';
 import '../../inbox/presentation/widgets/message_payload_view.dart';
 import '../../inbox/presentation/widgets/reply_lock_strip.dart';
+import '../../teams/data/team_repository.dart';
 
 /// Every shared component on one page, under a live brightness × direction
 /// toggle.
@@ -407,6 +412,18 @@ class _ComponentGalleryScreenState extends State<ComponentGalleryScreen> {
                 // the bottom as soon as the device's text scale nudged the
                 // column past them — the gallery reported an overflow that the
                 // widgets themselves do not have.
+                // Teams and bot replies have no frame and no safe live path —
+                // every write is destructive against production. Same treatment
+                // as the payloads above: wire-shaped JSON through the real
+                // `fromJson`, so a change to the parser shows up here.
+                _group('Teams', <Widget>[
+                  Column(children: _teamRows()),
+                ]),
+
+                _group('Bot replies', <Widget>[
+                  Column(children: _botReplyRows()),
+                ]),
+
                 _group('Empty and error states', <Widget>[
                   EmptyState(
                     icon: Icons.forum_outlined,
@@ -420,6 +437,19 @@ class _ComponentGalleryScreenState extends State<ComponentGalleryScreen> {
                   FailureMessage(
                     message: 'No connection. Check your network and try again.',
                     onRetry: () {},
+                  ),
+                  // Both 403s, side by side. They are the same status code and
+                  // used to be the same red box; the point of this pair is that
+                  // one offers a retry and the other deliberately does not.
+                  const FailureMessage(
+                    message: 'You do not have access to this.',
+                  ),
+                  const PlanLimitMessage(
+                    failure: PlanLimitFailure(
+                      'Bot replies are not included in your current '
+                          'subscription plan.',
+                      'bot_reply',
+                    ),
                   ),
                 ]),
               ],
@@ -590,6 +620,119 @@ class _ComponentGalleryScreenState extends State<ComponentGalleryScreen> {
               content: content,
               timeLabel: '10:30',
               isOutgoing: !m.isIncoming,
+            );
+          },
+        ),
+    ];
+  }
+
+  /// Team rows, covering the two shapes the API answers with.
+  ///
+  /// The list sends `memberCount` and no roster; the detail sends a roster and
+  /// no count. A row that read only one of them would show "0 members" on half
+  /// the screens in the app.
+  List<Widget> _teamRows() {
+    final List<WorkTeam> teams = <WorkTeam>[
+      WorkTeam.fromJson(<String, dynamic>{
+        'uid': 'g-t1',
+        'title': 'Support',
+        'memberCount': 6,
+      }),
+      WorkTeam.fromJson(<String, dynamic>{
+        'uid': 'g-t2',
+        // The other spelling — both occur.
+        'name': 'Sales',
+        'members': <dynamic>[
+          <String, dynamic>{'uid': 'u1', 'name': 'Sara Mahmoud', 'role': 'Agent'},
+          <String, dynamic>{'uid': 'u2', 'name': 'Omar Khaled'},
+          // Nameless, and dropped — nothing renders for it.
+          <String, dynamic>{'uid': 'u3'},
+        ],
+      }),
+      WorkTeam.fromJson(<String, dynamic>{'uid': 'g-t3', 'title': 'Escalations'}),
+    ];
+
+    return <Widget>[
+      for (final WorkTeam t in teams)
+        Builder(
+          builder: (BuildContext c) => AppListTile(
+            title: t.title,
+            subtitle: AppLocalizations.of(c).tmMembers(t.displayCount),
+            leading: const IconTile(
+              icon: Icons.groups_outlined,
+              color: AppColor.success,
+            ),
+            onTap: () {},
+          ),
+        ),
+    ];
+  }
+
+  /// One row per trigger family, plus the two that cannot be edited here.
+  List<Widget> _botReplyRows() {
+    final List<BotReply> replies = <BotReply>[
+      BotReply.fromJson(<String, dynamic>{
+        'uid': 'g-b1',
+        'name': 'Greeting',
+        'trigger_type': 'welcome',
+        'reply_text': 'Hi! How can we help?',
+      }),
+      BotReply.fromJson(<String, dynamic>{
+        'uid': 'g-b2',
+        'name': 'Pricing',
+        'trigger_type': 'contains',
+        'reply_trigger': 'price',
+        'reply_text': 'Our price list is attached.',
+      }),
+      BotReply.fromJson(<String, dynamic>{
+        'uid': 'g-b3',
+        'name': 'Order status',
+        'trigger_type': 'starts_with',
+        'reply_trigger': 'order',
+        'reply_text': 'Send your order number and we will check.',
+      }),
+      // Rich replies. These carry a payload this form has no fields for, so
+      // they open read-only — the row says so before it is tapped, which is the
+      // difference between a locked row and one that silently flattens.
+      BotReply.fromJson(<String, dynamic>{
+        'uid': 'g-b4',
+        'name': 'Main menu',
+        'trigger_type': 'is',
+        'reply_trigger': 'menu',
+        'message_type': 'interactive',
+      }),
+      BotReply.fromJson(<String, dynamic>{
+        'uid': 'g-b5',
+        'name': 'Catalogue',
+        'trigger_type': 'contains_word',
+        'reply_trigger': 'catalogue',
+        'message_type': 'media',
+      }),
+    ];
+
+    return <Widget>[
+      for (final BotReply r in replies)
+        Builder(
+          builder: (BuildContext c) {
+            final AppLocalizations l10n = AppLocalizations.of(c);
+            return AppListTile(
+              title: r.name,
+              subtitle: triggerLabel(l10n, r.trigger) +
+                  (r.keyword == null ? '' : ' · ${r.keyword}'),
+              subtitleMaxLines: 2,
+              leading: const IconTile(
+                icon: Icons.smart_toy_outlined,
+                color: AppColor.info,
+              ),
+              showChevron: r.messageKind.isEditable,
+              trailing: r.messageKind.isEditable
+                  ? null
+                  : const StatusPill(
+                      label: '…',
+                      tone: StatusTone.neutral,
+                      showDot: false,
+                    ),
+              onTap: () {},
             );
           },
         ),
