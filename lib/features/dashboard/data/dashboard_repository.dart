@@ -55,30 +55,36 @@ List<DaySeriesPoint> _series(Object? raw) {
     final DateTime? day =
         DateTime.tryParse('${e['date'] ?? e['day'] ?? ''}')?.toLocal();
     if (day == null) continue;
-    final Object? v = e['count'] ?? e['total'] ?? e['conversations'] ?? e['value'];
+    int n(Object? v) =>
+        v is num ? v.round() : int.tryParse('${v ?? ''}') ?? 0;
+    // `inbound`/`outbound` is the shape the API sends. The single-value keys
+    // are kept as a fallback in case a later revision collapses them, but they
+    // are not what arrives today — reading only those gave seven zero bars.
+    final Object? single =
+        e['count'] ?? e['total'] ?? e['conversations'] ?? e['value'];
     out.add(DaySeriesPoint(
       date: day,
-      count: v is num ? v.round() : int.tryParse('${v ?? ''}') ?? 0,
+      inbound: n(e['inbound'] ?? single),
+      outbound: n(e['outbound']),
     ));
   }
   out.sort((DaySeriesPoint a, DaySeriesPoint b) => a.date.compareTo(b.date));
   return out;
 }
 
-List<QueueEntry> _queue(Object? raw) {
-  if (raw is! List) return const <QueueEntry>[];
-  final List<QueueEntry> out = <QueueEntry>[];
+List<AgentWorkload> _queue(Object? raw) {
+  if (raw is! List) return const <AgentWorkload>[];
+  final List<AgentWorkload> out = <AgentWorkload>[];
   for (final Object? e in raw) {
     if (e is! Map) continue;
-    final String uid = '${e['contactUid'] ?? e['uid'] ?? ''}';
+    final String uid = '${e['uid'] ?? ''}';
     if (uid.isEmpty) continue;
-    final Object? unread = e['unread'] ?? e['unreadCount'];
-    out.add(QueueEntry(
-      contactUid: uid,
-      name: '${e['name'] ?? e['waId'] ?? ''}',
-      lastMessage: (e['lastMessage'] ?? e['last_message']) as String?,
-      unreadCount:
-          unread is num ? unread.round() : int.tryParse('${unread ?? ''}') ?? 0,
+    final Object? open = e['openConversations'] ?? e['open'];
+    out.add(AgentWorkload(
+      agentUid: uid,
+      name: '${e['name'] ?? ''}',
+      openConversations:
+          open is num ? open.round() : int.tryParse('${open ?? ''}') ?? 0,
     ));
   }
   return out;

@@ -29,10 +29,10 @@ import '../../domain/contact.dart';
     return (label: l10n.cdBlocked, tone: StatusTone.danger);
   }
   return switch (c.lifecycleStage) {
-    LifecycleStage.customer =>
-      (label: l10n.ctStageCustomer, tone: StatusTone.success),
-    LifecycleStage.lead => (label: l10n.ctStageLead, tone: StatusTone.info),
-    LifecycleStage.vip => (label: l10n.ctStageVip, tone: StatusTone.warning),
+    LifecycleStage.newCustomer =>
+      (label: l10n.ctStageNew, tone: StatusTone.info),
+    LifecycleStage.returning =>
+      (label: l10n.ctStageReturning, tone: StatusTone.success),
     null => null,
   };
 }

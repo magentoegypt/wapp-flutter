@@ -272,12 +272,17 @@ Contact contactFromJson(Map<String, dynamic> j) {
     language: (j['language'] ?? j['languageCode']) as String?,
     labels: strings(j['labels']),
     groups: refs(j['groups']),
-    // The backend packs the lifecycle stage into the same `status` string that
-    // carries `blocked`, so both are read from it. An unrecognised value maps
-    // to null and the pill is simply omitted.
-    lifecycleStage: LifecycleStage.fromApi(j['status'] ?? j['lifecycleStage']),
+    // `customerType`, not `status`. There is no `status` field on a contact —
+    // reading one meant the stage was null on every row in the workspace and
+    // the pill never rendered. An unrecognised value still maps to null.
+    lifecycleStage: LifecycleStage.fromApi(j['customerType']),
     createdAt: DateTime.tryParse('${j['createdAt'] ?? ''}')?.toLocal(),
-    isBlocked: '${j['status'] ?? ''}' == 'blocked',
+    // Kept tolerant: no list row has ever carried `blocked`, but the detail
+    // endpoint is a different serialiser and the flag matters when it is there.
+    isBlocked: j['blocked'] == true ||
+        j['isBlocked'] == true ||
+        '${j['status'] ?? ''}' == 'blocked',
+    isFavorite: j['favorite'] == true || j['isFavorite'] == true,
     channel: MessageChannelX.fromApi(j['channel']),
     instagramUsername: j['instagramUsername'] as String?,
   );

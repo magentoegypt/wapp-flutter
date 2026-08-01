@@ -1,25 +1,35 @@
 import '../../inbox/domain/channel.dart';
 
-/// Where a contact sits in the sales lifecycle.
+/// Where a contact sits in the lifecycle, as the backend actually models it.
 ///
-/// The frames segment the Contacts list by these three (278:2) and print the
-/// stage as a pill in every row's trailing slot, so it is display data as much
-/// as filter data.
+/// The frame (278:2) segments Contacts by **Customer / Lead / VIP** and prints
+/// one of those as a pill on every row. That taxonomy does not exist in this
+/// API. Every contact carries `customerType`, whose entire observed vocabulary
+/// across the workspace is `new` and `returning` — there is no `status` field
+/// at all, which is what the stage used to be read from.
+///
+/// So the pill was permanently absent: a column the frame fills on every row
+/// rendered empty on all of them, and no amount of data would have changed it.
+/// Matching the backend's own two values makes it real. Departing from the
+/// frame here is deliberate — inventing Lead and VIP client-side would put a
+/// label on a contact that nothing in the system supports.
 enum LifecycleStage {
-  customer,
-  lead,
-  vip;
+  /// `new` on the wire. Not spelled `new` here — it is a Dart reserved word.
+  newCustomer('new'),
+  returning('returning');
+
+  const LifecycleStage(this.wire);
+
+  final String wire;
 
   /// Null for an absent or unrecognised value.
   ///
-  /// The backend serialises the stage into the same `status` string that
-  /// carries `blocked`, and nothing guarantees the vocabulary — returning null
-  /// keeps an unknown slug out of the UI instead of printing it raw or
-  /// defaulting everyone to "customer".
+  /// Nothing guarantees the vocabulary, so an unknown slug maps to null rather
+  /// than being printed raw or defaulting everyone to one bucket.
   static LifecycleStage? fromApi(Object? raw) {
     final String value = '${raw ?? ''}'.trim().toLowerCase();
     for (final LifecycleStage stage in values) {
-      if (stage.name == value) return stage;
+      if (stage.wire == value) return stage;
     }
     return null;
   }
@@ -41,6 +51,7 @@ class Contact {
     this.lifecycleStage,
     this.createdAt,
     this.isBlocked = false,
+    this.isFavorite = false,
     this.channel = MessageChannel.whatsapp,
     this.instagramUsername,
   });
@@ -88,6 +99,12 @@ class Contact {
     return phone.isEmpty ? null : phone;
   }
   final bool isBlocked;
+
+  /// `favorite`. Real data the app used to discard entirely — every contact
+  /// carries it and it is the only per-contact flag the workspace actually
+  /// sets. Shown as a star beside the name; not editable, because no endpoint
+  /// in the checkout toggles it.
+  final bool isFavorite;
 }
 
 /// Dropdown data for the Add-contact form, fetched in one call so the form

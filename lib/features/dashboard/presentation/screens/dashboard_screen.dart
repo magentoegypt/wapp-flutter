@@ -222,30 +222,33 @@ class DashboardScreen extends ConsumerWidget {
                     // "My queue · See all", per the frame.
                     if (d.agentQueue.isNotEmpty) ...<Widget>[
                       SectionHeader(
-                        title: l10n.dashboardMyQueue,
+                        title: l10n.dashboardWorkload,
                         actionLabel: l10n.actionSeeAll,
-                        onAction: () => context.go(AppRoutes.chats),
+                        onAction: () => context.push(AppRoutes.agents),
                       ),
-                      // The frame puts an elapsed time on the right of each
-                      // queue row ("2m", "8m"). `agentQueue` carries no
-                      // timestamp — only name, lastMessage and unread — so the
-                      // last message and the unread count stand in for it.
-                      // Deliberate; do not re-open on the next frame diff.
-                      for (final QueueEntry q in d.agentQueue)
+                      // `agentQueue` is a per-agent open count, not a list of
+                      // this agent's conversations. It was read as the latter,
+                      // which showed agent names with a blank second line and
+                      // pushed `/chats/<agent-uid>` on tap — a conversation
+                      // route holding a uid no conversation has. There is no
+                      // per-agent screen keyed by uid either, so the rows do
+                      // not navigate at all and the header goes to Agents.
+                      //
+                      // The frame's elapsed-time column ("2m", "8m") has no
+                      // field behind it anywhere in this payload. The open
+                      // count is what the API knows.
+                      for (final AgentWorkload a in d.agentQueue)
                         AppListTile(
-                          title: q.name,
-                          subtitle: q.lastMessage,
-                          leading: InitialsAvatar(name: q.name),
+                          title: a.name,
+                          leading: InitialsAvatar(name: a.name),
                           showChevron: false,
-                          trailing: q.unreadCount > 0
-                              ? StatusPill(
-                                  label: '${q.unreadCount}',
-                                  tone: StatusTone.success,
-                                  showDot: false,
-                                )
-                              : null,
-                          onTap: () =>
-                              context.push(AppRoutes.chat(q.contactUid)),
+                          trailing: StatusPill(
+                            label: l10n.dashboardOpenCount(a.openConversations),
+                            tone: a.openConversations > 0
+                                ? StatusTone.info
+                                : StatusTone.neutral,
+                            showDot: false,
+                          ),
                         ),
                     ],
 

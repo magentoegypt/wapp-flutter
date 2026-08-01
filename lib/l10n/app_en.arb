@@ -166,6 +166,8 @@
   "cdDetails": "Details",
   "cdPhone": "Phone",
   "cdEmail": "Email",
+  "cdFavorite": "Favourite",
+  "cdFavoriteYes": "Yes",
   "cdLabels": "Labels",
   "cdGroups": "Groups",
   "cdBlocked": "Blocked",
@@ -241,9 +243,11 @@
   "loginEmailHint": "you@company.com",
   "loginPasswordHint": "Your password",
   "ctFilterAll": "All",
-  "ctStageCustomer": "Customer",
-  "ctStageLead": "Lead",
-  "ctStageVip": "VIP",
+  "ctStageNew": "New",
+  "@ctStageNew": {
+    "description": "The frame segments contacts by Customer/Lead/VIP. That taxonomy does not exist in this API — every contact carries customerType, whose whole vocabulary is new and returning, so the pill was empty on every row."
+  },
+  "ctStageReturning": "Returning",
   "agSearchHint": "Search agents",
   "agAvailable": "Available",
   "agHandling": "{count, plural, =1{Handling 1 chat} other{Handling {count} chats}}",
@@ -336,7 +340,14 @@
   "loginResetSent": "If that address has an account, a reset link is on its way.",
   "ciReceivedOn": "Received on",
   "dashboardWeek": "Conversations this week",
-  "dashboardMyQueue": "My queue",
+  "dashboardWorkload": "Agent workload",
+  "@dashboardWorkload": {
+    "description": "`agentQueue` is open conversations per agent, not the signed-in agent's own queue. Calling it My queue put other agents' names under this user's heading."
+  },
+  "dashboardOpenCount": "{count, plural, =0{None open} =1{1 open} other{{count} open}}",
+  "@dashboardOpenCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
   "dashboardWeekQuiet": "No conversations this week.",
   "resetTitle": "Reset password",
   "resetPrompt": "Enter the code from your email and choose a new password.",

@@ -312,8 +312,12 @@ class _Steps extends ConsumerWidget {
                 subtitle: steps[i].replyText ?? '',
                 subtitleMaxLines: 2,
                 showChevron: false,
-                leading: IconTile(
-                  icon: Icons.subdirectory_arrow_right,
+                // `format_indent_increase` rather than
+                // `subdirectory_arrow_right`: both read as "nested under the
+                // flow", but only this one carries `matchTextDirection`, so the
+                // other points the wrong way in Arabic.
+                leading: const IconTile(
+                  icon: Icons.format_indent_increase,
                   color: AppColor.inkMuted,
                 ),
               ),

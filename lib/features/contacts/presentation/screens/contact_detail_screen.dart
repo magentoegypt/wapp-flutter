@@ -123,6 +123,12 @@ class ContactDetailScreen extends ConsumerWidget {
             // like four. Absent values are omitted rather than shown blank.
             _InfoRow(label: l10n.cdPhone, value: c.phone),
             _InfoRow(label: l10n.cdEmail, value: c.email),
+            // Only when set. `favorite` is on every contact payload and was
+            // being discarded; shown here rather than in the list, where the
+            // trailing slot already carries the lifecycle pill. Read-only —
+            // no endpoint in the checkout toggles it.
+            if (c.isFavorite)
+              _InfoRow(label: l10n.cdFavorite, value: l10n.cdFavoriteYes),
             _InfoRow(label: l10n.ciCountry, value: c.countryCode),
             _InfoRow(label: l10n.cdCity, value: c.city),
             _InfoRow(label: l10n.cdLanguage, value: c.language),
