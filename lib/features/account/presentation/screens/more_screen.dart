@@ -44,7 +44,13 @@ class MoreScreen extends ConsumerWidget {
         children: <Widget>[
           _ProfileCard(
             name: auth.session?.user.name ?? '',
-            role: auth.session?.user.role ?? '',
+            // The same label Profile shows. This used to print `user.role`
+            // verbatim, so the card said "owner" about someone the profile
+            // one tap away called "Admin" — a raw wire slug leaking into the
+            // UI, and two names for one person.
+            role: auth.session == null
+                ? ''
+                : (auth.session!.user.isAdmin ? l10n.prAdmin : l10n.prAgent),
             onTap: () => context.go(AppRoutes.profile),
           ),
 

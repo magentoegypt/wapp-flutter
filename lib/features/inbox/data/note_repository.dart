@@ -41,11 +41,36 @@ class NoteRepositoryImpl implements NoteRepository {
   Future<void> remove(String noteUid) => _api.delete('/notes/$noteUid');
 }
 
+/// The note's author, however the payload spells them.
+///
+/// `author` is an **object**, not a string. `.toString()` on it printed the
+/// whole map into the author line — every note card read
+/// `{uid: d57867fa-65f8-4e6…` and the avatar took its initials from the brace,
+/// so the column showed `{C` and `{A`. A string is still accepted, because the
+/// create response and the list have been seen to differ.
+String _authorName(Object? raw) {
+  if (raw is Map) {
+    final Object? name = raw['name'] ?? raw['fullName'];
+    if (name != null && '$name'.trim().isNotEmpty) return '$name'.trim();
+    final String composed = <String>[
+      '${raw['firstName'] ?? ''}'.trim(),
+      '${raw['lastName'] ?? ''}'.trim(),
+    ].where((String s) => s.isNotEmpty).join(' ');
+    if (composed.isNotEmpty) return composed;
+    // An email is a worse label than a name but a far better one than a uid.
+    final Object? email = raw['email'];
+    return email == null ? '' : '$email'.trim();
+  }
+  return '${raw ?? ''}'.trim();
+}
+
 InternalNote noteFromJson(Map<String, dynamic> j) {
   return InternalNote(
     uid: (j['uid'] ?? j['_uid'] ?? '').toString(),
     body: (j['message'] ?? j['body'] ?? '').toString(),
-    authorName: (j['author'] ?? j['author_name'] ?? '').toString(),
+    authorName: _authorName(
+      j['author'] ?? j['author_name'] ?? j['user'] ?? j['createdBy'],
+    ),
     createdAt: DateTime.tryParse('${j['createdAt'] ?? j['created_at'] ?? ''}')
         ?.toLocal(),
     edited: (j['edited'] as bool?) ?? (j['edited'] as num?) == 1,

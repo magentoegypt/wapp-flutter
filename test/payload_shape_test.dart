@@ -1,6 +1,8 @@
 import 'package:clickalize/features/contacts/data/contact_repository.dart';
 import 'package:clickalize/features/contacts/domain/contact.dart';
 import 'package:clickalize/features/dashboard/data/dashboard_repository.dart';
+import 'package:clickalize/features/inbox/data/note_repository.dart';
+import 'package:clickalize/features/inbox/domain/internal_note.dart';
 import 'package:clickalize/features/dashboard/domain/dashboard_summary.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -142,6 +144,58 @@ void main() {
       expect(d.totalContacts, 30);
       // Null, not absent — must not become a stray non-zero.
       expect(d.avgFirstResponseSeconds, 0);
+    });
+  });
+
+  group('a note author is an object', () {
+    test('the name is used, not the map', () {
+      // `.toString()` on the author map printed the whole thing into the
+      // author line: every card read `{uid: d57867fa-65f8-4e6...` and the
+      // avatar took its initials from the opening brace.
+      final InternalNote n = noteFromJson(<String, dynamic>{
+        'uid': 'n1',
+        'message': 'Wholesale client.',
+        'author': <String, dynamic>{
+          'uid': 'd57867fa-65f8-4e6c-8466-20cd70383145',
+          'name': 'Clickalize Clickalize',
+          'email': 'Clickalize@gmail.com',
+        },
+      });
+      expect(n.authorName, 'Clickalize Clickalize');
+      expect(n.authorName, isNot(contains('{')));
+      expect(n.authorName, isNot(contains('uid')));
+    });
+
+    test('a first/last pair composes, and an email beats a uid', () {
+      expect(
+        noteFromJson(<String, dynamic>{
+          'uid': 'n2',
+          'author': <String, dynamic>{'firstName': 'Sara', 'lastName': 'Mahmoud'},
+        }).authorName,
+        'Sara Mahmoud',
+      );
+      expect(
+        noteFromJson(<String, dynamic>{
+          'uid': 'n3',
+          'author': <String, dynamic>{'uid': 'x', 'email': 'sara@example.com'},
+        }).authorName,
+        'sara@example.com',
+      );
+      // A uid alone is not a name — better blank than a hex string.
+      expect(
+        noteFromJson(<String, dynamic>{
+          'uid': 'n4',
+          'author': <String, dynamic>{'uid': 'x'},
+        }).authorName,
+        isEmpty,
+      );
+    });
+
+    test('a plain string author still works', () {
+      expect(
+        noteFromJson(<String, dynamic>{'uid': 'n5', 'author': 'Omar'}).authorName,
+        'Omar',
+      );
     });
   });
 }
