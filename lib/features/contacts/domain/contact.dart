@@ -1,3 +1,5 @@
+import '../../inbox/domain/channel.dart';
+
 /// Where a contact sits in the sales lifecycle.
 ///
 /// The frames segment the Contacts list by these three (278:2) and print the
@@ -39,6 +41,8 @@ class Contact {
     this.lifecycleStage,
     this.createdAt,
     this.isBlocked = false,
+    this.channel = MessageChannel.whatsapp,
+    this.instagramUsername,
   });
 
   final String uid;
@@ -56,6 +60,26 @@ class Contact {
   final LifecycleStage? lifecycleStage;
 
   final DateTime? createdAt;
+
+  /// WhatsApp or Instagram. Defaulted server-side, so it is never null on the
+  /// wire — the default here only covers a payload from before it was sent.
+  final MessageChannel channel;
+
+  /// Populated on Instagram contacts only.
+  ///
+  /// Worth carrying because [phone] on an Instagram contact is not a phone
+  /// number: `waId` holds the IGSID, a 16-digit account id that means nothing
+  /// to an agent and reads as a malformed number next to real ones.
+  final String? instagramUsername;
+
+  /// What to show under the name. The IGSID is never it.
+  String? get subtitleLine {
+    if (channel.isInstagram) {
+      final String? u = instagramUsername?.trim();
+      return (u == null || u.isEmpty) ? null : (u.startsWith('@') ? u : '@$u');
+    }
+    return phone.isEmpty ? null : phone;
+  }
   final bool isBlocked;
 }
 

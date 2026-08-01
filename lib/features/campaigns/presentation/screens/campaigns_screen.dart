@@ -135,6 +135,8 @@ class CampaignsScreen extends ConsumerWidget {
                       // the useful fact is how it is going, not who it was
                       // aimed at.
                       subtitle: _subtitle(l10n, locale, c),
+                      // Carries a full date and time next to a status pill.
+                      subtitleMaxLines: 2,
                       // No leading tile and no chevron — the frame's row is the
                       // title, the delivery line and the status pill.
                       showChevron: false,
@@ -167,7 +169,22 @@ String _subtitle(AppLocalizations l10n, String locale, Campaign c) {
   return '${l10n.campContacts(c.totalContacts)} · ${l10n.campNotScheduled}';
 }
 
-/// Lifetime delivery totals across all campaigns.
+/// What the list can actually count.
+///
+/// This row used to sum `sent`, `delivered` and `read` across the loaded
+/// campaigns and called itself "lifetime delivery totals". It read **0 · 0 · 0
+/// forever**: `GET /campaigns` does not carry a `stats` block, only
+/// `GET /campaigns/{uid}` does. Confirmed on device — the same campaign shows
+/// 2 sent and 100% delivered on its detail screen and contributed 0 here.
+///
+/// Nothing threw and nothing was empty, so it looked like a workspace that had
+/// never sent anything rather than a summary reading fields that were not
+/// there. Three zeroes above a list of completed campaigns is worse than no
+/// summary at all.
+///
+/// So it now counts what a list row genuinely carries: how many campaigns, and
+/// how many contacts they targeted. Delivery figures live on the detail screen,
+/// where the data exists.
 class _DeliverySummary extends StatelessWidget {
   const _DeliverySummary({required this.items, required this.l10n});
 
@@ -176,27 +193,21 @@ class _DeliverySummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    int sum(int Function(Campaign) f) =>
-        items.fold<int>(0, (int s, Campaign c) => s + f(c));
+    final int contacts =
+        items.fold<int>(0, (int s, Campaign c) => s + c.totalContacts);
 
     return StatCardRow(
       cards: <StatCard>[
         StatCard(
-          value: '${sum((Campaign c) => c.sent)}',
-          label: l10n.cpSent,
-          icon: Icons.send_outlined,
+          value: '${items.length}',
+          label: l10n.campCampaigns,
+          icon: Icons.campaign_outlined,
           iconColor: AppColor.warning,
         ),
         StatCard(
-          value: '${sum((Campaign c) => c.delivered)}',
-          label: l10n.cpDelivered,
-          icon: Icons.done_all,
-          iconColor: AppColor.success,
-        ),
-        StatCard(
-          value: '${sum((Campaign c) => c.read)}',
-          label: l10n.cpRead,
-          icon: Icons.visibility_outlined,
+          value: '$contacts',
+          label: l10n.campTargeted,
+          icon: Icons.groups_outlined,
           iconColor: AppColor.info,
         ),
       ],

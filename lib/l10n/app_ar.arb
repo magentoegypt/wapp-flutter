@@ -591,5 +591,8 @@
   "mtListRows": "{count, plural, =1{خيار واحد} =2{خياران} few{{count} خيارات} other{{count} خيارًا}}",
   "mtCatalogGeneric": "عرض الكتالوج",
   "mtBot": "بوت",
-  "mtCampaign": "حملة"
+  "mtCampaign": "حملة",
+
+  "campCampaigns": "الحملات",
+  "campTargeted": "جهات الاتصال المستهدفة"
 }

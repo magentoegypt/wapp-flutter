@@ -695,5 +695,8 @@
   },
   "mtCatalogGeneric": "View catalog",
   "mtBot": "Bot",
-  "mtCampaign": "Campaign"
+  "mtCampaign": "Campaign",
+
+  "campCampaigns": "Campaigns",
+  "campTargeted": "Contacts targeted"
 }

@@ -152,6 +152,9 @@ class _CallCard extends ConsumerWidget {
           AppListTile(
             title: record.isIncoming ? l10n.chIncoming : l10n.chOutgoing,
             subtitle: _timeLabel(),
+            // The server renders this one ('Friday 22nd May 2026 …'), so it is
+            // longer than anything formatted here and was losing its time.
+            subtitleMaxLines: 2,
             // Not mirrored in RTL: these are outcome glyphs the way every phone
             // dialer draws them, not a navigation affordance, so flipping them
             // in Arabic would swap the meaning of received and made.

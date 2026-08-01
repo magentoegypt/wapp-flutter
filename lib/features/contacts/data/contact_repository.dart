@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
+import '../../inbox/domain/channel.dart';
 import '../domain/contact.dart';
 
 abstract interface class ContactRepository {
@@ -212,6 +213,8 @@ Contact contactFromJson(Map<String, dynamic> j) {
     lifecycleStage: LifecycleStage.fromApi(j['status'] ?? j['lifecycleStage']),
     createdAt: DateTime.tryParse('${j['createdAt'] ?? ''}')?.toLocal(),
     isBlocked: '${j['status'] ?? ''}' == 'blocked',
+    channel: MessageChannelX.fromApi(j['channel']),
+    instagramUsername: j['instagramUsername'] as String?,
   );
 }
 

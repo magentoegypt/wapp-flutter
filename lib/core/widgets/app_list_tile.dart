@@ -13,6 +13,7 @@ class AppListTile extends StatelessWidget {
   const AppListTile({
     required this.title,
     this.subtitle,
+    this.subtitleMaxLines = 1,
     this.leading,
     this.trailing,
     this.onTap,
@@ -24,6 +25,15 @@ class AppListTile extends StatelessWidget {
 
   final String title;
   final String? subtitle;
+
+  /// How many lines the subtitle may use before ellipsizing.
+  ///
+  /// One by default, which is right for a phone number or a preview. Rows whose
+  /// subtitle is a full timestamp need two: "May 30, 2026 4:42 PM" does not fit
+  /// beside a trailing pill and was clipping to "May 30, 2026 4:42 …", losing
+  /// the meridiem — an afternoon campaign became unreadable as morning or
+  /// afternoon, which is exactly the part that mattered.
+  final int subtitleMaxLines;
   final Widget? leading;
   final Widget? trailing;
   final VoidCallback? onTap;
@@ -69,7 +79,7 @@ class AppListTile extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       subtitle!,
-                      maxLines: 1,
+                      maxLines: subtitleMaxLines,
                       overflow: TextOverflow.ellipsis,
                       style: text.bodyMedium,
                     ),

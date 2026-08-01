@@ -7,7 +7,7 @@ import '../../../../core/widgets/agent_avatar.dart';
 import '../../../../core/widgets/app_header.dart';
 import '../../../../core/widgets/app_list_tile.dart';
 import '../../../../core/widgets/async_value_view.dart';
-import '../../../../core/widgets/initials_avatar.dart';
+import '../../../../core/widgets/channel_badge.dart';
 import '../../../../core/widgets/status_pill.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../data/contact_repository.dart';
@@ -93,8 +93,18 @@ class ContactsScreen extends ConsumerWidget {
                       final badge = stageBadge(l10n, c);
                       return AppListTile(
                         title: display,
-                        subtitle: c.phone,
-                        leading: InitialsAvatar(name: display),
+                        // Not c.phone. On an Instagram contact `waId` holds the
+                        // IGSID — a 16-digit account id that reads as a broken
+                        // phone number beside real ones. subtitleLine gives the
+                        // @username there and the number everywhere else.
+                        subtitle: c.subtitleLine,
+                        // Same badge as the inbox rows, for the same reason:
+                        // the reply rules differ by channel and an agent needs
+                        // to know which before opening the thread.
+                        leading: AvatarWithChannel(
+                          name: display,
+                          channel: c.channel,
+                        ),
                         showChevron: badge == null,
                         trailing: badge == null
                             ? null
