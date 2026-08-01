@@ -9,6 +9,7 @@ import '../../../../core/widgets/app_banner.dart';
 import '../../../../core/widgets/app_header.dart';
 import '../../../../core/widgets/app_list_tile.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../calls/data/call_repository.dart';
 import '../../../calls/domain/call.dart';
 import '../../../inbox/data/conversation_repository.dart';
 import '../../data/conversation_action_repository.dart';
@@ -76,6 +77,21 @@ class _CallPermissionScreenState extends ConsumerState<CallPermissionScreen> {
     final bool consentOnFile =
         calls.any((CallRecord c) => c.callbackConsentGiven);
 
+    // The frame's fourth state, and the one that applies to this workspace:
+    // Meta blocks business-initiated calls from some numbers, so permission
+    // could be granted and still lead to no call. Asking anyway spends a real
+    // customer message on something that cannot happen, so the button is
+    // disabled — which is what the frame specifies too.
+    //
+    // Gated on `outboundSupported`, not `canPlaceCall`. The latter folds in
+    // `withinBusinessHours`, which flips during the day; refusing to ask for
+    // permission at 7pm because nobody is on shift would be wrong, since the
+    // permission is for later.
+    final CallCapability? capability =
+        ref.watch(callCapabilityProvider).valueOrNull;
+    final bool outboundBlocked =
+        capability != null && !capability.outboundSupported;
+
     return Scaffold(
       appBar: AppHeader.back(title: l10n.cpermTitle),
       body: SafeArea(
@@ -84,6 +100,19 @@ class _CallPermissionScreenState extends ConsumerState<CallPermissionScreen> {
             // Shown, not enforced: permission lapses with the service window,
             // so a customer who agreed last month may still need asking. The
             // button stays live.
+            if (outboundBlocked)
+              AppBanner(
+                // The server's own wording for the restriction when it gives
+                // one ("USA / Canada" on this workspace), because only it knows
+                // which rule applied.
+                message: capability.outboundRestrictedReason == null
+                    ? l10n.cpermOutboundBlocked
+                    : l10n.cpermOutboundBlockedWhy(
+                        capability.outboundRestrictedReason!,
+                      ),
+                tone: BannerTone.warning,
+                icon: Icons.phone_disabled_outlined,
+              ),
             if (consentOnFile)
               AppBanner(
                 message: l10n.cpermGranted,
@@ -118,7 +147,7 @@ class _CallPermissionScreenState extends ConsumerState<CallPermissionScreen> {
             Padding(
               padding: const EdgeInsets.all(AppDimens.gutter),
               child: FilledButton(
-                onPressed: _submitting ? null : _submit,
+                onPressed: _submitting || outboundBlocked ? null : _submit,
                 child: _submitting
                     ? const SizedBox(
                         width: 18,

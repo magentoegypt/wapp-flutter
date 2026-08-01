@@ -513,6 +513,12 @@
   "chStCompleted": "Completed",
   "cpermTitle": "Request call permission",
   "cpermPrompt": "Ask this customer for permission to call them. They receive a message they can accept or decline.",
+  "cpermOutboundBlocked": "Outbound calling is unavailable on this number, so permission would not let you call.",
+  "cpermOutboundBlockedWhy": "Outbound calling is unavailable on this number ({reason}), so permission would not let you call. Inbound calls still work.",
+  "@cpermOutboundBlockedWhy": {
+    "description": "Meta blocks business-initiated calls from some numbers. Asking for permission anyway spends a real customer message on something that cannot happen.",
+    "placeholders": { "reason": { "type": "String" } }
+  },
   "cpermSubmit": "Send request",
   "cpermDone": "Permission request sent.",
   "cpermGranted": "This customer has already given permission.",

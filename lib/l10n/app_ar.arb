@@ -438,6 +438,11 @@
   "chStCompleted": "مكتملة",
   "cpermTitle": "طلب إذن الاتصال",
   "cpermPrompt": "اطلب من هذا العميل الإذن بالاتصال به. تصله رسالة يمكنه قبولها أو رفضها.",
+  "cpermOutboundBlocked": "المكالمات الصادرة غير متاحة من هذا الرقم، لذا لن يفيد الإذن في الاتصال.",
+  "cpermOutboundBlockedWhy": "المكالمات الصادرة غير متاحة من هذا الرقم ({reason})، لذا لن يفيد الإذن في الاتصال. المكالمات الواردة تعمل كالمعتاد.",
+  "@cpermOutboundBlockedWhy": {
+    "placeholders": { "reason": { "type": "String" } }
+  },
   "cpermSubmit": "إرسال الطلب",
   "cpermDone": "تم إرسال طلب الإذن.",
   "cpermGranted": "سبق أن منح هذا العميل الإذن.",
