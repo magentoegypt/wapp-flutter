@@ -78,6 +78,22 @@ class MoreScreen extends ConsumerWidget {
             ),
             onTap: () => context.push(AppRoutes.agents),
           ),
+          AppListTile(
+            title: l10n.tmTitle,
+            leading: const IconTile(
+              icon: Icons.workspaces_outline,
+              color: AppColor.success,
+            ),
+            onTap: () => context.push(AppRoutes.teams),
+          ),
+          AppListTile(
+            title: l10n.brTitle,
+            leading: const IconTile(
+              icon: Icons.smart_toy_outlined,
+              color: AppColor.info,
+            ),
+            onTap: () => context.push(AppRoutes.botReplies),
+          ),
           // The frame has this row. It was omitted because no endpoint backed
           // it; the 31 Jul API pass added template CRUD, so it exists now.
           AppListTile(

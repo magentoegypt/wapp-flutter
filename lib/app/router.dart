@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../features/account/presentation/screens/more_screen.dart';
 import '../features/agents/presentation/screens/agent_detail_screen.dart';
 import '../features/agents/presentation/screens/agents_screen.dart';
+import '../features/automation/presentation/screens/bot_replies_screen.dart';
+import '../features/automation/presentation/screens/bot_reply_editor_screen.dart';
 import '../features/campaigns/presentation/screens/campaign_detail_screen.dart';
 import '../features/campaigns/presentation/screens/campaigns_screen.dart';
 import '../features/campaigns/presentation/screens/create_campaign_screen.dart';
@@ -45,6 +47,8 @@ import '../features/inbox/presentation/screens/internal_notes_screen.dart';
 import '../features/settings/presentation/screens/instagram_settings_screen.dart';
 import '../features/templates/presentation/screens/template_editor_screen.dart';
 import '../features/templates/presentation/screens/templates_screen.dart';
+import '../features/teams/presentation/screens/team_editor_screen.dart';
+import '../features/teams/presentation/screens/teams_screen.dart';
 import 'routes.dart';
 import 'shell/app_shell.dart';
 
@@ -411,6 +415,40 @@ final Provider<GoRouter> routerProvider = Provider<GoRouter>((Ref ref) {
         parentNavigatorKey: _rootKey,
         builder: (_, GoRouterState s) =>
             TemplateEditorScreen(uid: s.pathParameters['uid']!),
+      ),
+
+      GoRoute(
+        path: AppRoutes.teams,
+        parentNavigatorKey: _rootKey,
+        builder: (_, __) => const TeamsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.teamNew,
+        parentNavigatorKey: _rootKey,
+        builder: (_, __) => const TeamEditorScreen(),
+      ),
+      GoRoute(
+        path: '/teams/:uid',
+        parentNavigatorKey: _rootKey,
+        builder: (_, GoRouterState s) =>
+            TeamEditorScreen(uid: s.pathParameters['uid']!),
+      ),
+
+      GoRoute(
+        path: AppRoutes.botReplies,
+        parentNavigatorKey: _rootKey,
+        builder: (_, __) => const BotRepliesScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.botReplyNew,
+        parentNavigatorKey: _rootKey,
+        builder: (_, __) => const BotReplyEditorScreen(),
+      ),
+      GoRoute(
+        path: '/bot-replies/:uid',
+        parentNavigatorKey: _rootKey,
+        builder: (_, GoRouterState s) =>
+            BotReplyEditorScreen(uid: s.pathParameters['uid']!),
       ),
 
       // Workspace settings, so it sits beside /agents rather than under

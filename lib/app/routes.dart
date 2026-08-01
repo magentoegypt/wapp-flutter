@@ -42,6 +42,12 @@ abstract final class AppRoutes {
   static const String templates = '/templates';
   static const String templateNew = '/templates/new';
 
+  /// Teams and keyword auto-replies. Both arrived with the 31 Jul API pass.
+  static const String teams = '/teams';
+  static const String teamNew = '/teams/new';
+  static const String botReplies = '/bot-replies';
+  static const String botReplyNew = '/bot-replies/new';
+
   /// Component gallery — every shared widget in light/dark × LTR/RTL.
   /// Debug builds only; not reachable from the UI.
   static const String devGallery = '/dev/gallery';
@@ -49,6 +55,9 @@ abstract final class AppRoutes {
   static String chat(String contactUid) => '/chats/$contactUid';
 
   static String template(String uid) => '/templates/$uid';
+
+  static String team(String uid) => '/teams/$uid';
+  static String botReply(String uid) => '/bot-replies/$uid';
   static String chatInfo(String contactUid) => '/chats/$contactUid/info';
   static String chatNotes(String contactUid) => '/chats/$contactUid/notes';
 

@@ -776,5 +776,54 @@
   "tplStatusRejected": "Rejected",
   "tplStatusDisabled": "Disabled",
   "tplIncomplete": "Fill in the name, language and body.",
-  "tplMediaHeaderNote": "Image, video and document headers are managed in the web console."
+  "tplMediaHeaderNote": "Image, video and document headers are managed in the web console.",
+
+  "tmTitle": "Teams",
+  "tmNew": "New team",
+  "tmEdit": "Edit team",
+  "tmName": "Team name",
+  "tmEmpty": "No teams yet",
+  "tmEmptyHint": "Teams are who a conversation can be transferred or assigned to.",
+  "tmMembers": "{count, plural, =0{No members} =1{1 member} other{{count} members}}",
+  "@tmMembers": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "tmMembersNote": "Membership is managed in the web console.",
+  "tmSaved": "Team saved.",
+  "tmDelete": "Delete team",
+  "tmDeleteConfirm": "Delete \"{name}\"? Conversations assigned to it become unassigned.",
+  "@tmDeleteConfirm": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "tmDeleted": "Team deleted.",
+  "tmNameRequired": "Give the team a name of at least 2 characters.",
+  "brTitle": "Bot replies",
+  "brNew": "New bot reply",
+  "brEdit": "Edit bot reply",
+  "brEmpty": "No bot replies yet",
+  "brEmptyHint": "A bot reply answers automatically when a message matches its trigger.",
+  "brName": "Name",
+  "brTrigger": "Fires when",
+  "brKeyword": "Keyword",
+  "brReplyText": "Reply",
+  "brTriggerWelcome": "First message (welcome)",
+  "brTriggerAdsWelcome": "First message from an ad",
+  "brTriggerIs": "Message is exactly",
+  "brTriggerStartsWith": "Message starts with",
+  "brTriggerEndsWith": "Message ends with",
+  "brTriggerContainsWord": "Message contains the word",
+  "brTriggerContains": "Message contains",
+  "brSaved": "Bot reply saved.",
+  "brDelete": "Delete bot reply",
+  "brDeleteConfirm": "Delete \"{name}\"?",
+  "@brDeleteConfirm": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "brDeleted": "Bot reply deleted.",
+  "brDuplicate": "Duplicate",
+  "brDuplicated": "Duplicated.",
+  "brIncomplete": "Fill in the name, keyword and reply.",
+  "brReadOnly": "This reply sends buttons, a list or media. Edit it in the web console — saving here would flatten it to plain text.",
+  "brInFlow": "Part of a flow",
+  "brNameTaken": "A bot reply with that name already exists."
 }
