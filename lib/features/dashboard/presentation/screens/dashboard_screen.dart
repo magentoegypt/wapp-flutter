@@ -73,11 +73,13 @@ class DashboardScreen extends ConsumerWidget {
                           StatCardRow(
                             cards: <StatCard>[
                               StatCard(
+                                dense: true,
                                 value: '${d.openConversations}',
                                 label: l10n.dashboardOpen,
                                 icon: Icons.forum_outlined,
                               ),
                               StatCard(
+                                dense: true,
                                 value: '${d.unassigned}',
                                 label: l10n.dashboardUnassigned,
                                 icon: Icons.person_off_outlined,
@@ -90,12 +92,14 @@ class DashboardScreen extends ConsumerWidget {
                           StatCardRow(
                             cards: <StatCard>[
                               StatCard(
+                                dense: true,
                                 value: '${d.assigned}',
                                 label: l10n.dashboardAssigned,
                                 icon: Icons.assignment_ind_outlined,
                                 iconColor: AppColor.success,
                               ),
                               StatCard(
+                                dense: true,
                                 value: '${d.queued}',
                                 label: l10n.dashboardQueued,
                                 icon: Icons.schedule_send_outlined,
@@ -117,12 +121,14 @@ class DashboardScreen extends ConsumerWidget {
                           StatCardRow(
                             cards: <StatCard>[
                               StatCard(
+                                dense: true,
                                 value: '${d.inboundToday}',
                                 label: l10n.dashboardInbound,
                                 icon: Icons.call_received,
                                 iconColor: AppColor.info,
                               ),
                               StatCard(
+                                dense: true,
                                 value: '${d.outboundToday}',
                                 label: l10n.dashboardOutbound,
                                 icon: Icons.call_made,
@@ -134,11 +140,13 @@ class DashboardScreen extends ConsumerWidget {
                           StatCardRow(
                             cards: <StatCard>[
                               StatCard(
+                                dense: true,
                                 value: '${d.newContactsToday}',
                                 label: l10n.dashboardNewContacts,
                                 icon: Icons.person_add_alt,
                               ),
                               StatCard(
+                                dense: true,
                                 value: '${d.totalContacts}',
                                 label: l10n.dashboardTotalContacts,
                                 icon: Icons.people_outline,
@@ -161,6 +169,7 @@ class DashboardScreen extends ConsumerWidget {
                         child: StatCardRow(
                           cards: <StatCard>[
                             StatCard(
+                              dense: true,
                               value: DurationFormat.coarse(
                                 d.avgFirstResponseSeconds,
                               ),
