@@ -712,5 +712,24 @@
   "@chatTakeOverBody": {
     "placeholders": { "name": { "type": "String" } }
   },
-  "chatTakenOver": "You have the reply lock."
+  "chatTakenOver": "You have the reply lock.",
+
+  "cdDelete": "Delete contact",
+  "cdDeleteConfirm": "Delete {name}? Their conversation history stays, but the contact is removed from the workspace.",
+  "@cdDeleteConfirm": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "cdDeleted": "Contact deleted.",
+  "cdRemoveFromGroup": "Remove from {group}?",
+  "@cdRemoveFromGroup": {
+    "placeholders": { "group": { "type": "String" } }
+  },
+  "cdRemovedFromGroup": "Removed from the group.",
+  "ctImport": "Import contacts",
+  "ctImportHint": "Excel workbook (.xlsx) only.",
+  "ctImportWrongType": "Choose an .xlsx workbook.",
+  "ctImported": "Import started.",
+  "ctExport": "Export contacts",
+  "ctExporting": "Preparing the workbook…",
+  "ctExportEmpty": "The server returned an empty file."
 }

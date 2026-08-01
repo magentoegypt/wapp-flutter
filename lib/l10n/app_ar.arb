@@ -602,5 +602,18 @@
   "chatTakeOver": "تولّي المحادثة",
   "chatTakeOverTitle": "تولّي هذه المحادثة؟",
   "chatTakeOverBody": "{name} يرد الآن. التولّي يحرر حجزه ويمنحك الدقائق الخمس التالية.",
-  "chatTakenOver": "أصبح حجز الرد لك."
+  "chatTakenOver": "أصبح حجز الرد لك.",
+
+  "cdDelete": "حذف جهة الاتصال",
+  "cdDeleteConfirm": "حذف {name}؟ سجل المحادثة يبقى، لكن تُزال جهة الاتصال من مساحة العمل.",
+  "cdDeleted": "تم حذف جهة الاتصال.",
+  "cdRemoveFromGroup": "إزالة من {group}؟",
+  "cdRemovedFromGroup": "تمت الإزالة من المجموعة.",
+  "ctImport": "استيراد جهات الاتصال",
+  "ctImportHint": "ملف إكسل (‎.xlsx‎) فقط.",
+  "ctImportWrongType": "اختر ملف ‎.xlsx‎.",
+  "ctImported": "بدأ الاستيراد.",
+  "ctExport": "تصدير جهات الاتصال",
+  "ctExporting": "جارٍ تجهيز الملف…",
+  "ctExportEmpty": "أعاد الخادم ملفًا فارغًا."
 }

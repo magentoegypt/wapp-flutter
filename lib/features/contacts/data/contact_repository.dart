@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
@@ -34,6 +35,28 @@ abstract interface class ContactRepository {
     bool? enableAiBot,
     Map<String, String>? customFields,
   });
+
+  /// Removes the contact from the workspace.
+  ///
+  /// The API separately refuses the campaign test contact, so a failure here is
+  /// not always a permission problem — surface the server's own wording.
+  Future<void> delete(String uid);
+
+  /// Takes the contact out of one group. Needs the group's **uid**, which is
+  /// why [Contact.groups] carries [NamedRef] rather than plain names.
+  Future<void> removeFromGroup(String uid, String groupUid);
+
+  /// Uploads an xlsx workbook of contacts.
+  ///
+  /// Deliberately not routed through `/media/upload`: that endpoint keys its
+  /// restrictions on `whatsapp_<type>` and would accept every Office format
+  /// Meta allows. This one validates `mimes:xlsx` under the console's own
+  /// import key.
+  Future<String> import(String filePath, String fileName);
+
+  /// Downloads the contact workbook. Returns the bytes; the caller decides
+  /// where they land.
+  Future<List<int>> export({String? type});
 }
 
 class ContactRepositoryImpl implements ContactRepository {
@@ -51,6 +74,36 @@ class ContactRepositoryImpl implements ContactRepository {
     );
     return _rows(body).map(contactFromJson).toList();
   }
+
+  @override
+  Future<void> delete(String uid) => _api.delete('/contacts/$uid');
+
+  @override
+  Future<void> removeFromGroup(String uid, String groupUid) =>
+      _api.post('/contacts/$uid/groups/$groupUid/remove');
+
+  @override
+  Future<String> import(String filePath, String fileName) async {
+    final dynamic body = await _api.post(
+      '/contacts/import',
+      body: FormData.fromMap(<String, dynamic>{
+        'file': await MultipartFile.fromFile(filePath, filename: fileName),
+      }),
+      // A workbook of several thousand rows is parsed synchronously server
+      // side; the client's 20s JSON default aborts that partway and reports a
+      // timeout for an import that was still running.
+      timeout: const Duration(minutes: 3),
+    );
+    return body is Map<String, dynamic>
+        ? '${body['message'] ?? ''}'
+        : '';
+  }
+
+  @override
+  Future<List<int>> export({String? type}) => _api.bytes(
+        '/contacts/export',
+        query: <String, dynamic>{if (type != null) 'type': type},
+      );
 
   @override
   Future<Contact> byUid(String uid) async {

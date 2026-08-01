@@ -35,7 +35,15 @@ class ContactDetailScreen extends ConsumerWidget {
       // A static title, per the frame. Binding it to the contact left the
       // header blank while loading and on error — the name is already the hero
       // directly below, so repeating it bought nothing.
-      appBar: AppHeader.back(title: l10n.cdTitle),
+      appBar: AppHeader.back(
+        title: l10n.cdTitle,
+        actions: <Widget>[
+          // Delete lives behind an overflow rather than beside Message and
+          // Call: those three are the frame's primary actions and one of them
+          // removing the contact would sit badly next to "send a message".
+          _ContactOverflow(uid: uid, contact: contact.valueOrNull),
+        ],
+      ),
       body: AsyncValueView<Contact>(
         value: contact,
         onRetry: () => ref.invalidate(contactDetailProvider(uid)),
@@ -168,11 +176,7 @@ class ContactDetailScreen extends ConsumerWidget {
                   runSpacing: 8,
                   children: <Widget>[
                     for (final NamedRef g in c.groups)
-                      StatusPill(
-                        label: g.name,
-                        tone: StatusTone.neutral,
-                        showDot: false,
-                      ),
+                      _GroupChip(contactUid: uid, group: g),
                   ],
                 ),
               ),
@@ -321,5 +325,140 @@ class _InfoRow extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Delete, behind the header's overflow.
+class _ContactOverflow extends ConsumerWidget {
+  const _ContactOverflow({required this.uid, required this.contact});
+
+  final String uid;
+  final Contact? contact;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    // Nothing to act on until the contact has loaded, and the name is needed
+    // for the confirmation.
+    if (contact == null) return const SizedBox.shrink();
+
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.more_vert, color: Colors.white),
+      onSelected: (_) => _confirmDelete(context, ref, l10n),
+      itemBuilder: (BuildContext _) => <PopupMenuEntry<String>>[
+        PopupMenuItem<String>(
+          value: 'delete',
+          child: Text(
+            l10n.cdDelete,
+            style: const TextStyle(color: AppColor.danger),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _confirmDelete(
+    BuildContext context,
+    WidgetRef ref,
+    AppLocalizations l10n,
+  ) async {
+    final bool ok = await showDialog<bool>(
+          context: context,
+          builder: (BuildContext c) => AlertDialog(
+            content: Text(l10n.cdDeleteConfirm(contact!.name)),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.of(c).pop(false),
+                child: Text(MaterialLocalizations.of(c).cancelButtonLabel),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(c).pop(true),
+                style: TextButton.styleFrom(foregroundColor: AppColor.danger),
+                child: Text(l10n.actionDelete),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+    if (!ok || !context.mounted) return;
+
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final GoRouter router = GoRouter.of(context);
+    try {
+      await ref.read(contactRepositoryProvider).delete(uid);
+      ref.invalidate(contactListProvider);
+      messenger.showSnackBar(SnackBar(content: Text(l10n.cdDeleted)));
+      router.pop();
+    } catch (e) {
+      // The API refuses the campaign test contact specifically, so its wording
+      // is more useful here than a generic failure.
+      messenger.showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+}
+
+/// A group chip that can take the contact out of that group.
+class _GroupChip extends ConsumerWidget {
+  const _GroupChip({required this.contactUid, required this.group});
+
+  final String contactUid;
+  final NamedRef group;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+
+    // Without a uid there is nothing to call, so the chip stays inert rather
+    // than offering a control that would 404.
+    if (group.id.isEmpty) {
+      return StatusPill(
+        label: group.name,
+        tone: StatusTone.neutral,
+        showDot: false,
+      );
+    }
+
+    return InputChip(
+      label: Text(group.name),
+      onDeleted: () => _confirm(context, ref, l10n),
+      deleteIcon: const Icon(Icons.close, size: 16),
+      visualDensity: VisualDensity.compact,
+    );
+  }
+
+  Future<void> _confirm(
+    BuildContext context,
+    WidgetRef ref,
+    AppLocalizations l10n,
+  ) async {
+    final bool ok = await showDialog<bool>(
+          context: context,
+          builder: (BuildContext c) => AlertDialog(
+            content: Text(l10n.cdRemoveFromGroup(group.name)),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.of(c).pop(false),
+                child: Text(MaterialLocalizations.of(c).cancelButtonLabel),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(c).pop(true),
+                child: Text(l10n.actionDelete),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+    if (!ok || !context.mounted) return;
+
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref
+          .read(contactRepositoryProvider)
+          .removeFromGroup(contactUid, group.id);
+      ref.invalidate(contactDetailProvider(contactUid));
+      messenger.showSnackBar(SnackBar(content: Text(l10n.cdRemovedFromGroup)));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('$e')));
+    }
   }
 }

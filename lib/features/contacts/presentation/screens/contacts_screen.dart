@@ -1,3 +1,7 @@
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:file_picker/file_picker.dart';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -48,7 +52,13 @@ class ContactsScreen extends ConsumerWidget {
         searchHint: l10n.contactsSearchHint,
         onSearchChanged: (String q) =>
             ref.read(contactSearchProvider.notifier).state = q,
-        trailing: const AgentAvatar(),
+        // Import and export sit beside the avatar. Neither is in the frame —
+        // the endpoints arrived after it was drawn — and an overflow keeps two
+        // rarely-used bulk actions out of the way of the list.
+        trailing: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[_ContactsOverflow(), AgentAvatar()],
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         // Distinct hero tag. Inbox and Contacts are both kept alive by
@@ -128,5 +138,89 @@ class ContactsScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+}
+
+/// Bulk import and export, behind the header's overflow.
+class _ContactsOverflow extends ConsumerWidget {
+  const _ContactsOverflow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.more_vert, color: Colors.white),
+      onSelected: (String v) => v == 'import'
+          ? _import(context, ref, l10n)
+          : _export(context, ref, l10n),
+      itemBuilder: (BuildContext _) => <PopupMenuEntry<String>>[
+        PopupMenuItem<String>(value: 'import', child: Text(l10n.ctImport)),
+        PopupMenuItem<String>(value: 'export', child: Text(l10n.ctExport)),
+      ],
+    );
+  }
+
+  Future<void> _import(
+    BuildContext context,
+    WidgetRef ref,
+    AppLocalizations l10n,
+  ) async {
+    // Restricted at the picker rather than only at the server: the API accepts
+    // xlsx alone, and letting someone choose a CSV just to be refused a minute
+    // later is a worse way to learn that.
+    final FilePickerResult? picked = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: <String>['xlsx'],
+      withData: false,
+    );
+    final PlatformFile? file = picked?.files.singleOrNull;
+    if (file == null || file.path == null || !context.mounted) return;
+
+    if (!file.name.toLowerCase().endsWith('.xlsx')) {
+      // Some pickers ignore the extension filter, so it is checked again.
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10n.ctImportWrongType)));
+      return;
+    }
+
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    try {
+      final String message =
+          await ref.read(contactRepositoryProvider).import(file.path!, file.name);
+      ref.invalidate(contactListProvider);
+      messenger.showSnackBar(
+        SnackBar(content: Text(message.isEmpty ? l10n.ctImported : message)),
+      );
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
+  Future<void> _export(
+    BuildContext context,
+    WidgetRef ref,
+    AppLocalizations l10n,
+  ) async {
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(SnackBar(content: Text(l10n.ctExporting)));
+
+    try {
+      final List<int> bytes = await ref.read(contactRepositoryProvider).export();
+      if (bytes.isEmpty) {
+        messenger.showSnackBar(SnackBar(content: Text(l10n.ctExportEmpty)));
+        return;
+      }
+
+      // App-private storage, then hand it straight to the share sheet. Saving
+      // without sharing would put a workbook somewhere the user cannot reach,
+      // which is worse than not offering the button.
+      final Directory dir = await getApplicationDocumentsDirectory();
+      final File out = File('${dir.path}/contacts.xlsx');
+      await out.writeAsBytes(bytes, flush: true);
+      await Share.shareXFiles(<XFile>[XFile(out.path)]);
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('$e')));
+    }
   }
 }

@@ -35,7 +35,19 @@ dependencies:
   image_picker: ^1.2.3
   # Documents for the composer, and the xlsx workbook for contact import.
   # image_picker cannot offer either: it is photo/video only.
-  file_picker: ^8.1.7
+  #
+  # Held below 11. In 11.0.3 the Android module's Kotlin never reaches the app's
+  # classpath under Flutter 3.44's built-in Kotlin, so the build dies at
+  # GeneratedPluginRegistrant with "cannot find symbol: FilePickerPlugin" — the
+  # class is present in the package, its module simply contributes nothing.
+  # 8.x is also out: it compiles against android-34 while a transitive
+  # dependency now demands 36. 10.x is the window that satisfies both.
+  file_picker: ^10.3.3
+  # Contact export returns the xlsx itself. Without somewhere to put it and a
+  # way to hand it on, the download would save a workbook the user can never
+  # open — worse than not offering the button.
+  path_provider: ^2.1.5
+  share_plus: ^10.1.4
   url_launcher: ^6.3.2
   flutter_svg: ^2.0.10
   flutter_webrtc: ^1.5.2

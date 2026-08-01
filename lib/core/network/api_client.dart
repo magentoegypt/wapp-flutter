@@ -52,6 +52,27 @@ class ApiClient {
   Future<dynamic> get(String path, {Map<String, dynamic>? query}) =>
       _send(() => _dio.get<dynamic>(path, queryParameters: query));
 
+  /// A response that is a file rather than JSON.
+  ///
+  /// Two endpoints answer with bytes — the contact export workbook and the call
+  /// recording. Going through [get] would hand dio's JSON transformer a binary
+  /// body, which either throws or silently mangles it; `ResponseType.bytes`
+  /// stops the decode before it starts.
+  ///
+  /// Errors still arrive as JSON, so [_send]'s mapping is reused unchanged — a
+  /// 403 on an export is a plan limit like anywhere else.
+  Future<List<int>> bytes(String path, {Map<String, dynamic>? query}) async {
+    final Object? out = await _send(
+      () => _dio.get<List<int>>(
+        path,
+        queryParameters: query,
+        options: Options(responseType: ResponseType.bytes),
+      ),
+      unwrap: false,
+    );
+    return out is List<int> ? out : const <int>[];
+  }
+
   /// [onSendProgress] is only meaningful for a multipart upload — dio reports
   /// bytes as they leave, which is the difference between a progress bar and a
   /// spinner that sits there for a 40MB video.
@@ -83,7 +104,12 @@ class ApiClient {
   Future<dynamic> delete(String path, {Object? body}) =>
       _send(() => _dio.delete<dynamic>(path, data: body));
 
-  Future<dynamic> _send(Future<Response<dynamic>> Function() request) async {
+  /// [unwrap] is false for a binary response: [_unwrap] inspects the body as a
+  /// map, and a byte list is neither wrapped nor inspectable.
+  Future<dynamic> _send(
+    Future<Response<dynamic>> Function() request, {
+    bool unwrap = true,
+  }) async {
     final Response<dynamic> response;
     try {
       response = await request();
@@ -92,7 +118,9 @@ class ApiClient {
     }
 
     final int status = response.statusCode ?? 0;
-    if (status >= 200 && status < 300) return _unwrap(response.data);
+    if (status >= 200 && status < 300) {
+      return unwrap ? _unwrap(response.data) : response.data;
+    }
 
     throw await _fromStatus(status, response.data);
   }
