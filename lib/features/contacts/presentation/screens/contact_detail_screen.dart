@@ -7,18 +7,80 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_dimens.dart';
+import '../../../../core/error/failure.dart';
 import '../../../../core/widgets/app_header.dart';
 import '../../../../core/widgets/app_list_tile.dart';
 import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/initials_avatar.dart';
 import '../../../../core/widgets/section_label.dart';
 import '../../../../core/widgets/status_pill.dart';
+import '../../../conversation_actions/data/conversation_action_repository.dart';
 import '../../data/contact_repository.dart';
 import '../../../inbox/data/conversation_repository.dart';
 import '../../../inbox/domain/conversation.dart';
 import '../../domain/contact.dart';
 import 'contacts_screen.dart' show stageBadge;
 import '../../../../l10n/app_localizations.dart';
+
+/// A wire phone number as the frame shows it: `+20 102 998 1200`.
+///
+/// `wa_id` is stored bare — country code first, no `+`, no separators — which
+/// is exactly what the send endpoints want and exactly what nobody wants to
+/// read.
+///
+/// The trailing ten digits are grouped 3-3-4 and whatever precedes them is
+/// shown as the dialling code. That boundary is **inferred from length, not
+/// known**: it is exact for Egypt (`20` + 10 digits), which is this
+/// workspace's market and the frame's example, and can split a digit early for
+/// a country with a three-digit code and a shorter subscriber number. Getting
+/// it right everywhere needs a per-country table, which is a lot to carry for
+/// a display string.
+///
+/// What it never does is change the digits — [formatPhone] is presentation
+/// only, and every send path uses the raw `wa_id`.
+///
+/// Anything that is not a bare number is returned untouched, so a value that
+/// already carries a `+` or spaces is not mangled.
+String formatPhone(String raw) {
+  final String digits = raw.trim();
+  if (digits.isEmpty) return digits;
+  if (!RegExp(r'^\d{7,15}$').hasMatch(digits)) return digits;
+
+  final int n = digits.length;
+  if (n <= 10) return '+$digits';
+
+  final String code = digits.substring(0, n - 10);
+  final String a = digits.substring(n - 10, n - 7);
+  final String b = digits.substring(n - 7, n - 4);
+  final String c = digits.substring(n - 4);
+
+  return '+$code $a $b $c';
+}
+
+/// A language name for a wire code — "en" → "English".
+///
+/// Only the codes this workspace actually uses are mapped. An unknown code is
+/// returned upper-cased rather than guessed at, which reads as a code and not
+/// as a wrong language.
+String? languageName(String? code) {
+  final String c = (code ?? '').trim().toLowerCase();
+  if (c.isEmpty) return null;
+  const Map<String, String> names = <String, String>{
+    'en': 'English',
+    'ar': 'العربية',
+    'fr': 'Français',
+    'es': 'Español',
+    'de': 'Deutsch',
+    'it': 'Italiano',
+    'tr': 'Türkçe',
+    'ru': 'Русский',
+    'hi': 'हिन्दी',
+    'ur': 'اردو',
+    'pt': 'Português',
+    'zh': '中文',
+  };
+  return names[c] ?? names[c.split(RegExp('[-_]')).first] ?? c.toUpperCase();
+}
 
 /// Contact detail — Figma 290:68.
 class ContactDetailScreen extends ConsumerWidget {
@@ -38,9 +100,21 @@ class ContactDetailScreen extends ConsumerWidget {
       appBar: AppHeader.back(
         title: l10n.cdTitle,
         actions: <Widget>[
-          // Delete lives behind an overflow rather than beside Message and
-          // Call: those three are the frame's primary actions and one of them
-          // removing the contact would sit badly next to "send a message".
+          // Edit is a labelled button in the header, where the frame puts it —
+          // not a line in the overflow. It is the screen's main affordance and
+          // burying it made the whole update path look absent.
+          if (contact.valueOrNull != null)
+            TextButton(
+              onPressed: () =>
+                  context.push(AppRoutes.contactEdit(contact.value!.uid)),
+              child: Text(
+                l10n.actionEdit,
+                style: const TextStyle(color: Colors.white),
+              ),
+            ),
+          // Delete stays behind an overflow, away from Message and Call: those
+          // are the frame's primary actions and one of them removing the
+          // contact would sit badly next to "send a message".
           _ContactOverflow(uid: uid, contact: contact.valueOrNull),
         ],
       ),
@@ -104,15 +178,12 @@ class ContactDetailScreen extends ConsumerWidget {
                         : () => launchUrl(Uri(scheme: 'tel', path: c.phone)),
                   ),
                   const SizedBox(width: 10),
-                  // The frame's third tile is Favourite, which has no endpoint
-                  // behind it — notes do, and are reachable from here in the
-                  // navigation graph, so the slot carries a working action
-                  // rather than a decorative one.
-                  _ActionTile(
-                    icon: Icons.sticky_note_2_outlined,
-                    label: l10n.ciActionNote,
-                    onTap: () => context.push(AppRoutes.chatNotes(c.uid)),
-                  ),
+                  // Favourite, as the frame draws it. The note claiming there
+                  // was no endpoint behind this was written before the toggle
+                  // existed: `POST /contacts/{uid}/favorite` is keyed by
+                  // contact and returns the new state, so the star reflects
+                  // reality rather than guessing at it.
+                  _FavouriteTile(contact: c),
                 ],
               ),
             ),
@@ -121,19 +192,17 @@ class ContactDetailScreen extends ConsumerWidget {
             // Label left, value right, no icon tiles — the frame reads these as
             // a data table, and stacking value under label made two rows look
             // like four. Absent values are omitted rather than shown blank.
-            _InfoRow(label: l10n.cdPhone, value: c.phone),
+            _InfoRow(label: l10n.cdPhone, value: formatPhone(c.phone)),
             _InfoRow(label: l10n.cdEmail, value: c.email),
-            // Only when set. `favorite` is on every contact payload and was
-            // being discarded; shown here rather than in the list, where the
-            // trailing slot already carries the lifecycle pill. Read-only —
-            // no endpoint in the checkout toggles it.
-            if (c.isFavorite)
-              _InfoRow(label: l10n.cdFavorite, value: l10n.cdFavoriteYes),
+            // Favourite is no longer a row — it is the third action tile now,
+            // which is both where the frame puts it and the only place it can
+            // be changed rather than merely read.
             _InfoRow(label: l10n.ciCountry, value: c.countryCode),
             _InfoRow(label: l10n.cdCity, value: c.city),
-            _InfoRow(label: l10n.cdLanguage, value: c.language),
+            // "en" is a wire value, not something to show an agent.
+            _InfoRow(label: l10n.cdLanguage, value: languageName(c.language)),
             _InfoRow(
-              label: l10n.ciFirstSeen,
+              label: l10n.cdCreated,
               value: c.createdAt == null
                   ? null
                   : DateFormat.yMMMd(
@@ -153,19 +222,24 @@ class ContactDetailScreen extends ConsumerWidget {
                 child: Wrap(
                   spacing: 8,
                   runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: <Widget>[
-                    if (c.labels.isEmpty)
-                      Text(
-                        l10n.cdNoTags,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      )
-                    else
-                      for (final String label in c.labels)
-                        StatusPill(
-                          label: label,
-                          tone: StatusTone.info,
-                          showDot: false,
-                        ),
+                    for (final String label in c.labels)
+                      StatusPill(
+                        label: label,
+                        tone: StatusTone.info,
+                        showDot: false,
+                      ),
+                    // "+ Add" opens the edit form rather than adding inline.
+                    //
+                    // Not a shortcut: `contact_tags` is replace-not-append
+                    // server-side, and a PUT that carries only tags would also
+                    // null the city and unfile every group, because the
+                    // endpoint derives both from what the request contains. A
+                    // one-field write from here would quietly destroy two
+                    // other fields; the edit form already sends the whole set
+                    // safely.
+                    _AddTagChip(contactUid: c.uid),
                   ],
                 ),
               ),
@@ -264,6 +338,90 @@ class _RecentConversation extends ConsumerWidget {
 ///
 /// Disabled rather than hidden when there is nothing to act on, so the row keeps
 /// its three-up rhythm instead of reflowing per contact.
+/// The Favourite action tile.
+///
+/// Optimistic: the star flips immediately and is corrected from the response,
+/// because the round trip is long enough that a tile which does nothing for a
+/// second reads as broken. On failure it flips back and says so — silently
+/// reverting would look like the tap missed.
+class _FavouriteTile extends ConsumerStatefulWidget {
+  const _FavouriteTile({required this.contact});
+
+  final Contact contact;
+
+  @override
+  ConsumerState<_FavouriteTile> createState() => _FavouriteTileState();
+}
+
+class _FavouriteTileState extends ConsumerState<_FavouriteTile> {
+  bool? _override;
+  bool _busy = false;
+
+  bool get _on => _override ?? widget.contact.isFavorite;
+
+  Future<void> _toggle() async {
+    if (_busy) return;
+    final bool previous = _on;
+    setState(() {
+      _busy = true;
+      _override = !previous;
+    });
+
+    try {
+      final bool now = await ref
+          .read(conversationActionRepositoryProvider)
+          .toggleFavourite(widget.contact.uid);
+      if (!mounted) return;
+      // The server's answer wins over the optimistic guess.
+      setState(() => _override = now);
+      ref.invalidate(contactDetailProvider(widget.contact.uid));
+      ref.invalidate(contactListProvider);
+    } on Failure catch (e) {
+      if (!mounted) return;
+      setState(() => _override = previous);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.message)));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _ActionTile(
+      icon: _on ? Icons.star : Icons.star_outline,
+      label: AppLocalizations.of(context).cdFavorite,
+      onTap: _toggle,
+    );
+  }
+}
+
+/// The "+ Add" chip in the tags row.
+///
+/// Routes to the edit form. See the call site for why this cannot safely write
+/// a tag on its own.
+class _AddTagChip extends StatelessWidget {
+  const _AddTagChip({required this.contactUid});
+
+  final String contactUid;
+
+  @override
+  Widget build(BuildContext context) {
+    return ActionChip(
+      avatar: const Icon(Icons.add, size: 15, color: AppColor.brandDeep),
+      label: Text(AppLocalizations.of(context).cdAddTag),
+      labelStyle: Theme.of(context)
+          .textTheme
+          .labelMedium
+          ?.copyWith(color: AppColor.brandDeep),
+      backgroundColor: AppColor.brandWash,
+      side: const BorderSide(color: AppColor.brandWash),
+      visualDensity: VisualDensity.compact,
+      onPressed: () => context.push(AppRoutes.contactEdit(contactUid)),
+    );
+  }
+}
+
 class _ActionTile extends StatelessWidget {
   const _ActionTile({required this.icon, required this.label, this.onTap});
 
