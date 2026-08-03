@@ -22,6 +22,7 @@ import '../../data/conversation_repository.dart';
 import '../../data/note_repository.dart';
 import '../../domain/channel.dart';
 import '../../domain/conversation.dart';
+import '../../../contacts/presentation/widgets/tag_picker.dart';
 import '../widgets/chat_actions_sheet.dart';
 
 /// Conversation info — Figma 290:4.
@@ -157,14 +158,8 @@ class ConversationInfoScreen extends ConsumerWidget {
 
             // The frame's LABELS chips, with its "+ Add".
             //
-            // Add opens the contact's edit form rather than writing here. Tags
-            // are replace-not-append server-side and a PUT carrying only tags
-            // would also null the city and unfile every group, because the
-            // endpoint derives both from what the request contains — so a
-            // one-field write from this screen would quietly destroy two other
-            // fields. The section is always drawn now; it used to vanish
-            // entirely when a contact had no labels, which hid the way to add
-            // the first one.
+            // The section is always drawn; it used to vanish entirely when a
+            // contact had no labels, which hid the way to add the first one.
             if (contact != null) ...<Widget>[
               SectionLabel(l10n.cdLabels),
               Padding(
@@ -182,23 +177,13 @@ class ConversationInfoScreen extends ConsumerWidget {
                         tone: StatusTone.info,
                         showDot: false,
                       ),
-                    ActionChip(
-                      avatar: const Icon(
-                        Icons.add,
-                        size: 15,
-                        color: AppColor.brandDeep,
-                      ),
-                      label: Text(l10n.cdAddTag),
-                      labelStyle: Theme.of(context)
-                          .textTheme
-                          .labelMedium
-                          ?.copyWith(color: AppColor.brandDeep),
-                      backgroundColor: AppColor.brandWash,
-                      side: const BorderSide(color: AppColor.brandWash),
-                      visualDensity: VisualDensity.compact,
-                      onPressed: () =>
-                          context.push(AppRoutes.contactEdit(contactUid)),
-                    ),
+                    // The same picker Contact detail uses. It writes here
+                    // rather than sending the agent to the edit form: this
+                    // screen already holds the full contact — labels, city,
+                    // groups and custom fields — through the same provider, so
+                    // it can assemble the whole-record write the endpoint
+                    // needs. The earlier note claiming otherwise was wrong.
+                    AddTagChip(contact: contact),
                   ],
                 ),
               ),
