@@ -8,8 +8,16 @@ import '../domain/session.dart';
 /// a status code or a dio type.
 abstract interface class AuthRepository {
   /// Exchanges credentials for a Sanctum personal access token and persists it.
+  ///
+  /// [identifier] is an **email address or a username**. The API decides which
+  /// by looking for an "@" — the same split the web console makes, so both
+  /// surfaces accept the same credentials. Matching is case-insensitive.
+  ///
+  /// Named for what it holds rather than for the wire key, which is still
+  /// `email`: a parameter called `email` that accepts a username is the kind
+  /// of naming that hides a bug.
   Future<Session> login({
-    required String email,
+    required String identifier,
     required String password,
     required String deviceName,
   });
@@ -75,14 +83,17 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<Session> login({
-    required String email,
+    required String identifier,
     required String password,
     required String deviceName,
   }) async {
     final dynamic body = await _api.post(
       '/auth/login',
       body: <String, dynamic>{
-        'email': email,
+        // Still `email`, even for a username. The endpoint accepts `username`
+        // and `login` as aliases, but `email` is the documented field and the
+        // one every other client sends — no reason to be the odd one out.
+        'email': identifier,
         'password': password,
         'device_name': deviceName,
       },

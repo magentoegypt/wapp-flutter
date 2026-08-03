@@ -107,19 +107,20 @@ class _ChatActionsSheet extends ConsumerWidget {
     final bool want = !contact.isFavorite;
 
     try {
-      final Contact updated = await ref
-          .read(contactRepositoryProvider)
-          .update(contactUid, favorite: want);
+      // `POST /conversations/{uid}/favorite`, not the contact PUT. `favorite`
+      // is read back on every contact payload, which made the contact endpoint
+      // look like the place to write it — it is not, and that PUT drops the
+      // key silently. This one toggles and answers with the new state, which
+      // is read rather than assumed.
+      final bool now = await ref
+          .read(conversationActionRepositoryProvider)
+          .toggleFavourite(contactUid);
       ref.invalidate(contactDetailProvider(contactUid));
 
-      // The response is checked rather than assumed. `favorite` is read back
-      // from every contact payload, but nothing confirms the controller accepts
-      // it on write — and a star that flips in the UI then reverts on the next
-      // load is the worst of both.
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            updated.isFavorite == want
+            now == want
                 ? (want ? l10n.caFavouriteOn : l10n.caFavouriteOff)
                 : l10n.caFavouriteUnsupported,
           ),

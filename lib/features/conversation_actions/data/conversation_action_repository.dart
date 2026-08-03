@@ -81,6 +81,7 @@ abstract interface class ConversationActionRepository {
 
   Future<void> requestCallPermission(String contactUid);
 
+
   // ── history access ────────────────────────────────────────────────────────
   Future<HistoryAccessSnapshot> historyAccess(String contactUid);
   Future<void> requestHistoryAccess(String contactUid);
@@ -281,6 +282,7 @@ class ConversationActionRepositoryImpl implements ConversationActionRepository {
   @override
   Future<void> requestCallPermission(String contactUid) =>
       _api.post('${_base(contactUid)}/call-permission');
+
 
   @override
   Future<HistoryAccessSnapshot> historyAccess(String contactUid) async {

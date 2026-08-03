@@ -28,9 +28,9 @@
   "@loginSubtitle": {
     "description": "Explains that credentials are per-agent, not shared."
   },
-  "loginEmailLabel": "Email",
+  "loginEmailLabel": "Email or username",
   "loginPasswordLabel": "Password",
-  "loginEmailRequired": "Enter your email address.",
+  "loginEmailRequired": "Enter your email or username.",
   "loginPasswordRequired": "Enter your password.",
   "loginSubmit": "Log in",
   "actionRetry": "Retry",
@@ -272,7 +272,7 @@
   "loginForgotPassword": "Forgot password?",
   "loginNoAccount": "Don't have an account? Contact your workspace admin.",
   "loginTagline": "WhatsApp Business Platform",
-  "loginEmailHint": "you@company.com",
+  "loginEmailHint": "you@company.com or username",
   "loginPasswordHint": "Your password",
   "ctFilterAll": "All",
   "ctStageNew": "New",

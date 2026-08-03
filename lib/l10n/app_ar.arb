@@ -7,9 +7,9 @@
   "navMore": "المزيد",
   "loginTitle": "تسجيل الدخول",
   "loginSubtitle": "استخدم حسابك الخاص — سيتم نسب ردودك إليك.",
-  "loginEmailLabel": "البريد الإلكتروني",
+  "loginEmailLabel": "البريد الإلكتروني أو اسم المستخدم",
   "loginPasswordLabel": "كلمة المرور",
-  "loginEmailRequired": "أدخل بريدك الإلكتروني.",
+  "loginEmailRequired": "أدخل بريدك الإلكتروني أو اسم المستخدم.",
   "loginPasswordRequired": "أدخل كلمة المرور.",
   "loginSubmit": "تسجيل الدخول",
   "actionRetry": "إعادة المحاولة",
@@ -92,21 +92,21 @@
   "qrMessage": "الرسالة",
   "qrShortcutRequired": "أدخل اسمًا قصيرًا.",
   "qrMessageRequired": "أدخل الرسالة المراد إرسالها.",
-  "caFavourite": "ÙÙØ¶ÙØ©",
-  "caCall": "Ø§ØªØµØ§Ù",
-  "caStatus": "Ø§ÙØ­Ø§ÙØ©",
-  "caAssignShort": "Ø¥Ø³ÙØ§Ø¯",
-  "caGroupConversation": "Ø§ÙÙØ­Ø§Ø¯Ø«Ø©",
-  "caGroupMessaging": "Ø§ÙÙØ±Ø§Ø³ÙØ©",
-  "caGroupCalling": "Ø§ÙÙÙØ§ÙÙØ§Øª",
-  "caGroupAccess": "Ø§ÙÙØµÙÙ ÙØ§ÙØ¨ÙØ§ÙØ§Øª",
-  "caPending": "{count} ÙÙØ¯ Ø§ÙØ§ÙØªØ¸Ø§Ø±",
+  "caFavourite": "مفضلة",
+  "caCall": "اتصال",
+  "caStatus": "الحالة",
+  "caAssignShort": "إسناد",
+  "caGroupConversation": "المحادثة",
+  "caGroupMessaging": "المراسلة",
+  "caGroupCalling": "المكالمات",
+  "caGroupAccess": "الوصول والبيانات",
+  "caPending": "{count} قيد الانتظار",
   "@caPending": {
     "placeholders": { "count": { "type": "int" } }
   },
-  "caFavouriteOn": "ØªÙØª Ø§ÙØ¥Ø¶Ø§ÙØ© Ø¥ÙÙ Ø§ÙÙÙØ¶ÙØ©.",
-  "caFavouriteOff": "ØªÙØª Ø§ÙØ¥Ø²Ø§ÙØ© ÙÙ Ø§ÙÙÙØ¶ÙØ©.",
-  "caFavouriteUnsupported": "ÙØ§ ÙÙÙÙ ØªØºÙÙØ± Ø§ÙÙÙØ¶ÙØ© ÙÙ Ø§ÙØªØ·Ø¨ÙÙ Ø¨Ø¹Ø¯.",
+  "caFavouriteOn": "تمت الإضافة إلى المفضلة.",
+  "caFavouriteOff": "تمت الإزالة من المفضلة.",
+  "caFavouriteUnsupported": "لا يمكن تغيير المفضلة من التطبيق بعد.",
   "caTitle": "إجراءات المحادثة",
   "caInternalNote": "ملاحظة داخلية",
   "caSnooze": "تأجيل المحادثة",

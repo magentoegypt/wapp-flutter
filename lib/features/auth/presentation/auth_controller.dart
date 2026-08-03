@@ -84,11 +84,14 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
-  Future<bool> login({required String email, required String password}) async {
+  Future<bool> login({
+    required String identifier,
+    required String password,
+  }) async {
     state = state.copyWith(busy: true, clearFailure: true);
     try {
       final Session session = await _repo.login(
-        email: email,
+        identifier: identifier,
         password: password,
         deviceName: _deviceName(),
       );

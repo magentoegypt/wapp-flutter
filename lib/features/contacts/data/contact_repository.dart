@@ -33,7 +33,6 @@ abstract interface class ContactRepository {
     List<String>? tags,
     List<String>? groupIds,
     bool? enableAiBot,
-    bool? favorite,
     Map<String, String>? customFields,
   });
 
@@ -161,7 +160,6 @@ class ContactRepositoryImpl implements ContactRepository {
     List<String>? tags,
     List<String>? groupIds,
     bool? enableAiBot,
-    bool? favorite,
     Map<String, String>? customFields,
   }) async {
     // Only non-null values are sent. The endpoint is partial-safe, so omitting
@@ -179,10 +177,6 @@ class ContactRepositoryImpl implements ContactRepository {
       if (groupIds != null) 'contact_groups': groupIds,
       // The one camelCase key in an otherwise snake_case body.
       if (enableAiBot != null) 'enableAiBot': enableAiBot,
-      // Read back as `favorite`, so written the same way. Whether the
-      // controller accepts it is unverified — the caller re-reads and says so
-      // if the value did not move, rather than showing a star that lies.
-      if (favorite != null) 'favorite': favorite,
       // Keyed by field uid: custom_input_fields[<uid>] = value.
       if (customFields != null && customFields.isNotEmpty)
         'custom_input_fields': customFields,

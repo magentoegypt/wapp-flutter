@@ -50,7 +50,7 @@ class _FakeAuthRepository implements AuthRepository {
 
   @override
   Future<Session> login({
-    required String email,
+    required String identifier,
     required String password,
     required String deviceName,
   }) async =>

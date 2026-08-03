@@ -30,13 +30,13 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final TextEditingController _email = TextEditingController();
+  final TextEditingController _identifier = TextEditingController();
   final TextEditingController _password = TextEditingController();
   bool _obscure = true;
 
   @override
   void dispose() {
-    _email.dispose();
+    _identifier.dispose();
     _password.dispose();
     super.dispose();
   }
@@ -46,7 +46,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     // No navigation here — the router's redirect owns post-login routing so a
     // deep link captured before the session resolved is honoured.
     await ref.read(authControllerProvider.notifier).login(
-          email: _email.text.trim(),
+          identifier: _identifier.text.trim(),
           password: _password.text,
         );
   }
@@ -92,8 +92,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                     _FieldLabel(l10n.loginEmailLabel),
                     TextFormField(
-                      controller: _email,
-                      keyboardType: TextInputType.emailAddress,
+                      controller: _identifier,
+                      // Plain text, not emailAddress: this field takes a
+                      // username too, and the email keyboard's layout and
+                      // autocorrect behaviour assume an address.
+                      keyboardType: TextInputType.text,
+                      autocorrect: false,
+                      textCapitalization: TextCapitalization.none,
                       autofillHints: const <String>[AutofillHints.username],
                       textInputAction: TextInputAction.next,
                       decoration: InputDecoration(
