@@ -206,7 +206,16 @@ class _ContactFormScreenState extends ConsumerState<ContactFormScreen> {
     // dropped on save.
     if (_tagInput.text.trim().isNotEmpty) _addTag();
 
-    if (!(_formKey.currentState?.validate() ?? false)) return;
+    // A failed validation used to return in silence. The offending field is
+    // routinely below the fold on a form this long — the required custom
+    // fields sit at the very bottom — so Save appeared to do nothing at all,
+    // with the reason several screens away. Say so.
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).acFixErrors)),
+      );
+      return;
+    }
     setState(() {
       _saving = true;
       _validation = null;
@@ -377,8 +386,20 @@ class _ContactFormScreenState extends ConsumerState<ContactFormScreen> {
 
   /// One vendor-defined field, rendered by its declared type.
   Widget _custom(CustomField f, AppLocalizations l10n) {
+    // Required is enforced on **create only**.
+    //
+    // The API does not enforce it at all — `store()` forwards custom values
+    // unvalidated — so this is the client's rule, and on an existing contact
+    // it is the wrong one. Contacts predate the fields a workspace later marks
+    // required, so enforcing it on edit refuses to let an agent fix a typo in
+    // a city until they have also answered questions about a customer they may
+    // have no answers for. Worse, it invites them to invent one.
+    //
+    // On create the contact does not exist yet, nobody is blocked from fixing
+    // anything, and the field is the workspace's stated requirement — so it
+    // still applies there.
     String? validate(String? v) =>
-        f.required && (v == null || v.trim().isEmpty)
+        f.required && !widget.isEdit && (v == null || v.trim().isEmpty)
             ? l10n.acFieldRequired
             : null;
 

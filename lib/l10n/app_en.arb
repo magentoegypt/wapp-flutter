@@ -1161,5 +1161,6 @@
   "acAiBotHint": "Auto-answers this contact until an agent replies",
   "acAiBotFailed": "Contact saved, but the AI bot could not be enabled.",
   "acEditTitle": "Edit contact",
-  "acPhoneNotEditable": "The number cannot be changed — it identifies the conversation"
+  "acPhoneNotEditable": "The number cannot be changed — it identifies the conversation",
+  "acFixErrors": "Check the highlighted fields below."
 }
