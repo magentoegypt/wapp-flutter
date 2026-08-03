@@ -15,10 +15,17 @@ import 'package:flutter/material.dart';
 ///    at body sizes; use [brandDeep] for any green text or icon on a light
 ///    ground, and reserve [brand] for fills.
 abstract final class AppColor {
-  /// #2BAC32, taken from the header's own Figma export — the iOS layer gives
-  /// `UIColor(red: 0.169, green: 0.675, blue: 0.196)` and the Android one
-  /// `#2BAC32`, which agree. Was #00BF63, a noticeably minter green.
-  static const Color brand = Color(0xFF2BAC32);
+  /// #00BF63 — the shipping product logo's own fill.
+  ///
+  /// The Figma variable collection says `#2BAC32`, and so does the header's
+  /// export, but `/imgs/logo-short.svg` fills with this. The handoff settles
+  /// it in favour of the logo and records that the Figma variable still needs
+  /// updating: "this document and the Figma file disagree on purpose."
+  ///
+  /// It briefly shipped as #2BAC32. Reverted — [brandDeep] and [brandWash]
+  /// were derived at this hue, so the AA-on-white behaviour they encode only
+  /// holds against this value.
+  static const Color brand = Color(0xFF00BF63);
   static const Color brandDeep = Color(0xFF00703A); // ~6.2:1 on white
   static const Color brandWash = Color(0xFFEBFAF3);
 
