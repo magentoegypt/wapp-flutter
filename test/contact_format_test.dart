@@ -1,4 +1,4 @@
-import 'package:clickalize/features/contacts/presentation/screens/contact_detail_screen.dart';
+import 'package:clickalize/core/util/contact_format.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Display formatting on Contact detail.

@@ -1164,5 +1164,8 @@
   "acPhoneNotEditable": "The number cannot be changed — it identifies the conversation",
   "acFixErrors": "Check the highlighted fields below.",
   "cdCreated": "Created",
-  "cdAddTag": "Add"
+  "cdAddTag": "Add",
+  "ciCustomerStatus": "Customer status",
+  "ciChangeAssignee": "Change",
+  "notesViewAll": "View all"
 }

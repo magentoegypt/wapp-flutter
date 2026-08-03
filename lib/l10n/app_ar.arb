@@ -949,5 +949,8 @@
   "acPhoneNotEditable": "لا يمكن تغيير الرقم — فهو معرّف المحادثة",
   "acFixErrors": "راجع الحقول المُعلّمة بالأسفل.",
   "cdCreated": "تاريخ الإضافة",
-  "cdAddTag": "إضافة"
+  "cdAddTag": "إضافة",
+  "ciCustomerStatus": "حالة العميل",
+  "ciChangeAssignee": "تغيير",
+  "notesViewAll": "عرض الكل"
 }

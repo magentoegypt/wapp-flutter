@@ -14,7 +14,9 @@ import '../../../../core/widgets/initials_avatar.dart';
 import '../../../../core/widgets/section_label.dart';
 import '../../../../core/widgets/status_pill.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../../core/util/contact_format.dart';
 import '../../../contacts/data/contact_repository.dart';
+import '../../../contacts/presentation/screens/contacts_screen.dart' show stageBadge;
 import '../../../contacts/domain/contact.dart';
 import '../../data/conversation_repository.dart';
 import '../../data/note_repository.dart';
@@ -49,7 +51,8 @@ class ConversationInfoScreen extends ConsumerWidget {
     final int noteCount =
         ref.watch(notesProvider(contactUid)).valueOrNull?.length ?? 0;
     final String locale = Localizations.localeOf(context).toLanguageTag();
-    final List<Widget> details = _detailRows(l10n, contact, locale);
+    final List<Widget> detailsBefore = _detailRowsBefore(l10n, contact, locale);
+    final List<Widget> detailsAfter = _detailRowsAfter(l10n, contact, locale);
     // The Instagram handle travels on the inbox row, not on the thread — the
     // chat endpoint has never carried it. Read it back out of the list that is
     // already loaded behind this screen and drop the line when the row isn't
@@ -68,7 +71,14 @@ class ConversationInfoScreen extends ConsumerWidget {
           children: <Widget>[
             const SizedBox(height: 20),
             Center(
-              child: InitialsAvatar(name: t.name, size: AppDimens.avatarHero),
+              // Filled brand green with light initials, matching the frame and
+              // Contact detail. The hash-tinted pastels are for list rows; a
+              // hero rendered in one of them made the same customer look like
+              // two different people across the two screens.
+              child: InitialsAvatar.onBrand(
+                name: t.name,
+                size: AppDimens.avatarHero,
+              ),
             ),
             const SizedBox(height: 12),
             Center(
@@ -81,8 +91,21 @@ class ConversationInfoScreen extends ConsumerWidget {
               const SizedBox(height: 4),
               Center(
                 child: Text(
-                  t.phone!,
+                  formatPhone(t.phone!),
                   style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
+            ],
+            // The frame's pill under the number is the customer's lifecycle
+            // stage. It was missing here while Contact detail had it, so the
+            // same customer read as "Returning" on one screen and as nothing
+            // on the other.
+            if (contact != null && stageBadge(l10n, contact) != null) ...<Widget>[
+              const SizedBox(height: 8),
+              Center(
+                child: StatusPill(
+                  label: stageBadge(l10n, contact)!.label,
+                  tone: stageBadge(l10n, contact)!.tone,
                 ),
               ),
             ],
@@ -91,7 +114,7 @@ class ConversationInfoScreen extends ConsumerWidget {
             _QuickActions(contactUid: contactUid, phone: t.phone, l10n: l10n),
 
             SectionLabel(l10n.ciContactDetails),
-            ...details,
+            ...detailsBefore,
             // Which network the thread runs on. Always shown, even though it
             // is WhatsApp for almost every row: an agent has to know before
             // replying, because what may be sent and how long the window stays
@@ -109,11 +132,19 @@ class ConversationInfoScreen extends ConsumerWidget {
             // outright, so an outbound-only tail does not blank the row.
             if (_receivedOn(t) != null)
               _DetailRow(label: l10n.ciReceivedOn, value: _receivedOn(t)!),
+            ...detailsAfter,
 
-            // The frame's LABELS chips. Read-only: ContactRepository has no
-            // label mutation, so the frame's "+ Add" chip is not here — an add
-            // affordance that cannot add is worse than none.
-            if ((contact?.labels ?? const <String>[]).isNotEmpty) ...<Widget>[
+            // The frame's LABELS chips, with its "+ Add".
+            //
+            // Add opens the contact's edit form rather than writing here. Tags
+            // are replace-not-append server-side and a PUT carrying only tags
+            // would also null the city and unfile every group, because the
+            // endpoint derives both from what the request contains — so a
+            // one-field write from this screen would quietly destroy two other
+            // fields. The section is always drawn now; it used to vanish
+            // entirely when a contact had no labels, which hid the way to add
+            // the first one.
+            if (contact != null) ...<Widget>[
               SectionLabel(l10n.cdLabels),
               Padding(
                 padding: const EdgeInsets.symmetric(
@@ -122,13 +153,31 @@ class ConversationInfoScreen extends ConsumerWidget {
                 child: Wrap(
                   spacing: 8,
                   runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: <Widget>[
-                    for (final String label in contact!.labels)
+                    for (final String label in contact.labels)
                       StatusPill(
                         label: label,
                         tone: StatusTone.info,
                         showDot: false,
                       ),
+                    ActionChip(
+                      avatar: const Icon(
+                        Icons.add,
+                        size: 15,
+                        color: AppColor.brandDeep,
+                      ),
+                      label: Text(l10n.cdAddTag),
+                      labelStyle: Theme.of(context)
+                          .textTheme
+                          .labelMedium
+                          ?.copyWith(color: AppColor.brandDeep),
+                      backgroundColor: AppColor.brandWash,
+                      side: const BorderSide(color: AppColor.brandWash),
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () =>
+                          context.push(AppRoutes.contactEdit(contactUid)),
+                    ),
                   ],
                 ),
               ),
@@ -175,6 +224,14 @@ class ConversationInfoScreen extends ConsumerWidget {
                       size: AppDimens.iconTile,
                     ),
               showChevron: false,
+              // The frame's "Change" link. The assign screen already existed
+              // and was reachable only from the chat's actions sheet, so this
+              // row named an owner it gave no way to change.
+              trailing: TextButton(
+                onPressed: () =>
+                    context.push(AppRoutes.chatAssign(contactUid)),
+                child: Text(l10n.ciChangeAssignee),
+              ),
             ),
             AppListTile(
               title: l10n.ciReplyLock,
@@ -189,8 +246,10 @@ class ConversationInfoScreen extends ConsumerWidget {
             ),
 
             SectionLabel(l10n.notesTitle),
+            // The frame's "View all ›". The row already navigated; it just did
+            // not say so.
             AppListTile(
-              title: l10n.notesTitle,
+              title: l10n.notesViewAll,
               subtitle: l10n.notesCount(noteCount),
               leading: const IconTile(
                 icon: Icons.sticky_note_2_outlined,
@@ -232,14 +291,17 @@ class ConversationInfoScreen extends ConsumerWidget {
   /// The CONTACT DETAILS block, restricted to fields the customer record
   /// actually carries.
   ///
-  /// The frame also lists Customer status, which exists neither on [Contact]
-  /// nor in the conversation payload, and a row rendered from nothing reads as
-  /// a fact — so it stays out until the API carries it. Channel used to be in
-  /// that group; it is on the thread now and the caller renders it alongside
-  /// the other thread-derived row.
-  /// Language is here: it was listed as absent by a stale comment, but the
-  /// field has existed since contacts gained city/language.
-  List<Widget> _detailRows(
+  /// Row order follows the frame: Email, Country, Channel, First seen,
+  /// Received on, Customer status, Language. Channel and Received on come off
+  /// the thread rather than the contact, so the caller interleaves them — the
+  /// two halves are split by where the data lives, not by how it reads.
+  ///
+  /// **Customer status** is here now. A stale comment claimed it existed
+  /// "neither on [Contact] nor in the conversation payload" and kept the row
+  /// out; it is `customerType`, which the contact has carried since the
+  /// lifecycle stage was wired, and is the same value the pill under the hero
+  /// shows.
+  List<Widget> _detailRowsBefore(
     AppLocalizations l10n,
     Contact? contact,
     String locale,
@@ -247,21 +309,43 @@ class ConversationInfoScreen extends ConsumerWidget {
     if (contact == null) return const <Widget>[];
     final String? email = contact.email;
     final String? country = contact.countryCode;
-    // `createdAt` is the date the
-    // workspace first saw this customer, which is exactly the frame's row.
-    final DateTime? firstSeen = contact.createdAt;
 
     return <Widget>[
       if (email != null && email.isNotEmpty)
         _DetailRow(label: l10n.ciEmail, value: email),
       if (country != null && country.isNotEmpty)
         _DetailRow(label: l10n.ciCountry, value: country),
-      if ((contact.language ?? '').isNotEmpty)
-        _DetailRow(label: l10n.cdLanguage, value: contact.language!),
+    ];
+  }
+
+  /// The rows the frame places after Channel and Received on.
+  List<Widget> _detailRowsAfter(
+    AppLocalizations l10n,
+    Contact? contact,
+    String locale,
+  ) {
+    if (contact == null) return const <Widget>[];
+    // `createdAt` is the date the workspace first saw this customer, which is
+    // exactly the frame's row.
+    final DateTime? firstSeen = contact.createdAt;
+    final String? stage = stageBadge(l10n, contact)?.label;
+    // "English (en)" — the frame shows both, because an agent choosing a
+    // template needs the code and everyone else needs the name.
+    final String? language = languageName(contact.language);
+
+    return <Widget>[
       if (firstSeen != null)
         _DetailRow(
           label: l10n.ciFirstSeen,
           value: DateFormat.yMMMd(locale).format(firstSeen),
+        ),
+      if (stage != null) _DetailRow(label: l10n.ciCustomerStatus, value: stage),
+      if (language != null)
+        _DetailRow(
+          label: l10n.cdLanguage,
+          value: language.toLowerCase() == (contact.language ?? '').toLowerCase()
+              ? language
+              : '$language (${contact.language})',
         ),
     ];
   }
