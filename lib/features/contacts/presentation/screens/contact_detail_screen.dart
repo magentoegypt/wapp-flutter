@@ -41,29 +41,31 @@ class ContactDetailScreen extends ConsumerWidget {
       appBar: AppHeader.back(
         title: l10n.cdTitle,
         actions: <Widget>[
-          // Edit is a labelled button in the header, where the frame puts it —
-          // not a line in the overflow. It is the screen's main affordance and
-          // burying it made the whole update path look absent.
+          // Two icons, not a label and an overflow. Both actions belong to the
+          // whole contact, so neither sits in the action row beside Message
+          // and Call — "delete this person" next to "send them a message"
+          // reads badly and is one mis-tap from being irreversible.
           if (contact.valueOrNull != null)
-            TextButton(
+            IconButton(
+              icon: const Icon(Icons.edit_outlined, color: Colors.white),
+              tooltip: l10n.actionEdit,
               onPressed: () =>
                   context.push(AppRoutes.contactEdit(contact.value!.uid)),
-              child: Text(
-                l10n.actionEdit,
-                style: const TextStyle(color: Colors.white),
-              ),
             ),
-          // Delete stays behind an overflow, away from Message and Call: those
-          // are the frame's primary actions and one of them removing the
-          // contact would sit badly next to "send a message".
-          _ContactOverflow(uid: uid, contact: contact.valueOrNull),
+          _ContactDelete(uid: uid, contact: contact.valueOrNull),
         ],
       ),
       body: AsyncValueView<Contact>(
         value: contact,
         onRetry: () => ref.invalidate(contactDetailProvider(uid)),
         builder: (Contact c) => ListView(
+          // The frame is a white sheet on a tinted page: hero and rows sit on
+          // white, and the section headings sit on the page colour, which is
+          // what makes them read as bands rather than as floating labels.
+          // Everything used to share one flat background, so nothing was
+          // grouped and the dividers had nothing to divide.
           children: <Widget>[
+            _Surface(children: <Widget>[
             const SizedBox(height: 20),
             Center(
               // Filled deep green with light initials, as the frame draws the
@@ -77,13 +79,22 @@ class ContactDetailScreen extends ConsumerWidget {
             Center(
               child: Text(
                 c.name.isEmpty ? c.phone : c.name,
-                style: Theme.of(context).textTheme.titleMedium,
+                textAlign: TextAlign.center,
+                // The frame's name is the biggest thing on the screen;
+                // titleMedium left it the same weight as a row label.
+                style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                      fontSize: 22,
+                      height: 1.2,
+                    ),
               ),
             ),
             const SizedBox(height: 4),
             Center(
               child: Text(
-                c.phone,
+                // Formatted here too. The INFORMATION row was fixed and this
+                // one was not, so the same number appeared twice on one screen
+                // in two different shapes.
+                formatPhone(c.phone),
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
             ),
@@ -106,7 +117,10 @@ class ContactDetailScreen extends ConsumerWidget {
               child: Row(
                 children: <Widget>[
                   _ActionTile(
-                    icon: Icons.chat_bubble_outline,
+                    // Envelope, as the frame draws it — and as Conversation
+                    // info already used, so the same action stopped wearing
+                    // two different glyphs.
+                    icon: Icons.mail_outline,
                     label: l10n.ciActionMessage,
                     onTap: () => context.push(AppRoutes.chat(c.uid)),
                   ),
@@ -129,33 +143,43 @@ class ContactDetailScreen extends ConsumerWidget {
               ),
             ),
 
+            const SizedBox(height: 14),
+            ]),
+
             SectionLabel(l10n.cdInformation),
             // Label left, value right, no icon tiles — the frame reads these as
             // a data table, and stacking value under label made two rows look
             // like four. Absent values are omitted rather than shown blank.
-            _InfoRow(label: l10n.cdPhone, value: formatPhone(c.phone)),
-            _InfoRow(label: l10n.cdEmail, value: c.email),
-            // Favourite is no longer a row — it is the third action tile now,
-            // which is both where the frame puts it and the only place it can
-            // be changed rather than merely read.
-            _InfoRow(label: l10n.ciCountry, value: c.countryCode),
-            _InfoRow(label: l10n.cdCity, value: c.city),
-            // "en" is a wire value, not something to show an agent.
-            _InfoRow(label: l10n.cdLanguage, value: languageName(c.language)),
-            _InfoRow(
-              label: l10n.cdCreated,
-              value: c.createdAt == null
-                  ? null
-                  : DateFormat.yMMMd(
-                      Localizations.localeOf(context).toLanguageTag(),
-                    ).format(c.createdAt!),
-            ),
+            // Null rows are dropped before the surface sees them, not hidden
+            // inside it — a row that collapses to nothing still counts as a
+            // child, so a divided surface would draw a rule against an
+            // invisible row and the block would end up with double lines.
+            _Surface(divided: true, children: <Widget>[
+              ?infoRow(l10n.cdPhone, formatPhone(c.phone)),
+              ?infoRow(l10n.cdEmail, c.email),
+              // Favourite is no longer a row — it is the third action tile
+              // now, which is both where the frame puts it and the only place
+              // it can be changed rather than merely read.
+              ?infoRow(l10n.ciCountry, c.countryCode),
+              ?infoRow(l10n.cdCity, c.city),
+              // "en" is a wire value, not something to show an agent.
+              ?infoRow(l10n.cdLanguage, languageName(c.language)),
+              ?infoRow(
+                l10n.cdCreated,
+                c.createdAt == null
+                    ? null
+                    : DateFormat.yMMMd(
+                        Localizations.localeOf(context).toLanguageTag(),
+                      ).format(c.createdAt!),
+              ),
+            ]),
 
             // Rendered even when empty: the frame keeps the section, and having
             // it vanish made the screen's shape depend on data the user cannot
             // see the absence of.
             ...<Widget>[
               SectionLabel(l10n.cdTags),
+              _Surface(children: <Widget>[
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppDimens.gutter,
@@ -184,10 +208,12 @@ class ContactDetailScreen extends ConsumerWidget {
                   ],
                 ),
               ),
+              ]),
             ],
 
             if (c.groups.isNotEmpty) ...<Widget>[
               SectionLabel(l10n.cdGroups),
+              _Surface(children: <Widget>[
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppDimens.gutter,
@@ -201,6 +227,7 @@ class ContactDetailScreen extends ConsumerWidget {
                   ],
                 ),
               ),
+              ]),
             ],
             // The workspace's own fields, in the same "Other information"
             // section the Add-contact form files them under, so an agent sees
@@ -211,8 +238,10 @@ class ContactDetailScreen extends ConsumerWidget {
             // workspace's schema rather than with anything about this contact.
             if (c.customFields.isNotEmpty) ...<Widget>[
               SectionLabel(l10n.acSectionOther),
-              for (final ContactCustomValue f in c.customFields)
-                _InfoRow(label: f.name, value: f.value),
+              _Surface(divided: true, children: <Widget>[
+                for (final ContactCustomValue f in c.customFields)
+                  ?infoRow(f.name, f.value),
+              ]),
             ],
 
             _RecentConversation(contactUid: c.uid),
@@ -446,9 +475,66 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-/// Delete, behind the header's overflow.
-class _ContactOverflow extends ConsumerWidget {
-  const _ContactOverflow({required this.uid, required this.contact});
+/// One label/value line, or nothing when there is no value.
+///
+/// Returns `Widget?` rather than an empty box so a caller can drop it with the
+/// null-aware element operator — see the divided-surface note at the call site.
+Widget? infoRow(String label, String? value) {
+  if (value == null || value.isEmpty) return null;
+  return _InfoRow(label: label, value: value);
+}
+
+/// A full-bleed white block on the tinted page.
+///
+/// The frame is a white sheet interrupted by tinted bands — the section
+/// headings sit on the page colour and everything else sits on white. Without
+/// this the screen was one flat tone, so the headings floated and there was
+/// nothing for a divider to separate.
+///
+/// [divided] draws a hairline between children, inset past the gutter so the
+/// rules line up under the values rather than running edge to edge.
+class _Surface extends StatelessWidget {
+  const _Surface({required this.children, this.divided = false});
+
+  final List<Widget> children;
+  final bool divided;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isLight = Theme.of(context).brightness == Brightness.light;
+    final List<Widget> rows = <Widget>[];
+
+    for (int i = 0; i < children.length; i++) {
+      rows.add(children[i]);
+      if (divided && i < children.length - 1) {
+        rows.add(Divider(
+          height: 1,
+          thickness: 1,
+          indent: AppDimens.gutter,
+          endIndent: AppDimens.gutter,
+          color: isLight ? AppColor.hairline : AppColor.hairlineDark,
+        ));
+      }
+    }
+
+    return Container(
+      width: double.infinity,
+      color: isLight ? Colors.white : AppColor.surfaceDark,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: rows,
+      ),
+    );
+  }
+}
+
+/// Delete, as a header icon.
+///
+/// A bare icon for an irreversible action is only acceptable because it opens
+/// a confirmation naming the contact — the tap arms it, it does not fire it.
+class _ContactDelete extends ConsumerWidget {
+  const _ContactDelete({required this.uid, required this.contact});
 
   final String uid;
   final Contact? contact;
@@ -460,31 +546,10 @@ class _ContactOverflow extends ConsumerWidget {
     // for the confirmation.
     if (contact == null) return const SizedBox.shrink();
 
-    return PopupMenuButton<String>(
-      icon: const Icon(Icons.more_vert, color: Colors.white),
-      // Was `(_) => delete`, which fired the destructive action for whatever
-      // was picked. With a second entry that would have deleted the contact
-      // when the user chose Edit.
-      onSelected: (String value) {
-        if (value == 'edit') {
-          context.push(AppRoutes.contactEdit(contact!.uid));
-          return;
-        }
-        _confirmDelete(context, ref, l10n);
-      },
-      itemBuilder: (BuildContext _) => <PopupMenuEntry<String>>[
-        PopupMenuItem<String>(
-          value: 'edit',
-          child: Text(l10n.actionEdit),
-        ),
-        PopupMenuItem<String>(
-          value: 'delete',
-          child: Text(
-            l10n.cdDelete,
-            style: const TextStyle(color: AppColor.danger),
-          ),
-        ),
-      ],
+    return IconButton(
+      icon: const Icon(Icons.delete_outline, color: Colors.white),
+      tooltip: l10n.cdDelete,
+      onPressed: () => _confirmDelete(context, ref, l10n),
     );
   }
 
