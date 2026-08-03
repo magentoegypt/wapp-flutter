@@ -85,6 +85,14 @@ class CallRecord {
 /// The gates are reported separately on purpose. One boolean would hide the
 /// difference between "the workspace switched it off" and "Meta will not allow
 /// it from this number" — only the first is fixable by the user.
+/// Why an outbound call cannot be placed. See [CallCapability.blockedBy].
+enum CallBlock {
+  workspaceDisabled,
+  countryRestricted,
+  outsideBusinessHours,
+  unknown,
+}
+
 class CallCapability {
   const CallCapability({
     this.enabled = false,
@@ -109,6 +117,24 @@ class CallCapability {
   final bool withinBusinessHours;
   final bool recordingEnabled;
   final bool iceServersConfigured;
+
+  /// Which gate is closed, or null when a call can be placed.
+  ///
+  /// The three are reported separately on purpose and must not be collapsed:
+  /// `enabled` is a workspace switch the user can flip, `outboundSupported` is
+  /// Meta refusing business-initiated calls from this number and is not
+  /// fixable at all, and `withinBusinessHours` is time-of-day and will clear
+  /// on its own. Telling someone to check their settings when Meta is the
+  /// blocker sends them hunting for a switch that would not help.
+  CallBlock? get blockedBy {
+    if (canPlaceCall) return null;
+    if (!enabled) return CallBlock.workspaceDisabled;
+    if (!outboundSupported) return CallBlock.countryRestricted;
+    if (businessHoursEnabled && !withinBusinessHours) {
+      return CallBlock.outsideBusinessHours;
+    }
+    return CallBlock.unknown;
+  }
 
   /// The conjunction, computed server-side. Branch on this rather than
   /// re-deriving the rule, or the client drifts from the engine.

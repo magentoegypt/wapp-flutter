@@ -296,11 +296,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
               phone: thread.valueOrNull?.phone,
               channel:
                   thread.valueOrNull?.channel ?? MessageChannel.whatsapp,
-              // The sheet's Call and Status tiles reuse the header's own
-              // handlers rather than re-deriving them: Call has to consult the
-              // capability gate first, and Status needs the inbox row that
-              // carries the current value.
-              onCall: () => context.push(AppRoutes.chatCalls(widget.contactUid)),
+              // Call goes through the same gate as the header button rather
+              // than to call history — a tile labelled "Call" that opens a log
+              // is not the action it names. Null when a call cannot be placed,
+              // which the sheet draws as a faded tile.
+              onCall: (ref.watch(callCapabilityProvider).valueOrNull
+                          ?.canPlaceCall ??
+                      false)
+                  ? () => context.push(
+                        '/calls/${widget.contactUid}/outgoing',
+                        extra: thread.valueOrNull?.name,
+                      )
+                  : null,
               onStatus: _statusOf(widget.contactUid) == null
                   ? null
                   : () => _showStatusMenu(_statusOf(widget.contactUid)!),
@@ -447,16 +454,19 @@ class _CallButton extends ConsumerWidget {
           context.push('/calls/$contactUid/outgoing', extra: name);
           return;
         }
-        // Say which gate closed. "Calling is off for this workspace" is
-        // fixable by the user; "Meta will not allow it from this number" is
-        // not, and conflating them sends someone hunting through settings.
-        final String reason = cap == null
-            ? l10n.clUnavailable
-            : !cap.enabled
-                ? l10n.clDisabled
-                : l10n.clRestricted(
-                    cap.outboundRestrictedReason ?? l10n.clUnavailable,
-                  );
+        // Say which gate closed. The three are different problems: a
+        // workspace switch the user can flip, a Meta country rule nobody can,
+        // and a time-of-day window that will clear on its own. Business hours
+        // used to fall through to the country message and name a restriction
+        // that was not the one in force.
+        final String reason = switch (cap?.blockedBy) {
+          CallBlock.workspaceDisabled => l10n.clDisabled,
+          CallBlock.countryRestricted => l10n.clRestricted(
+              cap!.outboundRestrictedReason ?? l10n.clUnavailable,
+            ),
+          CallBlock.outsideBusinessHours => l10n.clOutsideHours,
+          _ => l10n.clUnavailable,
+        };
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(reason)));
       },

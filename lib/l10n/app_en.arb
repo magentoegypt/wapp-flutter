@@ -591,6 +591,10 @@
   "clUnmute": "Unmute",
   "clSpeaker": "Speaker",
   "clCallBack": "Call back",
+  "clOutsideHours": "Outside your workspace's calling hours.",
+  "@clOutsideHours": {
+    "description": "withinBusinessHours is time-of-day and clears on its own, so this must not read like the permanent country restriction."
+  },
   "clUnavailable": "Calling unavailable",
   "clRestricted": "Calls cannot be placed from this number ({reason}).",
   "@clRestricted": {
