@@ -22,7 +22,19 @@ abstract final class AppDimens {
 
   /// App bar variants: a plain back-nav header, and the taller header that
   /// carries a title plus an inline search field (Inbox, Contacts).
-  static const double headerBack = 96;
+  /// Content height of the back-nav header, **excluding** the status bar.
+  ///
+  /// 96 was read from the handoff's constants table as though it were the
+  /// content box, but that figure is the whole green band — status bar
+  /// included. `SafeArea` inside the header already adds the inset, so the
+  /// band came out at 96 + inset ≈ 132 on a device with a 36dp status bar:
+  /// roughly double the ~50 the frames draw, and a quarter of a short phone's
+  /// screen spent on a back arrow and one word.
+  ///
+  /// 56 is Material's standard app-bar height and the smallest value that
+  /// still clears a 36dp touch target with breathing room. It measures within
+  /// a few px of the frames.
+  static const double headerBack = 56;
 
 
   /// Floating compose button, inset by [gutter] from both edges.

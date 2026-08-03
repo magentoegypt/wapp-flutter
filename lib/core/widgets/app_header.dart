@@ -111,6 +111,14 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
 
   bool get _isSearch => searchHint != null;
 
+  /// Whether the back variant centres its title.
+  ///
+  /// The frames centre a plain title and align the chat's identity block to
+  /// the start — an avatar with a name and a presence line under it is one
+  /// unit and reads as detached from the face when centred.
+  bool get _centreTitle =>
+      avatar == null && subtitle == null && subtitleTrailing == null;
+
   // Content metrics, so the header can be sized from what it contains rather
   // than from a fixed box the content has to fit inside. The handoff's 182 was
   // such a box: whatever the title, field and status-bar inset did not use
@@ -210,13 +218,21 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
             // Opaque so the whole title block is tappable, not just the glyphs.
             behavior: HitTestBehavior.opaque,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              // Centred on a plain title, where the frames centre it; aligned
+              // to the start as soon as there is an avatar or a subtitle,
+              // because the chat header is a stacked identity block and
+              // centring that leaves the name floating away from the face it
+              // belongs to.
+              crossAxisAlignment: _centreTitle
+                  ? CrossAxisAlignment.center
+                  : CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
                 Text(
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
+                  textAlign: _centreTitle ? TextAlign.center : TextAlign.start,
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
@@ -258,6 +274,13 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
           ),
         ),
         ...?actions,
+        // Counterweight for the back chevron. `Expanded` centres the title
+        // inside whatever is left over, so with a 40dp leading affordance and
+        // nothing trailing the text lands 20dp left of true centre — visibly
+        // off on a short title like "Contact". Only added when the title is
+        // actually centred and nothing else occupies the trailing slot.
+        if (_centreTitle && (actions == null || actions!.isEmpty))
+          const SizedBox(width: 40),
       ],
     );
   }

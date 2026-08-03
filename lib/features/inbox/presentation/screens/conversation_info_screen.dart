@@ -22,6 +22,7 @@ import '../../data/conversation_repository.dart';
 import '../../data/note_repository.dart';
 import '../../domain/channel.dart';
 import '../../domain/conversation.dart';
+import '../widgets/chat_actions_sheet.dart';
 
 /// Conversation info — Figma 290:4.
 ///
@@ -63,7 +64,26 @@ class ConversationInfoScreen extends ConsumerWidget {
     );
 
     return Scaffold(
-      appBar: AppHeader.back(title: l10n.ciContactInfo),
+      appBar: AppHeader.back(
+        title: l10n.ciContactInfo,
+        actions: <Widget>[
+          // The frame's ⋯. It was absent, so every conversation action —
+          // snooze, transfer, labels, templates, history access — was
+          // reachable only by going back to the chat first.
+          IconButton(
+            icon: const Icon(Icons.more_horiz, color: Colors.white),
+            tooltip: l10n.caTitle,
+            onPressed: () => showChatActionsSheet(
+              context,
+              contactUid: contactUid,
+              name: thread.valueOrNull?.name ?? '',
+              phone: thread.valueOrNull?.phone,
+              channel:
+                  thread.valueOrNull?.channel ?? MessageChannel.whatsapp,
+            ),
+          ),
+        ],
+      ),
       body: AsyncValueView<ChatThread>(
         value: thread,
         onRetry: () => ref.invalidate(chatThreadProvider(contactUid)),
