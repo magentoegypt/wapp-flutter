@@ -127,6 +127,7 @@ class ConversationInfoScreen extends ConsumerWidget {
                   : l10n.chanWhatsapp,
               secondary: t.channel.isInstagram ? handle : null,
             ),
+            ?_firstSeenRow(l10n, contact, locale),
             // Which workspace number the customer reached. Taken from the
             // most recent message that carries one rather than the newest
             // outright, so an outbound-only tail does not blank the row.
@@ -318,27 +319,37 @@ class ConversationInfoScreen extends ConsumerWidget {
     ];
   }
 
-  /// The rows the frame places after Channel and Received on.
+  /// First seen, which the frame places between Channel and Received on.
+  ///
+  /// `createdAt` is the date the workspace first saw this customer, which is
+  /// exactly the frame's row. It sits on its own because the rows either side
+  /// of it come off the thread rather than the contact.
+  Widget? _firstSeenRow(
+    AppLocalizations l10n,
+    Contact? contact,
+    String locale,
+  ) {
+    final DateTime? firstSeen = contact?.createdAt;
+    if (firstSeen == null) return null;
+    return _DetailRow(
+      label: l10n.ciFirstSeen,
+      value: DateFormat.yMMMd(locale).format(firstSeen),
+    );
+  }
+
+  /// The rows the frame places after Received on.
   List<Widget> _detailRowsAfter(
     AppLocalizations l10n,
     Contact? contact,
     String locale,
   ) {
     if (contact == null) return const <Widget>[];
-    // `createdAt` is the date the workspace first saw this customer, which is
-    // exactly the frame's row.
-    final DateTime? firstSeen = contact.createdAt;
     final String? stage = stageBadge(l10n, contact)?.label;
     // "English (en)" — the frame shows both, because an agent choosing a
     // template needs the code and everyone else needs the name.
     final String? language = languageName(contact.language);
 
     return <Widget>[
-      if (firstSeen != null)
-        _DetailRow(
-          label: l10n.ciFirstSeen,
-          value: DateFormat.yMMMd(locale).format(firstSeen),
-        ),
       if (stage != null) _DetailRow(label: l10n.ciCustomerStatus, value: stage),
       if (language != null)
         _DetailRow(
