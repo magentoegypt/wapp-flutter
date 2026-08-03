@@ -723,7 +723,19 @@ class _ContactFormScreenState extends ConsumerState<ContactFormScreen> {
                 ),
               ),
 
-              // Applied by a follow-up PUT — create does not accept the flag.
+              // Create only. On edit this is hidden rather than shown, because
+              // it could not be shown honestly: the contact payload does not
+              // expose the current AI-bot state, so the switch would always
+              // open in the "off" position regardless of the truth. Sending
+              // that on save would silently disable a bot that was on; not
+              // sending it — which is what the edit path does, so the server
+              // preserves the value — would leave a switch that moves and
+              // changes nothing. Neither is acceptable, so it is absent until
+              // the API returns the flag.
+              //
+              // On create it is applied by a follow-up PUT, since create does
+              // not accept it either.
+              if (!widget.isEdit)
               Padding(
                 padding: const EdgeInsets.only(bottom: 14),
                 child: Container(
