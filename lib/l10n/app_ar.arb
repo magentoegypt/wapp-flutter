@@ -952,5 +952,7 @@
   "cdAddTag": "إضافة",
   "ciCustomerStatus": "حالة العميل",
   "ciChangeAssignee": "تغيير",
-  "notesViewAll": "عرض الكل"
+  "notesViewAll": "عرض الكل",
+  "cdAddTagTitle": "إضافة وسم",
+  "cdAddTagUnsafe": "تعذّر تحميل مجموعات جهة الاتصال — لم تتم إضافة الوسم ولم يتغيّر شيء."
 }

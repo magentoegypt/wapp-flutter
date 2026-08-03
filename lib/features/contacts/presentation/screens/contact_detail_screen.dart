@@ -15,6 +15,7 @@ import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/initials_avatar.dart';
 import '../../../../core/widgets/section_label.dart';
 import '../../../../core/widgets/status_pill.dart';
+import '../../../../core/widgets/text_prompt_dialog.dart';
 import '../../../conversation_actions/data/conversation_action_repository.dart';
 import '../../data/contact_repository.dart';
 import '../../../inbox/data/conversation_repository.dart';
@@ -204,7 +205,7 @@ class ContactDetailScreen extends ConsumerWidget {
                     // one-field write from here would quietly destroy two
                     // other fields; the edit form already sends the whole set
                     // safely.
-                    _AddTagChip(contactUid: c.uid),
+                    _AddTagChip(contact: c),
                   ],
                 ),
               ),
@@ -366,19 +367,115 @@ class _FavouriteTileState extends ConsumerState<_FavouriteTile> {
   }
 }
 
-/// The "+ Add" chip in the tags row.
+/// The "+ Add" chip in the tags row. Adds a tag in place.
 ///
-/// Routes to the edit form. See the call site for why this cannot safely write
-/// a tag on its own.
-class _AddTagChip extends StatelessWidget {
-  const _AddTagChip({required this.contactUid});
+/// It used to open the edit form, which was safe but made a one-word change a
+/// five-step trip. Adding here is only safe because the write carries
+/// everything the endpoint would otherwise destroy:
+///
+///  * `contact_tags` is replace-not-append, so the **whole** list goes, not
+///    the new tag.
+///  * `contact_city` is rewritten from the request on every update and is not
+///    seeded from the current row, so omitting it stores null.
+///  * `contact_groups` removals are `array_diff(existing, sent)`, so omitting
+///    it unfiles the contact from every group.
+///
+/// Groups also have to be translated: the contact's own payload lists them as
+/// `{uid, title}` with no numeric id, while `contact_groups` matches on `_id`.
+/// `/contacts/meta` is the only place carrying both, so it is awaited before
+/// writing — and if a group cannot be resolved the write is **abandoned**
+/// rather than sent without it, because sending a partial list is what removes
+/// the rest.
+class _AddTagChip extends ConsumerStatefulWidget {
+  const _AddTagChip({required this.contact});
 
-  final String contactUid;
+  final Contact contact;
+
+  @override
+  ConsumerState<_AddTagChip> createState() => _AddTagChipState();
+}
+
+class _AddTagChipState extends ConsumerState<_AddTagChip> {
+  bool _busy = false;
+
+  Future<void> _add() async {
+    if (_busy) return;
+    final AppLocalizations l10n = AppLocalizations.of(context);
+
+    final String? raw = await showTextPromptDialog(
+      context,
+      title: l10n.cdAddTagTitle,
+      confirmLabel: l10n.cdAddTag,
+      hintText: l10n.acTagsPlaceholder,
+    );
+    final String tag = (raw ?? '').trim().replaceAll(',', '');
+    if (tag.isEmpty || !mounted) return;
+
+    // Already there — nothing to write, and re-sending would be a no-op that
+    // still risked the round trip above.
+    if (widget.contact.labels
+        .any((String l) => l.toLowerCase() == tag.toLowerCase())) {
+      return;
+    }
+
+    setState(() => _busy = true);
+    try {
+      final ContactMeta meta = await ref.read(contactMetaProvider.future);
+
+      final List<String> groupIds = <String>[];
+      for (final NamedRef g in widget.contact.groups) {
+        final GroupRef? match = meta.groups
+            .cast<GroupRef?>()
+            .firstWhere((GroupRef? m) => m?.uid == g.id || m?.id == g.id,
+                orElse: () => null);
+        if (match == null) {
+          // Writing now would drop this group. Say so and change nothing.
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(l10n.cdAddTagUnsafe)),
+            );
+          }
+          return;
+        }
+        groupIds.add(match.id);
+      }
+
+      await ref.read(contactRepositoryProvider).update(
+            widget.contact.uid,
+            tags: <String>[...widget.contact.labels, tag].join(','),
+            city: widget.contact.city ?? '',
+            groupIds: groupIds,
+            customFields: <String, String>{
+              for (final ContactCustomValue f in widget.contact.customFields)
+                f.fieldUid: f.value,
+            },
+          );
+
+      ref.invalidate(contactDetailProvider(widget.contact.uid));
+      ref.invalidate(contactListProvider);
+    } on Failure catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return ActionChip(
-      avatar: const Icon(Icons.add, size: 15, color: AppColor.brandDeep),
+      avatar: _busy
+          ? const SizedBox(
+              width: 13,
+              height: 13,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppColor.brandDeep,
+              ),
+            )
+          : const Icon(Icons.add, size: 15, color: AppColor.brandDeep),
       label: Text(AppLocalizations.of(context).cdAddTag),
       labelStyle: Theme.of(context)
           .textTheme
@@ -387,7 +484,7 @@ class _AddTagChip extends StatelessWidget {
       backgroundColor: AppColor.brandWash,
       side: const BorderSide(color: AppColor.brandWash),
       visualDensity: VisualDensity.compact,
-      onPressed: () => context.push(AppRoutes.contactEdit(contactUid)),
+      onPressed: _busy ? null : _add,
     );
   }
 }

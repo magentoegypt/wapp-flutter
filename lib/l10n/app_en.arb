@@ -1167,5 +1167,7 @@
   "cdAddTag": "Add",
   "ciCustomerStatus": "Customer status",
   "ciChangeAssignee": "Change",
-  "notesViewAll": "View all"
+  "notesViewAll": "View all",
+  "cdAddTagTitle": "Add a tag",
+  "cdAddTagUnsafe": "Couldn't load this contact's groups — tag not added, so nothing was changed."
 }
