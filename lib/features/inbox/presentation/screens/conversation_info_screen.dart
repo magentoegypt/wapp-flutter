@@ -22,6 +22,7 @@ import '../../data/conversation_repository.dart';
 import '../../data/note_repository.dart';
 import '../../domain/channel.dart';
 import '../../domain/conversation.dart';
+import '../../../contacts/presentation/widgets/contact_ui.dart';
 import '../../../contacts/presentation/widgets/tag_picker.dart';
 import '../widgets/chat_actions_sheet.dart';
 
@@ -90,6 +91,7 @@ class ConversationInfoScreen extends ConsumerWidget {
         onRetry: () => ref.invalidate(chatThreadProvider(contactUid)),
         builder: (ChatThread t) => ListView(
           children: <Widget>[
+            Surface(children: <Widget>[
             const SizedBox(height: 20),
             Center(
               // Filled brand green with light initials, matching the frame and
@@ -132,16 +134,61 @@ class ConversationInfoScreen extends ConsumerWidget {
             ],
 
             const SizedBox(height: 18),
-            _QuickActions(contactUid: contactUid, phone: t.phone, l10n: l10n),
+            // The same three tiles Contact detail draws, Favourite included.
+            // This screen used to end on Note while the other ended on
+            // Favourite, so the same customer offered different actions
+            // depending on the way in.
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppDimens.gutter,
+              ),
+              child: Row(
+                children: <Widget>[
+                  ActionTile(
+                    icon: Icons.mail_outline,
+                    label: l10n.ciActionMessage,
+                    // Returns to the chat rather than pushing a fresh one —
+                    // this screen is only reached from there, so a push would
+                    // stack a second copy of the same thread behind it.
+                    onTap: () => context.canPop()
+                        ? context.pop()
+                        : context.go(AppRoutes.chat(contactUid)),
+                  ),
+                  const SizedBox(width: 10),
+                  ActionTile(
+                    icon: Icons.call_outlined,
+                    label: l10n.ciActionCall,
+                    onTap: t.phone == null
+                        ? null
+                        : () => launchUrl(Uri(scheme: 'tel', path: t.phone!)),
+                  ),
+                  const SizedBox(width: 10),
+                  if (contact != null)
+                    FavouriteTile(contact: contact)
+                  else
+                    ActionTile(
+                      icon: Icons.star_outline,
+                      label: l10n.cdFavorite,
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            ]),
 
             SectionLabel(l10n.ciContactDetails),
+            // White rows on the tinted page, with hairlines between — the
+            // frame's shape, and what Contact detail already did. This screen
+            // stayed one flat tone, so its headings floated and its rows had
+            // no grouping.
+            Surface(divided: true, children: <Widget>[
             ...detailsBefore,
             // Which network the thread runs on. Always shown, even though it
             // is WhatsApp for almost every row: an agent has to know before
             // replying, because what may be sent and how long the window stays
             // open differ between the two, and an absent row would read as
             // "WhatsApp" by default on exactly the threads where that is wrong.
-            _DetailRow(
+            InfoRow(
               label: l10n.ciChannel,
               value: t.channel.isInstagram
                   ? l10n.chanInstagram
@@ -153,8 +200,9 @@ class ConversationInfoScreen extends ConsumerWidget {
             // most recent message that carries one rather than the newest
             // outright, so an outbound-only tail does not blank the row.
             if (_receivedOn(t) != null)
-              _DetailRow(label: l10n.ciReceivedOn, value: _receivedOn(t)!),
+              InfoRow(label: l10n.ciReceivedOn, value: _receivedOn(t)!),
             ...detailsAfter,
+            ]),
 
             // The frame's LABELS chips, with its "+ Add".
             //
@@ -318,9 +366,9 @@ class ConversationInfoScreen extends ConsumerWidget {
 
     return <Widget>[
       if (email != null && email.isNotEmpty)
-        _DetailRow(label: l10n.ciEmail, value: email),
+        InfoRow(label: l10n.ciEmail, value: email),
       if (country != null && country.isNotEmpty)
-        _DetailRow(label: l10n.ciCountry, value: country),
+        InfoRow(label: l10n.ciCountry, value: country),
     ];
   }
 
@@ -336,7 +384,7 @@ class ConversationInfoScreen extends ConsumerWidget {
   ) {
     final DateTime? firstSeen = contact?.createdAt;
     if (firstSeen == null) return null;
-    return _DetailRow(
+    return InfoRow(
       label: l10n.ciFirstSeen,
       value: DateFormat.yMMMd(locale).format(firstSeen),
     );
@@ -355,190 +403,14 @@ class ConversationInfoScreen extends ConsumerWidget {
     final String? language = languageName(contact.language);
 
     return <Widget>[
-      if (stage != null) _DetailRow(label: l10n.ciCustomerStatus, value: stage),
+      if (stage != null) InfoRow(label: l10n.ciCustomerStatus, value: stage),
       if (language != null)
-        _DetailRow(
+        InfoRow(
           label: l10n.cdLanguage,
           value: language.toLowerCase() == (contact.language ?? '').toLowerCase()
               ? language
               : '$language (${contact.language})',
         ),
     ];
-  }
-}
-
-/// One label/value line in the CONTACT DETAILS block.
-///
-/// Deliberately not an [AppListTile]: the frame's detail block is a tight
-/// two-column list with no leading tile and no chevron. Borrowing the row
-/// idiom made seven pieces of read-only data look like seven tappable
-/// settings.
-class _DetailRow extends StatelessWidget {
-  const _DetailRow({required this.label, required this.value, this.secondary});
-
-  final String label;
-  final String value;
-
-  /// A quieter second line under [value] — the Instagram handle under the
-  /// channel name. It qualifies the value rather than standing beside it, so
-  /// it stacks instead of claiming a row of its own.
-  final String? secondary;
-
-  @override
-  Widget build(BuildContext context) {
-    final TextTheme text = Theme.of(context).textTheme;
-
-    return Padding(
-      padding: const EdgeInsetsDirectional.symmetric(
-        horizontal: AppDimens.gutter,
-        vertical: 7,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(label, style: text.bodyMedium),
-          const SizedBox(width: 16),
-          Expanded(
-            // End-aligned, so the values line up on the trailing edge in both
-            // writing directions.
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: <Widget>[
-                Text(
-                  value,
-                  textAlign: TextAlign.end,
-                  style: text.bodyMedium?.copyWith(
-                    color: AppColor.ink,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                if (secondary != null)
-                  Text(
-                    secondary!,
-                    textAlign: TextAlign.end,
-                    style: text.bodySmall?.copyWith(color: AppColor.inkMuted),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// The three-up action row the frame puts under the hero block.
-class _QuickActions extends StatelessWidget {
-  const _QuickActions({
-    required this.contactUid,
-    required this.l10n,
-    this.phone,
-  });
-
-  final String contactUid;
-  final AppLocalizations l10n;
-  final String? phone;
-
-  /// Message returns to the chat instead of pushing a fresh one — this screen
-  /// is only ever reached from there, so a push would stack a second copy of
-  /// the same thread behind it.
-  void _openChat(BuildContext context) {
-    if (context.canPop()) {
-      context.pop();
-    } else {
-      context.go(AppRoutes.chat(contactUid));
-    }
-  }
-
-  /// Hands off to the platform dialer. The app cannot place a call itself, and
-  /// leaving the app is more honest than a tile that looks live and isn't.
-  Future<void> _dial(String number) async {
-    try {
-      await launchUrl(Uri(scheme: 'tel', path: number));
-    } catch (_) {
-      // No dialer on this device (tablet, emulator). Staying inert beats
-      // throwing out of a tap handler.
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final String? number = phone;
-
-    return Padding(
-      padding: const EdgeInsetsDirectional.symmetric(
-        horizontal: AppDimens.gutter,
-      ),
-      child: Row(
-        children: <Widget>[
-          Expanded(
-            child: _QuickAction(
-              icon: Icons.mail_outline,
-              label: l10n.ciActionMessage,
-              onTap: () => _openChat(context),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: _QuickAction(
-              icon: Icons.call_outlined,
-              label: l10n.ciActionCall,
-              onTap: number == null ? null : () => _dial(number),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: _QuickAction(
-              icon: Icons.sticky_note_2_outlined,
-              label: l10n.ciActionNote,
-              onTap: () => context.push(AppRoutes.chatNotes(contactUid)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// One brand-wash tile in the quick-action row.
-///
-/// [AppColor.brandDeep] for the glyph and the label, not [AppColor.brand]:
-/// brand green is a fill colour and does not reach AA as text on the wash.
-class _QuickAction extends StatelessWidget {
-  const _QuickAction({required this.icon, required this.label, this.onTap});
-
-  final IconData icon;
-  final String label;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: AppColor.brandWash,
-      borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Column(
-            children: <Widget>[
-              Icon(icon, size: 20, color: AppColor.brandDeep),
-              const SizedBox(height: 6),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColor.brandDeep,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }

@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_dimens.dart';
-import '../../../../core/error/failure.dart';
 import '../../../../core/util/contact_format.dart';
 import '../../../../core/widgets/app_header.dart';
 import '../../../../core/widgets/app_list_tile.dart';
@@ -15,8 +14,8 @@ import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/initials_avatar.dart';
 import '../../../../core/widgets/section_label.dart';
 import '../../../../core/widgets/status_pill.dart';
-import '../../../conversation_actions/data/conversation_action_repository.dart';
 import '../../data/contact_repository.dart';
+import '../widgets/contact_ui.dart';
 import '../widgets/tag_picker.dart';
 import '../../../inbox/data/conversation_repository.dart';
 import '../../../inbox/domain/conversation.dart';
@@ -66,7 +65,7 @@ class ContactDetailScreen extends ConsumerWidget {
           // Everything used to share one flat background, so nothing was
           // grouped and the dividers had nothing to divide.
           children: <Widget>[
-            _Surface(children: <Widget>[
+            Surface(children: <Widget>[
             const SizedBox(height: 20),
             Center(
               // Filled deep green with light initials, as the frame draws the
@@ -117,7 +116,7 @@ class ContactDetailScreen extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: AppDimens.gutter),
               child: Row(
                 children: <Widget>[
-                  _ActionTile(
+                  ActionTile(
                     // Envelope, as the frame draws it — and as Conversation
                     // info already used, so the same action stopped wearing
                     // two different glyphs.
@@ -126,7 +125,7 @@ class ContactDetailScreen extends ConsumerWidget {
                     onTap: () => context.push(AppRoutes.chat(c.uid)),
                   ),
                   const SizedBox(width: 10),
-                  _ActionTile(
+                  ActionTile(
                     icon: Icons.call_outlined,
                     label: l10n.ciActionCall,
                     onTap: c.phone.isEmpty
@@ -139,7 +138,7 @@ class ContactDetailScreen extends ConsumerWidget {
                   // existed: `POST /contacts/{uid}/favorite` is keyed by
                   // contact and returns the new state, so the star reflects
                   // reality rather than guessing at it.
-                  _FavouriteTile(contact: c),
+                  FavouriteTile(contact: c),
                 ],
               ),
             ),
@@ -155,7 +154,7 @@ class ContactDetailScreen extends ConsumerWidget {
             // inside it — a row that collapses to nothing still counts as a
             // child, so a divided surface would draw a rule against an
             // invisible row and the block would end up with double lines.
-            _Surface(divided: true, children: <Widget>[
+            Surface(divided: true, children: <Widget>[
               ?infoRow(l10n.cdPhone, formatPhone(c.phone)),
               ?infoRow(l10n.cdEmail, c.email),
               // Favourite is no longer a row — it is the third action tile
@@ -180,7 +179,7 @@ class ContactDetailScreen extends ConsumerWidget {
             // see the absence of.
             ...<Widget>[
               SectionLabel(l10n.cdTags),
-              _Surface(children: <Widget>[
+              Surface(children: <Widget>[
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppDimens.gutter,
@@ -214,7 +213,7 @@ class ContactDetailScreen extends ConsumerWidget {
 
             if (c.groups.isNotEmpty) ...<Widget>[
               SectionLabel(l10n.cdGroups),
-              _Surface(children: <Widget>[
+              Surface(children: <Widget>[
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppDimens.gutter,
@@ -239,7 +238,7 @@ class ContactDetailScreen extends ConsumerWidget {
             // workspace's schema rather than with anything about this contact.
             if (c.customFields.isNotEmpty) ...<Widget>[
               SectionLabel(l10n.acSectionOther),
-              _Surface(divided: true, children: <Widget>[
+              Surface(divided: true, children: <Widget>[
                 for (final ContactCustomValue f in c.customFields)
                   ?infoRow(f.name, f.value),
               ]),
@@ -304,222 +303,8 @@ class _RecentConversation extends ConsumerWidget {
     );
   }
 }
-
-/// One equal-width tile in the hero action row.
-///
-/// Disabled rather than hidden when there is nothing to act on, so the row keeps
-/// its three-up rhythm instead of reflowing per contact.
-/// The Favourite action tile.
-///
-/// Optimistic: the star flips immediately and is corrected from the response,
-/// because the round trip is long enough that a tile which does nothing for a
-/// second reads as broken. On failure it flips back and says so — silently
-/// reverting would look like the tap missed.
-class _FavouriteTile extends ConsumerStatefulWidget {
-  const _FavouriteTile({required this.contact});
-
-  final Contact contact;
-
-  @override
-  ConsumerState<_FavouriteTile> createState() => _FavouriteTileState();
-}
-
-class _FavouriteTileState extends ConsumerState<_FavouriteTile> {
-  bool? _override;
-  bool _busy = false;
-
-  bool get _on => _override ?? widget.contact.isFavorite;
-
-  Future<void> _toggle() async {
-    if (_busy) return;
-    final bool previous = _on;
-    setState(() {
-      _busy = true;
-      _override = !previous;
-    });
-
-    try {
-      final bool now = await ref
-          .read(conversationActionRepositoryProvider)
-          .toggleFavourite(widget.contact.uid);
-      if (!mounted) return;
-      // The server's answer wins over the optimistic guess.
-      setState(() => _override = now);
-      ref.invalidate(contactDetailProvider(widget.contact.uid));
-      ref.invalidate(contactListProvider);
-    } on Failure catch (e) {
-      if (!mounted) return;
-      setState(() => _override = previous);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.message)));
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return _ActionTile(
-      icon: _on ? Icons.star : Icons.star_outline,
-      label: AppLocalizations.of(context).cdFavorite,
-      onTap: _toggle,
-    );
-  }
-}
-
-class _ActionTile extends StatelessWidget {
-  const _ActionTile({required this.icon, required this.label, this.onTap});
-
-  final IconData icon;
-  final String label;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final bool enabled = onTap != null;
-    final Color ink = enabled ? AppColor.brandDeep : AppColor.inkFaint;
-
-    return Expanded(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: enabled ? AppColor.brandWash : AppColor.surfaceAlt,
-            borderRadius: BorderRadius.circular(AppDimens.radiusCard),
-          ),
-          child: Column(
-            children: <Widget>[
-              Icon(icon, size: 20, color: ink),
-              const SizedBox(height: 6),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: ink,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 /// Label-left, value-right information row. Renders nothing when [value] is
 /// absent, so the block shows only what the backend actually returned.
-class _InfoRow extends StatelessWidget {
-  const _InfoRow({required this.label, required this.value});
-
-  final String label;
-  final String? value;
-
-  @override
-  Widget build(BuildContext context) {
-    if (value == null || value!.isEmpty) return const SizedBox.shrink();
-
-    return Padding(
-      padding: const EdgeInsetsDirectional.symmetric(
-        horizontal: AppDimens.gutter,
-        vertical: 9,
-      ),
-      child: Row(
-        children: <Widget>[
-          // The label takes its own width and no more. It used to be
-          // `Expanded` while the value was merely `Flexible`, so the label
-          // claimed the row and squeezed the value — which is why a long
-          // address broke mid-token into "mahmoudmagdy74" over "237@gmail.com"
-          // instead of sitting on one line as the frame draws it.
-          Text(label, style: Theme.of(context).textTheme.bodyMedium),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Align(
-              alignment: AlignmentDirectional.centerEnd,
-              // Scale down rather than wrap or ellipsize. An email is only
-              // useful whole: truncating it hides the domain, and wrapping it
-              // splits it at whatever character happens to land on the edge.
-              // Shrinking keeps every character on one line, and only kicks in
-              // for values too long to fit at full size.
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: AlignmentDirectional.centerEnd,
-                child: Text(
-                  value!,
-                  maxLines: 1,
-                  softWrap: false,
-                  textAlign: TextAlign.end,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// One label/value line, or nothing when there is no value.
-///
-/// Returns `Widget?` rather than an empty box so a caller can drop it with the
-/// null-aware element operator — see the divided-surface note at the call site.
-Widget? infoRow(String label, String? value) {
-  if (value == null || value.isEmpty) return null;
-  return _InfoRow(label: label, value: value);
-}
-
-/// A full-bleed white block on the tinted page.
-///
-/// The frame is a white sheet interrupted by tinted bands — the section
-/// headings sit on the page colour and everything else sits on white. Without
-/// this the screen was one flat tone, so the headings floated and there was
-/// nothing for a divider to separate.
-///
-/// [divided] draws a hairline between children, inset past the gutter so the
-/// rules line up under the values rather than running edge to edge.
-class _Surface extends StatelessWidget {
-  const _Surface({required this.children, this.divided = false});
-
-  final List<Widget> children;
-  final bool divided;
-
-  @override
-  Widget build(BuildContext context) {
-    final bool isLight = Theme.of(context).brightness == Brightness.light;
-    final List<Widget> rows = <Widget>[];
-
-    for (int i = 0; i < children.length; i++) {
-      rows.add(children[i]);
-      if (divided && i < children.length - 1) {
-        rows.add(Divider(
-          height: 1,
-          thickness: 1,
-          indent: AppDimens.gutter,
-          endIndent: AppDimens.gutter,
-          color: isLight ? AppColor.hairline : AppColor.hairlineDark,
-        ));
-      }
-    }
-
-    return Container(
-      width: double.infinity,
-      color: isLight ? Colors.white : AppColor.surfaceDark,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: rows,
-      ),
-    );
-  }
-}
-
 /// Delete, as a header icon.
 ///
 /// A bare icon for an irreversible action is only acceptable because it opens
