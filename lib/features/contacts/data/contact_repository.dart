@@ -9,11 +9,28 @@ abstract interface class ContactRepository {
   Future<List<Contact>> list({String? query});
   Future<Contact> byUid(String uid);
   Future<ContactMeta> meta();
+  /// Create a contact.
+  ///
+  /// The body is **snake_case**, the same as [update] — `POST /contacts`
+  /// validates `first_name`, `last_name`, `phone_number`, `email`, `country`,
+  /// `language_code`, `contact_city`, `contact_tags` and `contact_groups`.
+  ///
+  /// It previously sent `name`, `phone` and `groups`: three keys the endpoint
+  /// does not read. Because `first_name` and `phone_number` are both
+  /// `required`, the request failed validation before it ever reached the
+  /// engine, so **Add contact could not create anyone**. It failed loudly with
+  /// a 422 rather than silently, which is the only reason it is a bug and not
+  /// a data-corruption incident — but the message named fields the form did
+  /// not show, so the error read as nonsense.
   Future<Contact> create({
-    required String name,
-    required String phone,
+    required String firstName,
+    String? lastName,
+    required String phoneNumber,
     String? email,
-    String? countryCode,
+    String? countryId,
+    String? languageCode,
+    String? city,
+    String? tags,
     List<String> groupIds,
   });
 
@@ -115,36 +132,40 @@ class ContactRepositoryImpl implements ContactRepository {
   Future<ContactMeta> meta() async {
     final dynamic body = await _api.get('/contacts/meta');
     // meta is flat under the envelope - no singular record key.
-    final Map<String, dynamic> j =
-        (body as Map<String, dynamic>?) ?? const <String, dynamic>{};
-    // `/contacts/meta` carries 252 countries as of the 30 Jul API pass; it
-    // previously returned none, which is why the Add-contact country field was
-    // left out rather than shipped against an empty list.
-    return ContactMeta(
-      groups: _refs(j['groups']),
-      labels: _refs(j['labels']),
-      countries: _refs(j['countries']),
-      customFields: _customFields(j['customFields'] ?? j['custom_fields']),
+    return contactMetaFromJson(
+      (body as Map<String, dynamic>?) ?? const <String, dynamic>{},
     );
   }
 
   @override
   Future<Contact> create({
-    required String name,
-    required String phone,
+    required String firstName,
+    String? lastName,
+    required String phoneNumber,
     String? email,
-    String? countryCode,
+    String? countryId,
+    String? languageCode,
+    String? city,
+    String? tags,
     List<String> groupIds = const <String>[],
   }) async {
+    // Optional strings are omitted when blank rather than sent as "". `email`
+    // is validated as `nullable|email`, so an empty string is not "no email" to
+    // this endpoint — it is an invalid one, and would 422 a form the user left
+    // untouched.
     final dynamic body = await _api.post(
       '/contacts',
-      body: <String, dynamic>{
-        'name': name,
-        'phone': phone,
-        if (email != null && email.isNotEmpty) 'email': email,
-        if (countryCode != null && countryCode.isNotEmpty) 'country': countryCode,
-        if (groupIds.isNotEmpty) 'groups': groupIds,
-      },
+      body: buildCreateBody(
+        firstName: firstName,
+        lastName: lastName,
+        phoneNumber: phoneNumber,
+        email: email,
+        countryId: countryId,
+        languageCode: languageCode,
+        city: city,
+        tags: tags,
+        groupIds: groupIds,
+      ),
     );
     return contactFromJson(_record(body, 'contact'));
   }
@@ -208,37 +229,109 @@ class ContactRepositoryImpl implements ContactRepository {
         m;
   }
 
-  /// Vendor-defined fields from `/contacts/meta`.
-  ///
-  /// Kept separate from [_refs] because these carry a type, a required flag and
-  /// options, none of which [NamedRef] can hold — and it is the type that
-  /// decides whether the form shows a text box, a number pad or a dropdown.
-  List<CustomField> _customFields(dynamic raw) {
-    final List<dynamic> list = (raw as List<dynamic>?) ?? const <dynamic>[];
-    return list.whereType<Map<String, dynamic>>().map((Map<String, dynamic> j) {
-      final List<dynamic> opts =
-          (j['options'] ?? j['values']) as List<dynamic>? ?? const <dynamic>[];
-      return CustomField(
-        uid: '${j['uid'] ?? j['id'] ?? ''}',
-        name: '${j['name'] ?? j['title'] ?? ''}',
-        type: '${j['type'] ?? 'text'}',
-        required: (j['required'] as bool?) ?? false,
-        options: opts.map((dynamic o) => '$o').toList(),
-      );
-    }).where((CustomField f) => f.uid.isNotEmpty).toList();
-  }
-
-  List<NamedRef> _refs(dynamic raw) {
-    if (raw is! List) return const <NamedRef>[];
-    return raw
-        .whereType<Map<String, dynamic>>()
-        .map((Map<String, dynamic> e) => NamedRef(
-              id: (e['uid'] ?? e['id'] ?? '').toString(),
-              name: (e['title'] ?? e['name'] ?? '').toString(),
-            ))
-        .toList();
-  }
 }
+
+/// Vendor-defined fields from `/contacts/meta`.
+///
+/// Kept separate from [_sharedRefs] because these carry a type, a required flag
+/// and options, none of which [NamedRef] can hold — and it is the type that
+/// decides whether the form shows a text box, a number pad or a dropdown.
+List<CustomField> _sharedCustomFields(dynamic raw) {
+  final List<dynamic> list = (raw as List<dynamic>?) ?? const <dynamic>[];
+  return list.whereType<Map<String, dynamic>>().map((Map<String, dynamic> j) {
+    final List<dynamic> opts =
+        (j['options'] ?? j['values']) as List<dynamic>? ?? const <dynamic>[];
+    return CustomField(
+      uid: '${j['uid'] ?? j['id'] ?? ''}',
+      name: '${j['name'] ?? j['title'] ?? ''}',
+      type: '${j['type'] ?? 'text'}',
+      required: (j['required'] as bool?) ?? false,
+      options: opts.map((dynamic o) => '$o').toList(),
+    );
+  }).where((CustomField f) => f.uid.isNotEmpty).toList();
+}
+
+List<NamedRef> _sharedRefs(dynamic raw) {
+  if (raw is! List) return const <NamedRef>[];
+  return raw
+      .whereType<Map<String, dynamic>>()
+      .map((Map<String, dynamic> e) => NamedRef(
+            id: (e['uid'] ?? e['id'] ?? '').toString(),
+            name: (e['title'] ?? e['name'] ?? '').toString(),
+          ))
+      .toList();
+}
+
+/// Countries keep their own shape.
+///
+/// ⚠ `id` here is the numeric `_id`, **not** `uid` — the countries list is the
+/// one entry in `/contacts/meta` that carries no uid, and `country` on create
+/// expects that id. Running these through [_sharedRefs], which prefers `uid`,
+/// would have produced empty ids and a dropdown that submitted nothing.
+///
+/// Rows missing an id or a name are dropped rather than shown, because a
+/// country you can select but not submit is worse than one that is absent.
+List<CountryRef> _sharedCountries(dynamic raw) {
+  if (raw is! List) return const <CountryRef>[];
+  return raw
+      .whereType<Map<String, dynamic>>()
+      .map((Map<String, dynamic> e) => CountryRef(
+            id: (e['id'] ?? '').toString(),
+            name: (e['name'] ?? '').toString(),
+            isoCode: (e['isoCode'] ?? '').toString(),
+            phoneCode: (e['phoneCode'] ?? '').toString(),
+          ))
+      .where((CountryRef c) => c.id.isNotEmpty && c.name.isNotEmpty)
+      .toList();
+}
+
+/// The `POST /contacts` request body.
+///
+/// Split out from [ContactRepositoryImpl.create] so the wire keys can be
+/// asserted directly. They are the part that was wrong — the screen and the
+/// mapper were both fine — and the part no other test covers.
+///
+/// Blank optionals are dropped rather than sent as `""`, because the server's
+/// `nullable|email` rule treats an empty string as an invalid address, not as
+/// an absent one. The two `required` fields are always present, never behind a
+/// conditional.
+Map<String, dynamic> buildCreateBody({
+  required String firstName,
+  String? lastName,
+  required String phoneNumber,
+  String? email,
+  String? countryId,
+  String? languageCode,
+  String? city,
+  String? tags,
+  List<String> groupIds = const <String>[],
+}) {
+  bool has(String? v) => v != null && v.isNotEmpty;
+
+  return <String, dynamic>{
+    'first_name': firstName,
+    if (has(lastName)) 'last_name': lastName,
+    'phone_number': phoneNumber,
+    if (has(email)) 'email': email,
+    if (has(countryId)) 'country': countryId,
+    if (has(languageCode)) 'language_code': languageCode,
+    if (has(city)) 'contact_city': city,
+    if (has(tags)) 'contact_tags': tags,
+    if (groupIds.isNotEmpty) 'contact_groups': groupIds,
+  };
+}
+
+/// `/contacts/meta`, flat under the envelope — no singular record key.
+///
+/// Carries 252 countries as of the 30 Jul API pass; it previously returned
+/// none, which is why the Add-contact country field was left out rather than
+/// shipped against an empty list.
+ContactMeta contactMetaFromJson(Map<String, dynamic> j) => ContactMeta(
+      groups: _sharedRefs(j['groups']),
+      labels: _sharedRefs(j['labels']),
+      countries: _sharedCountries(j['countries']),
+      customFields: _sharedCustomFields(j['customFields'] ?? j['custom_fields']),
+    );
 
 Contact contactFromJson(Map<String, dynamic> j) {
   List<String> strings(Object? v) => v is List

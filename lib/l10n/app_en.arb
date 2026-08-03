@@ -73,7 +73,11 @@
   "chatActiveAgo": "Active {when} ago",
   "@chatActiveAgo": {
     "description": "The chat header's presence line. WhatsApp exposes no online state for a customer, so this reports when they last wrote instead of inventing one.",
-    "placeholders": { "when": { "type": "String" } }
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
   },
   "chatComposerHint": "Message",
   "chatServiceWindowOpen": "Service window closes in {duration} — reply to keep it open.",
@@ -151,7 +155,11 @@
   "caPending": "{count} pending",
   "@caPending": {
     "description": "History access requests waiting for approval. Shown only when there are some â it is a call to action, not a size.",
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "caFavouriteOn": "Added to favourites.",
   "caFavouriteOff": "Removed from favourites.",
@@ -335,7 +343,25 @@
   "ccScheduleLater": "Schedule",
   "acFirstName": "First name",
   "acLastName": "Last name",
-  "acPhoneHint": "+20 100 234 5678",
+  "acPhoneHint": "201002345678",
+  "acPhoneRuleHint": "Country code first, no + and no leading 0",
+  "acPhoneCodeHint": "Start with {code}, then the number without its leading 0",
+  "@acPhoneCodeHint": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "acPhoneNoPrefix": "Leave out the + and any leading 0.",
+  "acPhoneDigitsOnly": "Digits only.",
+  "acPhoneTooShort": "Include the country code — at least 9 digits.",
+  "acEmailHint": "name@company.com",
+  "acCountryHint": "Select a country",
+  "acCity": "City",
+  "acTags": "Tags",
+  "acTagsHint": "Separate with commas",
+  "acTagsPlaceholder": "vip, wholesale",
   "cdTitle": "Contact",
   "cdInformation": "Information",
   "cdCity": "City",
@@ -378,7 +404,11 @@
   },
   "dashboardOpenCount": "{count, plural, =0{None open} =1{1 open} other{{count} open}}",
   "@dashboardOpenCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "dashboardWeekQuiet": "No conversations this week.",
   "resetTitle": "Reset password",
@@ -539,7 +569,11 @@
   "cpermOutboundBlockedWhy": "Outbound calling is unavailable on this number ({reason}), so permission would not let you call. Inbound calls still work.",
   "@cpermOutboundBlockedWhy": {
     "description": "Meta blocks business-initiated calls from some numbers. Asking for permission anyway spends a real customer message on something that cannot happen.",
-    "placeholders": { "reason": { "type": "String" } }
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
   },
   "cpermSubmit": "Send request",
   "cpermDone": "Permission request sent.",
@@ -715,7 +749,6 @@
   "mediaIgFormats": "Instagram accepts fewer formats than WhatsApp, so a file that works in one may be refused in the other.",
   "igReactTitle": "React to message",
   "igReactOnly": "Reactions are Instagram-only.",
-
   "igsTitle": "Instagram settings",
   "igsLive": "These write straight to Instagram. There is no draft — saving changes what customers see right away.",
   "igsAdminOnly": "Only a workspace admin can change these.",
@@ -748,46 +781,66 @@
       }
     }
   },
-
   "mtOrderItems": "{count, plural, =1{1 item} other{{count} items}}",
   "@mtOrderItems": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "mtOrderMixed": "Mixed currencies",
   "mtListRows": "{count, plural, =1{1 option} other{{count} options}}",
   "@mtListRows": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "mtCatalogGeneric": "View catalog",
   "mtBot": "Bot",
   "mtCampaign": "Campaign",
-
   "campCampaigns": "Campaigns",
   "campTargeted": "Contacts targeted",
-
   "chatReplyLockMine": "You are replying now — this chat is locked to you.",
   "chatReplyLockHeld": "{name} is replying now.",
   "@chatReplyLockHeld": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "chatReplyLockSomeone": "Someone else is replying now.",
   "chatTakeOver": "Take over",
   "chatTakeOverTitle": "Take over this conversation?",
   "chatTakeOverBody": "{name} is replying right now. Taking over releases their lock and gives you the next five minutes.",
   "@chatTakeOverBody": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "chatTakenOver": "You have the reply lock.",
-
   "cdDelete": "Delete contact",
   "cdDeleteConfirm": "Delete {name}? Their conversation history stays, but the contact is removed from the workspace.",
   "@cdDeleteConfirm": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "cdDeleted": "Contact deleted.",
   "cdRemoveFromGroup": "Remove from {group}?",
   "@cdRemoveFromGroup": {
-    "placeholders": { "group": { "type": "String" } }
+    "placeholders": {
+      "group": {
+        "type": "String"
+      }
+    }
   },
   "cdRemovedFromGroup": "Removed from the group.",
   "ctImport": "Import contacts",
@@ -797,7 +850,6 @@
   "ctExport": "Export contacts",
   "ctExporting": "Preparing the workbook…",
   "ctExportEmpty": "The server returned an empty file.",
-
   "tplTitle": "Templates",
   "tplNew": "New template",
   "tplEdit": "Edit template",
@@ -806,7 +858,11 @@
   "tplSync": "Sync with Meta",
   "tplSynced": "{count, plural, =1{1 template} other{{count} templates}} synced.",
   "@tplSynced": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "tplName": "Name",
   "tplLanguage": "Language code",
@@ -832,7 +888,11 @@
   "tplDelete": "Delete template",
   "tplDeleteConfirm": "Delete \"{name}\"? This removes it at Meta as well, and it cannot be restored.",
   "@tplDeleteConfirm": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "tplDeleted": "Template deleted at Meta.",
   "tplLockedNote": "Name, language and category are fixed once Meta holds a template.",
@@ -842,7 +902,6 @@
   "tplStatusDisabled": "Disabled",
   "tplIncomplete": "Fill in the name, language and body.",
   "tplMediaHeaderNote": "Image, video and document headers are managed in the web console.",
-
   "tmTitle": "Teams",
   "tmNew": "New team",
   "tmEdit": "Edit team",
@@ -851,14 +910,22 @@
   "tmEmptyHint": "Teams are who a conversation can be transferred or assigned to.",
   "tmMembers": "{count, plural, =0{No members} =1{1 member} other{{count} members}}",
   "@tmMembers": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "tmMembersNote": "Membership is managed in the web console.",
   "tmSaved": "Team saved.",
   "tmDelete": "Delete team",
   "tmDeleteConfirm": "Delete \"{name}\"? Conversations assigned to it become unassigned.",
   "@tmDeleteConfirm": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "tmDeleted": "Team deleted.",
   "tmNameRequired": "Give the team a name of at least 2 characters.",
@@ -882,7 +949,11 @@
   "brDelete": "Delete bot reply",
   "brDeleteConfirm": "Delete \"{name}\"?",
   "@brDeleteConfirm": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "brDeleted": "Bot reply deleted.",
   "brDuplicate": "Duplicate",
@@ -920,13 +991,21 @@
   },
   "bfSteps": "{count, plural, =0{No steps} =1{1 step} other{{count} steps}}",
   "@bfSteps": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "bfStepsLabel": "STEPS",
   "bfStepN": "Step {n}",
   "@bfStepN": {
     "description": "A reply inside a flow usually has no name of its own, so its position is the label.",
-    "placeholders": { "n": { "type": "int" } }
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
   },
   "bfNoSteps": "No steps yet. Add them in the web console.",
   "bfConsoleNote": "Name the flow and choose what starts it here. Its steps are built in the web console.",
@@ -939,14 +1018,129 @@
   "bfDeleteConfirm": "Delete \"{name}\"? Its {count, plural, =0{steps} =1{1 step} other{{count} steps}} go with it.",
   "@bfDeleteConfirm": {
     "placeholders": {
-      "name": { "type": "String" },
-      "count": { "type": "int" }
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
     }
   },
   "bfDeleteConfirmPlain": "Delete \"{name}\"? Its steps go with it.",
   "@bfDeleteConfirmPlain": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "bfDeleted": "Bot flow deleted.",
-  "bfIncomplete": "Give the flow a name and a keyword."
+  "bfIncomplete": "Give the flow a name and a keyword.",
+  "rpTitle": "Reports",
+  "rpConversational": "Conversations overview",
+  "rpConversationalHint": "Volume, waiting times and per-agent activity",
+  "rpPauseReasons": "Agent pause reasons",
+  "rpPauseReasonsHint": "Time spent away or busy, by reason",
+  "rpQuality": "Quality reviews",
+  "rpQualityHint": "Internal scores written by managers",
+  "rpTargets": "Agent targets",
+  "rpTargetsHint": "Targets against actuals, month by month",
+  "rpWindowDay": "Today",
+  "rpWindowWeek": "This week",
+  "rpWindowMonth": "This month",
+  "rpWindowYear": "This year",
+  "rpAgentFilter": "Agent",
+  "rpAllAgents": "All agents",
+  "rpReceived": "Messages received",
+  "rpAvgWait": "Average wait",
+  "rpOpened": "Opened",
+  "rpClosed": "Closed",
+  "rpConversations": "Conversations",
+  "rpTotalConversations": "Total",
+  "rpMissed": "Missed",
+  "rpTransfers": "Bot handovers",
+  "rpChatDuration": "Average chat duration",
+  "rpNewCustomers": "New customers",
+  "rpReturningCustomers": "Returning customers",
+  "rpConversationsPerAgent": "Conversations per agent",
+  "rpMessagesPerAgent": "Messages per agent",
+  "rpFirstResponsePerAgent": "First response per agent",
+  "rpResponseTimePerAgent": "Response time per agent",
+  "rpNoData": "No activity in this period",
+  "rpNoDataHint": "Try a wider date range, or clear the agent filter.",
+  "rpLast7": "Last 7 days",
+  "rpLast30": "Last 30 days",
+  "rpLast90": "Last 90 days",
+  "rpCustomRange": "Custom",
+  "rpTotals": "Totals",
+  "rpTotalPaused": "Total paused",
+  "rpSessions": "Sessions",
+  "rpNoPauses": "No pauses recorded",
+  "rpNoPausesHint": "Nobody went away or busy in this period.",
+  "rpSummary": "Summary",
+  "rpAvgScore": "Average score",
+  "rpReviews": "Reviews",
+  "rpInternalNote": "Internal manager reviews — not customer satisfaction scores.",
+  "rpScorePerAgent": "Score per agent",
+  "rpRecentReviews": "Recent reviews",
+  "rpNoReviews": "No reviews in this period",
+  "rpNoReviewsHint": "Managers write these from a conversation's actions menu.",
+  "rpNoTargets": "No agents to show",
+  "rpNoTargetsHint": "Targets are set in the web console.",
+  "rpNoTargetSet": "No target set for this month.",
+  "rpLeads": "Leads",
+  "rpOrders": "Orders",
+  "rpRevenue": "Revenue",
+  "rpResponseTime": "Response time",
+  "rpCsat": "CSAT",
+  "rpMinuteSuffix": "m",
+  "rpMinutes": "{count, plural, =0{0m} =1{1m} other{{count}m}}",
+  "@rpMinutes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rpAgentPauseSummary": "{human} across {sessions} sessions",
+  "@rpAgentPauseSummary": {
+    "placeholders": {
+      "human": {
+        "type": "String"
+      },
+      "sessions": {
+        "type": "int"
+      }
+    }
+  },
+  "rpPauseRowValue": "{human} · {sessions}",
+  "@rpPauseRowValue": {
+    "placeholders": {
+      "human": {
+        "type": "String"
+      },
+      "sessions": {
+        "type": "int"
+      }
+    }
+  },
+  "rpReviewedBy": "by {name}",
+  "@rpReviewedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "rpRangeLabel": "{from} → {to}",
+  "@rpRangeLabel": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      }
+    }
+  }
 }

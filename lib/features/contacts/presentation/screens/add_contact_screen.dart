@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_dimens.dart';
 import '../../../../core/error/failure.dart';
 import '../../../../core/widgets/app_header.dart';
@@ -16,6 +18,29 @@ import '../../domain/contact.dart';
 /// bottom-pinned button. The handoff's "bottom-pinned CTA" note applies to the
 /// detail screens; this frame is a sheet, and a form you can abandon needs its
 /// escape hatch beside its commit.
+///
+/// **Field order follows the frame**: first name, last name, phone, email,
+/// country — each full width and stacked. First and last were previously side
+/// by side in one row, which is not what the frame draws and left both boxes
+/// too narrow to read a long name in; and country sat above email rather than
+/// below it.
+///
+/// Two controls the frame draws are deliberately absent, because nothing behind
+/// them exists:
+///
+///  * **Add photo.** A contact has no avatar field anywhere in the API — not on
+///    create, not on update, not in the response shape. WhatsApp profile photos
+///    belong to WhatsApp and are not ours to set. A picker here would upload to
+///    nowhere.
+///  * **Lifecycle stage.** The frame offers Customer/Lead/VIP. The only thing
+///    resembling it is `customerType`, which is *derived* by the server as
+///    `new`/`returning` and is not writable — a different vocabulary answering a
+///    different question. A dropdown here would be a control that silently
+///    discards whatever the user picked.
+///
+/// Three fields the API does accept and the frame omits are included, because
+/// leaving them out means the app can create contacts the console then shows as
+/// half-filled: city, tags and language.
 class AddContactScreen extends ConsumerStatefulWidget {
   const AddContactScreen({super.key});
 
@@ -25,19 +50,19 @@ class AddContactScreen extends ConsumerStatefulWidget {
 
 class _AddContactScreenState extends ConsumerState<AddContactScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  // Split per the frame. The API still takes a single `name`, so the two are
-  // joined at the call site rather than changing the contract.
   final TextEditingController _firstName = TextEditingController();
   final TextEditingController _lastName = TextEditingController();
   final TextEditingController _phone = TextEditingController();
   final TextEditingController _email = TextEditingController();
+  final TextEditingController _city = TextEditingController();
+  final TextEditingController _tags = TextEditingController();
 
   bool _saving = false;
 
-  /// ISO code from `/contacts/meta`. Null means "not stated" rather than a
+  /// The country row's numeric id. Null means "not stated" rather than a
   /// default — guessing a country from the dialling code would be wrong as
   /// often as it was right.
-  String? _countryCode;
+  String? _countryId;
   ValidationFailure? _validation;
 
   /// Contact groups the new contact will join, keyed by group uid.
@@ -49,6 +74,8 @@ class _AddContactScreenState extends ConsumerState<AddContactScreen> {
     _lastName.dispose();
     _phone.dispose();
     _email.dispose();
+    _city.dispose();
+    _tags.dispose();
     super.dispose();
   }
 
@@ -61,13 +88,15 @@ class _AddContactScreenState extends ConsumerState<AddContactScreen> {
 
     try {
       await ref.read(contactRepositoryProvider).create(
-            // Single API field; the frame splits the input, not the contract.
-            name: <String>[_firstName.text.trim(), _lastName.text.trim()]
-                .where((String p) => p.isNotEmpty)
-                .join(' '),
-            phone: _phone.text.trim(),
-            email: _email.text.trim().isEmpty ? null : _email.text.trim(),
-            countryCode: _countryCode,
+            // Two fields, not one joined string: the endpoint validates
+            // `first_name` and `last_name` separately.
+            firstName: _firstName.text.trim(),
+            lastName: _lastName.text.trim(),
+            phoneNumber: _phone.text.trim(),
+            email: _email.text.trim(),
+            countryId: _countryId,
+            city: _city.text.trim(),
+            tags: _tags.text.trim(),
             groupIds: _groupIds.toList(),
           );
       ref.invalidate(contactListProvider);
@@ -84,10 +113,33 @@ class _AddContactScreenState extends ConsumerState<AddContactScreen> {
     }
   }
 
+  /// Mirrors the server's `numeric|min_digits:9|doesnt_start_with:+,0` so the
+  /// rule is explained where it is broken, rather than arriving as a 422 naming
+  /// a field the user thought they had filled in correctly.
+  ///
+  /// The frame's own placeholder — "+20 100 234 5678" — violates all three
+  /// halves of it, so this is a case where following the frame literally would
+  /// have shipped a form that cannot be submitted.
+  String? _validatePhone(String? raw, AppLocalizations l10n) {
+    final String v = (raw ?? '').trim();
+    if (v.isEmpty) return l10n.acPhoneRequired;
+    if (v.startsWith('+') || v.startsWith('0')) return l10n.acPhoneNoPrefix;
+    if (!RegExp(r'^\d+$').hasMatch(v)) return l10n.acPhoneDigitsOnly;
+    if (v.length < 9) return l10n.acPhoneTooShort;
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final AsyncValue<ContactMeta> meta = ref.watch(contactMetaProvider);
+
+    final CountryRef? country = meta.maybeWhen(
+      data: (ContactMeta m) => m.countries
+          .cast<CountryRef?>()
+          .firstWhere((CountryRef? c) => c?.id == _countryId, orElse: () => null),
+      orElse: () => null,
+    );
 
     return Scaffold(
       appBar: AppHeader.back(
@@ -129,95 +181,126 @@ class _AddContactScreenState extends ConsumerState<AddContactScreen> {
       body: SafeArea(
         child: Form(
           key: _formKey,
-          child: Column(
+          child: ListView(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppDimens.gutter,
+              vertical: 16,
+            ),
             children: <Widget>[
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.all(AppDimens.gutter),
-                  children: <Widget>[
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Expanded(
-                          child: TextFormField(
-                            controller: _firstName,
-                            textInputAction: TextInputAction.next,
-                            decoration: InputDecoration(
-                              labelText: l10n.acFirstName,
-                              errorText: _validation?.forField('name'),
-                            ),
-                            validator: (String? v) =>
-                                (v == null || v.trim().isEmpty)
-                                    ? l10n.acNameRequired
-                                    : null,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextFormField(
-                            controller: _lastName,
-                            textInputAction: TextInputAction.next,
-                            decoration:
-                                InputDecoration(labelText: l10n.acLastName),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _phone,
-                      keyboardType: TextInputType.phone,
-                      textInputAction: TextInputAction.next,
-                      decoration: InputDecoration(
-                        labelText: l10n.acPhone,
-                        hintText: l10n.acPhoneHint,
-                        errorText: _validation?.forField('phone'),
-                      ),
-                      validator: (String? v) => (v == null || v.trim().isEmpty)
-                          ? l10n.acPhoneRequired
-                          : null,
-                    ),
-                    const SizedBox(height: 12),
-                    // Country, per the frame. Only rendered once the meta call
-                    // has actually returned a list — an empty dropdown is a
-                    // control that cannot be used.
-                    meta.maybeWhen(
-                      data: (ContactMeta m) => m.countries.isEmpty
-                          ? const SizedBox.shrink()
-                          : Padding(
-                              padding: const EdgeInsets.only(bottom: 12),
-                              child: DropdownButtonFormField<String>(
-                                initialValue: _countryCode,
-                                isExpanded: true,
-                                decoration: InputDecoration(
-                                  labelText: l10n.acCountry,
-                                ),
-                                items: <DropdownMenuItem<String>>[
-                                  for (final NamedRef c in m.countries)
-                                    DropdownMenuItem<String>(
-                                      value: c.id,
-                                      child: Text(
-                                        c.name,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                ],
-                                onChanged: (String? v) =>
-                                    setState(() => _countryCode = v),
-                              ),
-                            ),
-                      orElse: () => const SizedBox.shrink(),
-                    ),
-                    TextFormField(
-                      controller: _email,
-                      keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.done,
-                      decoration: InputDecoration(
-                        labelText: l10n.acEmail,
-                        errorText: _validation?.forField('email'),
-                      ),
-                    ),
+              _Field(
+                label: l10n.acFirstName,
+                child: TextFormField(
+                  controller: _firstName,
+                  textInputAction: TextInputAction.next,
+                  textCapitalization: TextCapitalization.words,
+                  maxLength: 45,
+                  decoration: _box(errorText: _validation?.forField('first_name')),
+                  validator: (String? v) => (v == null || v.trim().isEmpty)
+                      ? l10n.acNameRequired
+                      : null,
+                ),
+              ),
+              _Field(
+                label: l10n.acLastName,
+                child: TextFormField(
+                  controller: _lastName,
+                  textInputAction: TextInputAction.next,
+                  textCapitalization: TextCapitalization.words,
+                  maxLength: 45,
+                  decoration: _box(errorText: _validation?.forField('last_name')),
+                ),
+              ),
+              _Field(
+                label: l10n.acPhone,
+                // The dialling code of the chosen country, shown as a prefix so
+                // "which country am I dialling" and "do not type the +" are
+                // answered in the same glance.
+                hint: country != null && country.phoneCode.isNotEmpty
+                    ? l10n.acPhoneCodeHint(country.phoneCode)
+                    : l10n.acPhoneRuleHint,
+                child: TextFormField(
+                  controller: _phone,
+                  keyboardType: TextInputType.phone,
+                  textInputAction: TextInputAction.next,
+                  // Digits only at the keyboard, so the commonest mistakes —
+                  // spaces and a leading + pasted from a contact card — cannot
+                  // be typed rather than merely being rejected afterwards.
+                  inputFormatters: <TextInputFormatter>[
+                    FilteringTextInputFormatter.digitsOnly,
                   ],
+                  decoration: _box(
+                    hintText: country != null && country.phoneCode.isNotEmpty
+                        ? '${country.phoneCode}1002345678'
+                        : l10n.acPhoneHint,
+                    errorText: _validation?.forField('phone_number'),
+                  ),
+                  validator: (String? v) => _validatePhone(v, l10n),
+                ),
+              ),
+              _Field(
+                label: l10n.acEmail,
+                child: TextFormField(
+                  controller: _email,
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  autocorrect: false,
+                  decoration: _box(
+                    hintText: l10n.acEmailHint,
+                    errorText: _validation?.forField('email'),
+                  ),
+                ),
+              ),
+
+              // Country. Only rendered once the meta call has actually returned
+              // a list — an empty dropdown is a control that cannot be used.
+              meta.maybeWhen(
+                data: (ContactMeta m) => m.countries.isEmpty
+                    ? const SizedBox.shrink()
+                    : _Field(
+                        label: l10n.acCountry,
+                        child: DropdownButtonFormField<String>(
+                          initialValue: _countryId,
+                          isExpanded: true,
+                          decoration: _box(),
+                          hint: Text(l10n.acCountryHint),
+                          items: <DropdownMenuItem<String>>[
+                            for (final CountryRef c in m.countries)
+                              DropdownMenuItem<String>(
+                                value: c.id,
+                                child: Text(
+                                  c.name,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                          ],
+                          onChanged: (String? v) =>
+                              setState(() => _countryId = v),
+                        ),
+                      ),
+                orElse: () => const SizedBox.shrink(),
+              ),
+
+              _Field(
+                label: l10n.acCity,
+                child: TextFormField(
+                  controller: _city,
+                  textInputAction: TextInputAction.next,
+                  textCapitalization: TextCapitalization.words,
+                  maxLength: 120,
+                  decoration: _box(errorText: _validation?.forField('contact_city')),
+                ),
+              ),
+              _Field(
+                label: l10n.acTags,
+                hint: l10n.acTagsHint,
+                child: TextFormField(
+                  controller: _tags,
+                  textInputAction: TextInputAction.done,
+                  maxLength: 500,
+                  decoration: _box(
+                    hintText: l10n.acTagsPlaceholder,
+                    errorText: _validation?.forField('contact_tags'),
+                  ),
                 ),
               ),
 
@@ -226,67 +309,118 @@ class _AddContactScreenState extends ConsumerState<AddContactScreen> {
               // /contacts/meta and rendered only a loading hint, so a contact
               // could never be filed into a group. Mirrors the picker on
               // Create campaign.
-              Flexible(
-                child: meta.when(
-                  loading: () => Padding(
-                    padding: const EdgeInsetsDirectional.only(
-                      start: AppDimens.gutter,
-                      bottom: 8,
-                    ),
-                    child: Align(
-                      alignment: AlignmentDirectional.centerStart,
-                      child: Text(
-                        l10n.acLoadingGroups,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    ),
+              meta.when(
+                loading: () => Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    l10n.acLoadingGroups,
+                    style: Theme.of(context).textTheme.bodyMedium,
                   ),
-                  // Groups are optional metadata — if the lookup fails the
-                  // contact can still be created, so this stays silent rather
-                  // than blocking the form.
-                  error: (Object _, StackTrace __) => const SizedBox.shrink(),
-                  data: (ContactMeta m) {
-                    if (m.groups.isEmpty) return const SizedBox.shrink();
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        SectionLabel(l10n.acGroups),
-                        Flexible(
-                          child: ListView(
-                            shrinkWrap: true,
-                            padding: EdgeInsets.zero,
-                            children: <Widget>[
-                              for (final NamedRef g in m.groups)
-                                CheckboxListTile(
-                                  value: _groupIds.contains(g.id),
-                                  title: Text(g.name),
-                                  dense: true,
-                                  contentPadding:
-                                      const EdgeInsetsDirectional.symmetric(
-                                    horizontal: AppDimens.gutter,
-                                  ),
-                                  onChanged: (bool? on) => setState(() {
-                                    if (on ?? false) {
-                                      _groupIds.add(g.id);
-                                    } else {
-                                      _groupIds.remove(g.id);
-                                    }
-                                  }),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    );
-                  },
                 ),
+                // Groups are optional metadata — if the lookup fails the
+                // contact can still be created, so this stays silent rather
+                // than blocking the form.
+                error: (Object _, StackTrace __) => const SizedBox.shrink(),
+                data: (ContactMeta m) {
+                  if (m.groups.isEmpty) return const SizedBox.shrink();
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      SectionLabel(l10n.acGroups, padded: false),
+                      for (final NamedRef g in m.groups)
+                        CheckboxListTile(
+                          value: _groupIds.contains(g.id),
+                          title: Text(g.name),
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                          controlAffinity: ListTileControlAffinity.leading,
+                          onChanged: (bool? on) => setState(() {
+                            if (on ?? false) {
+                              _groupIds.add(g.id);
+                            } else {
+                              _groupIds.remove(g.id);
+                            }
+                          }),
+                        ),
+                    ],
+                  );
+                },
               ),
+              const SizedBox(height: AppDimens.gutter),
               // No bottom-pinned Save — it moved into the header alongside
               // Cancel, where the frame puts it.
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// The frame's input treatment: a small label **above** a filled rounded box.
+///
+/// Material's floating `labelText` puts the label inside the box and animates
+/// it into the border, which is a different control to look at — the frame's
+/// labels are static, always visible, and sit outside. Hoisting them also means
+/// a long label no longer competes with the value for the same line.
+InputDecoration _box({String? hintText, String? errorText}) => InputDecoration(
+      hintText: hintText,
+      errorText: errorText,
+      filled: true,
+      isDense: true,
+      // The counter is suppressed on every field: `maxLength` is here to stop
+      // input at the server's column width, not to invite the user to count
+      // characters, and six live counters down the form is visual noise the
+      // frame does not have.
+      counterText: '',
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+        borderSide: BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppDimens.radiusCard),
+        borderSide: BorderSide.none,
+      ),
+    );
+
+/// One labelled row of the form.
+class _Field extends StatelessWidget {
+  const _Field({required this.label, required this.child, this.hint});
+
+  final String label;
+  final Widget child;
+
+  /// Optional guidance under the label — used where a server rule would
+  /// otherwise only surface as a rejection.
+  final String? hint;
+
+  @override
+  Widget build(BuildContext context) {
+    final TextTheme text = Theme.of(context).textTheme;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(label, style: text.labelMedium),
+          if (hint != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                hint!,
+                style: text.labelSmall?.copyWith(
+                  color: AppColor.inkFaint,
+                  letterSpacing: 0,
+                ),
+              ),
+            ),
+          const SizedBox(height: 6),
+          child,
+        ],
       ),
     );
   }

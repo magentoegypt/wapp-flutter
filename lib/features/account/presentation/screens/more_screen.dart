@@ -112,6 +112,17 @@ class MoreScreen extends ConsumerWidget {
             ),
             onTap: () => context.push(AppRoutes.botFlows),
           ),
+          // Not in the frame — the four reporting endpoints arrived after it
+          // was drawn. One row to a hub rather than four rows here, so this
+          // list stays the length the frame gives it.
+          AppListTile(
+            title: l10n.rpTitle,
+            leading: const IconTile(
+              icon: Icons.insights_outlined,
+              color: AppColor.brandDeep,
+            ),
+            onTap: () => context.push(AppRoutes.reports),
+          ),
           // The frame has this row. It was omitted because no endpoint backed
           // it; the 31 Jul API pass added template CRUD, so it exists now.
           AppListTile(

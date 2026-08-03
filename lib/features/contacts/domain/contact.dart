@@ -113,13 +113,16 @@ class ContactMeta {
   const ContactMeta({
     this.groups = const <NamedRef>[],
     this.labels = const <NamedRef>[],
-    this.countries = const <NamedRef>[],
+    this.countries = const <CountryRef>[],
     this.customFields = const <CustomField>[],
   });
 
   final List<NamedRef> groups;
   final List<NamedRef> labels;
-  final List<NamedRef> countries;
+
+  /// 252 rows, carrying their dialling codes — see [CountryRef] for why the
+  /// dialling code is worth keeping rather than reducing these to [NamedRef].
+  final List<CountryRef> countries;
 
   /// Per-workspace extra fields. The form renders this list — never a
   /// hard-coded set, because the definitions differ per vendor and two of this
@@ -167,4 +170,33 @@ class NamedRef {
 
   final String id;
   final String name;
+}
+
+/// A country, kept richer than [NamedRef] because of the phone rule.
+///
+/// `POST /contacts` validates `phone_number` as
+/// `numeric|min_digits:9|doesnt_start_with:+,0` — so the one format the Figma
+/// frame shows in its own placeholder, `+20 100 234 5678`, is rejected by the
+/// server three times over: the `+`, the spaces, and the leading zero a user
+/// naturally types after the dialling code.
+///
+/// Carrying [phoneCode] lets the form show the selected country's code beside
+/// the field and explain the rule in advance, instead of letting the user
+/// discover it as a 422 after they press Save.
+class CountryRef {
+  const CountryRef({
+    required this.id,
+    required this.name,
+    this.isoCode = '',
+    this.phoneCode = '',
+  });
+
+  /// The numeric `_id`; this is what `country` expects on create, not the ISO
+  /// code the field's old name implied.
+  final String id;
+  final String name;
+  final String isoCode;
+
+  /// Digits only, no `+` — e.g. "20". Empty when the row has none.
+  final String phoneCode;
 }

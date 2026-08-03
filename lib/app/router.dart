@@ -7,6 +7,11 @@ import '../features/agents/presentation/screens/agent_detail_screen.dart';
 import '../features/agents/presentation/screens/agents_screen.dart';
 import '../features/automation/presentation/screens/bot_flow_editor_screen.dart';
 import '../features/automation/presentation/screens/bot_flows_screen.dart';
+import '../features/reports/presentation/screens/agent_targets_screen.dart';
+import '../features/reports/presentation/screens/conversational_report_screen.dart';
+import '../features/reports/presentation/screens/pause_reasons_screen.dart';
+import '../features/reports/presentation/screens/quality_reviews_screen.dart';
+import '../features/reports/presentation/screens/reports_screen.dart';
 import '../features/automation/presentation/screens/bot_replies_screen.dart';
 import '../features/automation/presentation/screens/bot_reply_editor_screen.dart';
 import '../features/campaigns/presentation/screens/campaign_detail_screen.dart';
@@ -468,6 +473,35 @@ final Provider<GoRouter> routerProvider = Provider<GoRouter>((Ref ref) {
         parentNavigatorKey: _rootKey,
         builder: (_, GoRouterState s) =>
             BotFlowEditorScreen(uid: s.pathParameters['uid']!),
+      ),
+
+      // Reporting. Declared before the parameterised routes above would ever
+      // see them because each path is literal, so no ordering trap here — but
+      // they stay grouped for the same reason the hub exists.
+      GoRoute(
+        path: AppRoutes.reports,
+        parentNavigatorKey: _rootKey,
+        builder: (_, __) => const ReportsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.reportConversational,
+        parentNavigatorKey: _rootKey,
+        builder: (_, __) => const ConversationalReportScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.reportPauseReasons,
+        parentNavigatorKey: _rootKey,
+        builder: (_, __) => const PauseReasonsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.reportQuality,
+        parentNavigatorKey: _rootKey,
+        builder: (_, __) => const QualityReviewsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.reportTargets,
+        parentNavigatorKey: _rootKey,
+        builder: (_, __) => const AgentTargetsScreen(),
       ),
 
       // Workspace settings, so it sits beside /agents rather than under

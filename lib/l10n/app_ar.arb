@@ -36,7 +36,11 @@
   "chatActiveNow": "نشط الآن",
   "chatActiveAgo": "نشط قبل {when}",
   "@chatActiveAgo": {
-    "placeholders": { "when": { "type": "String" } }
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
   },
   "chatComposerHint": "رسالة",
   "chatServiceWindowOpen": "تنتهي نافذة الرد خلال {duration} — رد للإبقاء عليها مفتوحة.",
@@ -102,7 +106,11 @@
   "caGroupAccess": "الوصول والبيانات",
   "caPending": "{count} قيد الانتظار",
   "@caPending": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "caFavouriteOn": "تمت الإضافة إلى المفضلة.",
   "caFavouriteOff": "تمت الإزالة من المفضلة.",
@@ -277,7 +285,25 @@
   "ccScheduleLater": "جدولة",
   "acFirstName": "الاسم الأول",
   "acLastName": "اسم العائلة",
-  "acPhoneHint": "+20 100 234 5678",
+  "acPhoneHint": "201002345678",
+  "acPhoneRuleHint": "رمز الدولة أولاً، بدون + وبدون صفر في البداية",
+  "acPhoneCodeHint": "ابدأ بـ {code} ثم الرقم بدون الصفر الأول",
+  "@acPhoneCodeHint": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "acPhoneNoPrefix": "احذف علامة + وأي صفر في البداية.",
+  "acPhoneDigitsOnly": "أرقام فقط.",
+  "acPhoneTooShort": "أضف رمز الدولة — 9 أرقام على الأقل.",
+  "acEmailHint": "name@company.com",
+  "acCountryHint": "اختر الدولة",
+  "acCity": "المدينة",
+  "acTags": "الوسوم",
+  "acTagsHint": "افصل بينها بفاصلة",
+  "acTagsPlaceholder": "مميز، جملة",
   "cdTitle": "جهة الاتصال",
   "cdInformation": "المعلومات",
   "cdCity": "المدينة",
@@ -317,7 +343,11 @@
   "dashboardWorkload": "أعباء الوكلاء",
   "dashboardOpenCount": "{count, plural, =0{لا مفتوحة} =1{مفتوحة واحدة} =2{مفتوحتان} few{{count} مفتوحة} other{{count} مفتوحة}}",
   "@dashboardOpenCount": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "dashboardWeekQuiet": "لا توجد محادثات هذا الأسبوع.",
   "resetTitle": "إعادة تعيين كلمة المرور",
@@ -458,7 +488,11 @@
   "cpermOutboundBlocked": "المكالمات الصادرة غير متاحة من هذا الرقم، لذا لن يفيد الإذن في الاتصال.",
   "cpermOutboundBlockedWhy": "المكالمات الصادرة غير متاحة من هذا الرقم ({reason})، لذا لن يفيد الإذن في الاتصال. المكالمات الواردة تعمل كالمعتاد.",
   "@cpermOutboundBlockedWhy": {
-    "placeholders": { "reason": { "type": "String" } }
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
   },
   "cpermSubmit": "إرسال الطلب",
   "cpermDone": "تم إرسال طلب الإذن.",
@@ -597,7 +631,6 @@
   "mediaIgFormats": "يقبل إنستغرام صيغًا أقل من واتساب، لذا قد يُرفض ملف يعمل في أحدهما.",
   "igReactTitle": "التفاعل مع الرسالة",
   "igReactOnly": "التفاعلات متاحة في إنستغرام فقط.",
-
   "igsTitle": "إعدادات إنستغرام",
   "igsLive": "تُكتب هذه مباشرةً في إنستغرام. لا توجد مسودة — الحفظ يغيّر ما يراه العملاء فورًا.",
   "igsAdminOnly": "يمكن لمسؤول مساحة العمل وحده تغيير هذه الإعدادات.",
@@ -623,17 +656,14 @@
   "igsNone": "لا يوجد شيء مُعد بعد.",
   "igsIncomplete": "أكمل جميع الحقول قبل الحفظ.",
   "igsKeptLocales": "{count, plural, =1{توجد لغة أخرى مُعدة وسيتم الاحتفاظ بها.} =2{توجد لغتان أخريان مُعدتان وسيتم الاحتفاظ بهما.} few{توجد {count} لغات أخرى مُعدة وسيتم الاحتفاظ بها.} other{توجد {count} لغة أخرى مُعدة وسيتم الاحتفاظ بها.}}",
-
   "mtOrderItems": "{count, plural, =1{عنصر واحد} =2{عنصران} few{{count} عناصر} other{{count} عنصرًا}}",
   "mtOrderMixed": "عملات مختلطة",
   "mtListRows": "{count, plural, =1{خيار واحد} =2{خياران} few{{count} خيارات} other{{count} خيارًا}}",
   "mtCatalogGeneric": "عرض الكتالوج",
   "mtBot": "بوت",
   "mtCampaign": "حملة",
-
   "campCampaigns": "الحملات",
   "campTargeted": "جهات الاتصال المستهدفة",
-
   "chatReplyLockMine": "أنت ترد الآن — هذه المحادثة محجوزة لك.",
   "chatReplyLockHeld": "{name} يرد الآن.",
   "chatReplyLockSomeone": "شخص آخر يرد الآن.",
@@ -641,7 +671,6 @@
   "chatTakeOverTitle": "تولّي هذه المحادثة؟",
   "chatTakeOverBody": "{name} يرد الآن. التولّي يحرر حجزه ويمنحك الدقائق الخمس التالية.",
   "chatTakenOver": "أصبح حجز الرد لك.",
-
   "cdDelete": "حذف جهة الاتصال",
   "cdDeleteConfirm": "حذف {name}؟ سجل المحادثة يبقى، لكن تُزال جهة الاتصال من مساحة العمل.",
   "cdDeleted": "تم حذف جهة الاتصال.",
@@ -654,7 +683,6 @@
   "ctExport": "تصدير جهات الاتصال",
   "ctExporting": "جارٍ تجهيز الملف…",
   "ctExportEmpty": "أعاد الخادم ملفًا فارغًا.",
-
   "tplTitle": "القوالب",
   "tplNew": "قالب جديد",
   "tplEdit": "تعديل القالب",
@@ -693,7 +721,6 @@
   "tplStatusDisabled": "معطّل",
   "tplIncomplete": "أكمل الاسم واللغة والنص الأساسي.",
   "tplMediaHeaderNote": "ترويسات الصور والفيديو والمستندات تُدار من لوحة الويب.",
-
   "tmTitle": "الفرق",
   "tmNew": "فريق جديد",
   "tmEdit": "تعديل الفريق",
@@ -753,12 +780,20 @@
   "bfActiveEmpty": "بلا خطوات",
   "bfSteps": "{count, plural, =0{لا خطوات} =1{خطوة واحدة} =2{خطوتان} few{{count} خطوات} other{{count} خطوة}}",
   "@bfSteps": {
-    "placeholders": { "count": { "type": "int" } }
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "bfStepsLabel": "الخطوات",
   "bfStepN": "الخطوة {n}",
   "@bfStepN": {
-    "placeholders": { "n": { "type": "int" } }
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
   },
   "bfNoSteps": "لا خطوات بعد. أضِفها من لوحة التحكم على الويب.",
   "bfConsoleNote": "سمِّ المسار واختر ما يبدؤه من هنا. أما خطواته فتُبنى في لوحة التحكم على الويب.",
@@ -768,14 +803,129 @@
   "bfDeleteConfirm": "حذف \"{name}\"؟ ستُحذف معه {count, plural, =0{خطواته} =1{خطوته} =2{خطوتاه} few{{count} خطوات} other{{count} خطوة}}.",
   "@bfDeleteConfirm": {
     "placeholders": {
-      "name": { "type": "String" },
-      "count": { "type": "int" }
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
     }
   },
   "bfDeleteConfirmPlain": "حذف \"{name}\"؟ ستُحذف معه خطواته.",
   "@bfDeleteConfirmPlain": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "bfDeleted": "تم حذف المسار.",
-  "bfIncomplete": "أدخل اسم المسار والكلمة المفتاحية."
+  "bfIncomplete": "أدخل اسم المسار والكلمة المفتاحية.",
+  "rpTitle": "التقارير",
+  "rpConversational": "نظرة عامة على المحادثات",
+  "rpConversationalHint": "الحجم وأوقات الانتظار ونشاط كل موظف",
+  "rpPauseReasons": "أسباب توقف الموظفين",
+  "rpPauseReasonsHint": "وقت الغياب أو الانشغال حسب السبب",
+  "rpQuality": "مراجعات الجودة",
+  "rpQualityHint": "تقييمات داخلية يكتبها المديرون",
+  "rpTargets": "أهداف الموظفين",
+  "rpTargetsHint": "الأهداف مقابل الإنجاز، شهراً بشهر",
+  "rpWindowDay": "اليوم",
+  "rpWindowWeek": "هذا الأسبوع",
+  "rpWindowMonth": "هذا الشهر",
+  "rpWindowYear": "هذه السنة",
+  "rpAgentFilter": "الموظف",
+  "rpAllAgents": "كل الموظفين",
+  "rpReceived": "الرسائل الواردة",
+  "rpAvgWait": "متوسط الانتظار",
+  "rpOpened": "المفتوحة",
+  "rpClosed": "المغلقة",
+  "rpConversations": "المحادثات",
+  "rpTotalConversations": "الإجمالي",
+  "rpMissed": "الفائتة",
+  "rpTransfers": "تحويلات البوت",
+  "rpChatDuration": "متوسط مدة المحادثة",
+  "rpNewCustomers": "عملاء جدد",
+  "rpReturningCustomers": "عملاء عائدون",
+  "rpConversationsPerAgent": "المحادثات لكل موظف",
+  "rpMessagesPerAgent": "الرسائل لكل موظف",
+  "rpFirstResponsePerAgent": "أول رد لكل موظف",
+  "rpResponseTimePerAgent": "زمن الرد لكل موظف",
+  "rpNoData": "لا يوجد نشاط في هذه الفترة",
+  "rpNoDataHint": "جرّب نطاقاً زمنياً أوسع، أو أزل تصفية الموظف.",
+  "rpLast7": "آخر ٧ أيام",
+  "rpLast30": "آخر ٣٠ يوماً",
+  "rpLast90": "آخر ٩٠ يوماً",
+  "rpCustomRange": "مخصص",
+  "rpTotals": "الإجماليات",
+  "rpTotalPaused": "إجمالي التوقف",
+  "rpSessions": "الجلسات",
+  "rpNoPauses": "لا توجد فترات توقف",
+  "rpNoPausesHint": "لم يسجّل أحد غياباً أو انشغالاً في هذه الفترة.",
+  "rpSummary": "الملخص",
+  "rpAvgScore": "متوسط التقييم",
+  "rpReviews": "المراجعات",
+  "rpInternalNote": "مراجعات داخلية من المديرين — وليست تقييمات رضا العملاء.",
+  "rpScorePerAgent": "التقييم لكل موظف",
+  "rpRecentReviews": "أحدث المراجعات",
+  "rpNoReviews": "لا مراجعات في هذه الفترة",
+  "rpNoReviewsHint": "يكتبها المديرون من قائمة إجراءات المحادثة.",
+  "rpNoTargets": "لا يوجد موظفون لعرضهم",
+  "rpNoTargetsHint": "تُضبط الأهداف من لوحة التحكم على الويب.",
+  "rpNoTargetSet": "لا يوجد هدف محدد لهذا الشهر.",
+  "rpLeads": "العملاء المحتملون",
+  "rpOrders": "الطلبات",
+  "rpRevenue": "الإيرادات",
+  "rpResponseTime": "زمن الرد",
+  "rpCsat": "رضا العملاء",
+  "rpMinuteSuffix": "د",
+  "rpMinutes": "{count, plural, =0{٠ د} =1{دقيقة} other{{count} د}}",
+  "@rpMinutes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "rpAgentPauseSummary": "{human} خلال {sessions} جلسة",
+  "@rpAgentPauseSummary": {
+    "placeholders": {
+      "human": {
+        "type": "String"
+      },
+      "sessions": {
+        "type": "int"
+      }
+    }
+  },
+  "rpPauseRowValue": "{human} · {sessions}",
+  "@rpPauseRowValue": {
+    "placeholders": {
+      "human": {
+        "type": "String"
+      },
+      "sessions": {
+        "type": "int"
+      }
+    }
+  },
+  "rpReviewedBy": "بواسطة {name}",
+  "@rpReviewedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "rpRangeLabel": "{from} ← {to}",
+  "@rpRangeLabel": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      }
+    }
+  }
 }

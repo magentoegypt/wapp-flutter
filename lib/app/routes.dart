@@ -52,6 +52,15 @@ abstract final class AppRoutes {
   static const String botFlows = '/bot-flows';
   static const String botFlowNew = '/bot-flows/new';
 
+  /// Reporting. No frames — these four endpoints arrived after the handoff was
+  /// drawn. A hub rather than four rows in More, so More stays the length the
+  /// frame draws. Every one is read-only.
+  static const String reports = '/reports';
+  static const String reportConversational = '/reports/conversational';
+  static const String reportPauseReasons = '/reports/pause-reasons';
+  static const String reportQuality = '/reports/quality-reviews';
+  static const String reportTargets = '/reports/agent-targets';
+
   /// Component gallery — every shared widget in light/dark × LTR/RTL.
   /// Debug builds only; not reachable from the UI.
   static const String devGallery = '/dev/gallery';
