@@ -454,19 +454,35 @@ class _InfoRow extends StatelessWidget {
         vertical: 9,
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
+          // The label takes its own width and no more. It used to be
+          // `Expanded` while the value was merely `Flexible`, so the label
+          // claimed the row and squeezed the value — which is why a long
+          // address broke mid-token into "mahmoudmagdy74" over "237@gmail.com"
+          // instead of sitting on one line as the frame draws it.
+          Text(label, style: Theme.of(context).textTheme.bodyMedium),
+          const SizedBox(width: 16),
           Expanded(
-            child: Text(label, style: Theme.of(context).textTheme.bodyMedium),
-          ),
-          const SizedBox(width: 12),
-          Flexible(
-            child: Text(
-              value!,
-              textAlign: TextAlign.end,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+            child: Align(
+              alignment: AlignmentDirectional.centerEnd,
+              // Scale down rather than wrap or ellipsize. An email is only
+              // useful whole: truncating it hides the domain, and wrapping it
+              // splits it at whatever character happens to land on the edge.
+              // Shrinking keeps every character on one line, and only kicks in
+              // for values too long to fit at full size.
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: AlignmentDirectional.centerEnd,
+                child: Text(
+                  value!,
+                  maxLines: 1,
+                  softWrap: false,
+                  textAlign: TextAlign.end,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ),
             ),
           ),
         ],
