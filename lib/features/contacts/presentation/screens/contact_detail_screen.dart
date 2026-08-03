@@ -187,6 +187,19 @@ class ContactDetailScreen extends ConsumerWidget {
                 ),
               ),
             ],
+            // The workspace's own fields, in the same "Other information"
+            // section the Add-contact form files them under, so an agent sees
+            // what they entered back where they entered it.
+            //
+            // Only answered fields appear. Listing every definition with a
+            // blank beside it would fill the screen with the shape of the
+            // workspace's schema rather than with anything about this contact.
+            if (c.customFields.isNotEmpty) ...<Widget>[
+              SectionLabel(l10n.acSectionOther),
+              for (final ContactCustomValue f in c.customFields)
+                _InfoRow(label: f.name, value: f.value),
+            ],
+
             _RecentConversation(contactUid: c.uid),
 
             const SizedBox(height: 28),

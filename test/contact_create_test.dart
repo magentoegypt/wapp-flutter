@@ -158,4 +158,72 @@ void main() {
       expect(meta.countries.first.name, 'Egypt');
     });
   });
+
+  group('detail read', () {
+    test('city is found wherever the serialiser put it', () {
+      // City is not a column. storeContactContext() writes it into the
+      // contact's `__data` blob under BOTH `contact_city` and `city`, and the
+      // detailed shape lifts it to a top-level `city`. A value read under the
+      // wrong name renders as an absent row — indistinguishable from a contact
+      // who genuinely has no city, which is how it went unnoticed.
+      expect(contactFromJson(<String, dynamic>{'city': 'Cairo'}).city, 'Cairo');
+      expect(
+        contactFromJson(<String, dynamic>{'contact_city': 'Cairo'}).city,
+        'Cairo',
+      );
+      expect(
+        contactFromJson(<String, dynamic>{
+          '__data': <String, dynamic>{'contact_city': 'Cairo'},
+        }).city,
+        'Cairo',
+      );
+      expect(
+        contactFromJson(<String, dynamic>{
+          '_data': <String, dynamic>{'city': 'Cairo'},
+        }).city,
+        'Cairo',
+      );
+    });
+
+    test('a blank city stays null rather than becoming an empty row', () {
+      expect(contactFromJson(<String, dynamic>{'city': '   '}).city, isNull);
+      expect(contactFromJson(<String, dynamic>{}).city, isNull);
+    });
+
+    test('custom field values are read from the detailed payload', () {
+      final Contact c = contactFromJson(<String, dynamic>{
+        'uid': 'c1',
+        'customFields': <Map<String, dynamic>>[
+          <String, dynamic>{'uid': 'f1', 'name': 'Gender', 'value': 'Female'},
+          <String, dynamic>{'uid': 'f2', 'name': 'age', 'value': '30'},
+        ],
+      });
+
+      expect(c.customFields, hasLength(2));
+      expect(c.customFields.first.name, 'Gender');
+      expect(c.customFields.first.value, 'Female');
+      expect(c.customFields.first.fieldUid, 'f1');
+    });
+
+    test('unanswered and unnamed fields are dropped, not shown blank', () {
+      // The API returns a row per definition in some shapes. A label with
+      // nothing beside it describes the workspace's schema, not this contact.
+      final Contact c = contactFromJson(<String, dynamic>{
+        'customFields': <Map<String, dynamic>>[
+          <String, dynamic>{'uid': 'f1', 'name': 'Gender', 'value': ''},
+          <String, dynamic>{'uid': 'f2', 'name': '', 'value': 'orphan'},
+          <String, dynamic>{'uid': 'f3', 'name': 'age', 'value': '30'},
+        ],
+      });
+      expect(c.customFields, hasLength(1));
+      expect(c.customFields.first.name, 'age');
+    });
+
+    test('a list row carries no custom fields and does not invent any', () {
+      // shape() only adds them under $detailed, so this is the normal case for
+      // every row in the contacts list.
+      expect(contactFromJson(<String, dynamic>{'uid': 'c1'}).customFields,
+          isEmpty);
+    });
+  });
 }

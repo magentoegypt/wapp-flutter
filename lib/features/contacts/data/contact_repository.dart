@@ -363,6 +363,54 @@ ContactMeta contactMetaFromJson(Map<String, dynamic> j) => ContactMeta(
       customFields: _sharedCustomFields(j['customFields'] ?? j['custom_fields']),
     );
 
+/// The contact's city, wherever the serialiser put it.
+///
+/// It is not a column. `storeContactContext()` writes it into the contact's
+/// `__data` JSON blob under **both** `contact_city` and `city`, and the
+/// detailed shape lifts it to a top-level `city`. Each of those is tried in
+/// turn, including the raw blob under its `_data`/`__data` spellings, because
+/// a value that exists but is read under the wrong name renders as an absent
+/// row — indistinguishable from a contact who has no city.
+String? _city(Map<String, dynamic> j) {
+  String? clean(Object? v) {
+    final String s = '${v ?? ''}'.trim();
+    return s.isEmpty ? null : s;
+  }
+
+  final String? direct = clean(j['city'] ?? j['contactCity'] ?? j['contact_city']);
+  if (direct != null) return direct;
+
+  final Object? blob = j['__data'] ?? j['_data'] ?? j['data'];
+  if (blob is Map) {
+    return clean(blob['contact_city'] ?? blob['city']);
+  }
+  return null;
+}
+
+/// The contact's filled-in custom field values.
+///
+/// `value` is whatever string the field was answered with — the API stores
+/// custom values untyped, so a NUMBER field comes back as text and is rendered
+/// as text rather than being coerced into something it may not be.
+List<ContactCustomValue> _values(Object? raw) {
+  if (raw is! List) return const <ContactCustomValue>[];
+  final List<ContactCustomValue> out = <ContactCustomValue>[];
+  for (final Object? e in raw) {
+    if (e is! Map) continue;
+    final String name = '${e['name'] ?? ''}'.trim();
+    final String value = '${e['value'] ?? ''}'.trim();
+    // A field with no answer is not worth a row; a field with no name cannot
+    // be labelled, so neither is shown.
+    if (name.isEmpty || value.isEmpty) continue;
+    out.add(ContactCustomValue(
+      fieldUid: '${e['uid'] ?? ''}',
+      name: name,
+      value: value,
+    ));
+  }
+  return out;
+}
+
 Contact contactFromJson(Map<String, dynamic> j) {
   List<String> strings(Object? v) => v is List
       ? v
@@ -391,10 +439,16 @@ Contact contactFromJson(Map<String, dynamic> j) {
     phone: (j['phone'] ?? j['waId'] ?? '').toString(),
     email: j['email'] as String?,
     countryCode: (j['country'] ?? j['countryCode']) as String?,
-    city: j['city'] as String?,
+    // City does not live in a column — the server keeps it inside the
+    // contact's `__data` JSON blob and surfaces it as `city` only on the
+    // detailed read. Every spelling that blob is known to use is accepted, and
+    // the blob itself is read as a last resort, so a serialiser change cannot
+    // blank the row silently.
+    city: _city(j),
     language: (j['language'] ?? j['languageCode']) as String?,
     labels: strings(j['labels']),
     groups: refs(j['groups']),
+    customFields: _values(j['customFields'] ?? j['custom_fields']),
     // `customerType`, not `status`. There is no `status` field on a contact —
     // reading one meant the stage was null on every row in the workspace and
     // the pill never rendered. An unrecognised value still maps to null.

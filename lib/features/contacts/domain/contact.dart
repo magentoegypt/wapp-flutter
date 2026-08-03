@@ -48,6 +48,7 @@ class Contact {
     this.language,
     this.labels = const <String>[],
     this.groups = const <NamedRef>[],
+    this.customFields = const <ContactCustomValue>[],
     this.lifecycleStage,
     this.createdAt,
     this.isBlocked = false,
@@ -72,6 +73,13 @@ class Contact {
   /// was not merely unwired, it was **uncallable**. [NamedRef] is the type the
   /// rest of the contacts feature already uses for exactly this pair.
   final List<NamedRef> groups;
+
+  /// This contact's answers to the workspace's custom fields.
+  ///
+  /// Detail-only: `shape()` adds them under `$detailed`, so a list row never
+  /// carries them. Distinct from [ContactMeta.customFields], which is the
+  /// *definitions* — this is the values, and only the ones actually filled in.
+  final List<ContactCustomValue> customFields;
 
   /// Null when the payload carried no recognised stage — the detail and list
   /// screens then omit the pill rather than guess one.
@@ -131,6 +139,24 @@ class ContactMeta {
   final List<CustomField> customFields;
 
   static const ContactMeta empty = ContactMeta();
+}
+
+/// One filled-in custom field on a contact.
+///
+/// The API returns `{uid, name, value}` per row, where `uid` identifies the
+/// *field definition*, not the value. Rows the contact never answered are
+/// simply absent, so an empty list means "nothing filled in", not "no fields
+/// defined" — the definitions live in [ContactMeta.customFields].
+class ContactCustomValue {
+  const ContactCustomValue({
+    required this.fieldUid,
+    required this.name,
+    required this.value,
+  });
+
+  final String fieldUid;
+  final String name;
+  final String value;
 }
 
 /// A vendor-defined contact field.
