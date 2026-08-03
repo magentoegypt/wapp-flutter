@@ -99,6 +99,54 @@ void main() {
       expect(meta.countries.first.phoneCode, '20');
     });
 
+    test('groups keep both identifiers, because both are needed', () {
+      // `contact_groups` on create/update is resolved with whereIn('_id', …),
+      // while the remove endpoint and the campaign audience take the uid.
+      // Routing groups through the shared ref helper — which prefers uid —
+      // assigned no groups on create; on update the engine computes removals as
+      // array_diff(existingIds, sent), so a list of uids matched nothing and
+      // dropped every group the contact had.
+      final ContactMeta meta = contactMetaFromJson(<String, dynamic>{
+        'groups': <Map<String, dynamic>>[
+          <String, dynamic>{'uid': 'g-uid-1', 'id': 7, 'title': 'test group'},
+        ],
+      });
+
+      expect(meta.groups, hasLength(1));
+      expect(meta.groups.first.id, '7');
+      expect(meta.groups.first.uid, 'g-uid-1');
+      expect(meta.groups.first.name, 'test group');
+    });
+
+    test('create sends numeric group ids', () {
+      final Map<String, dynamic> body = buildCreateBody(
+        firstName: 'Amira',
+        phoneNumber: '201002345678',
+        groupIds: <String>['7'],
+      );
+      expect(body['contact_groups'], <String>['7']);
+    });
+
+    test('custom field values are keyed by field uid', () {
+      // custom_input_fields[<uid>] = value — the create path does consume
+      // these, so a workspace with required custom fields can be filled in
+      // from the app instead of being completed later in the console.
+      final Map<String, dynamic> body = buildCreateBody(
+        firstName: 'Amira',
+        phoneNumber: '201002345678',
+        customFields: <String, String>{'f-uid': 'Female'},
+      );
+      expect(body['custom_input_fields'], <String, String>{'f-uid': 'Female'});
+    });
+
+    test('no custom fields means the key is absent', () {
+      final Map<String, dynamic> body = buildCreateBody(
+        firstName: 'Amira',
+        phoneNumber: '201002345678',
+      );
+      expect(body.containsKey('custom_input_fields'), isFalse);
+    });
+
     test('a row with no id is dropped, not shown with an unusable value', () {
       final ContactMeta meta = contactMetaFromJson(<String, dynamic>{
         'countries': <Map<String, dynamic>>[

@@ -1142,5 +1142,22 @@
         "type": "String"
       }
     }
-  }
+  },
+  "acLanguage": "Language",
+  "acLanguageHint": "Used to pick the template language",
+  "acLanguagePlaceholder": "en, ar, fr",
+  "acCustomFields": "Additional details",
+  "acFieldRequired": "This field is required.",
+  "acSelectValue": "Select a value",
+  "acDateTimeHint": "YYYY-MM-DD HH:MM",
+  "acSectionContact": "Contact",
+  "acSectionOther": "Other information",
+  "acInitialsNote": "Initials are generated from the name",
+  "acPhoneNumber": "Phone number",
+  "acLastNameRequired": "Enter a last name.",
+  "acMulti": "multi",
+  "acSelectGroups": "Select groups",
+  "acAiBot": "Enable AI bot",
+  "acAiBotHint": "Auto-answers this contact until an agent replies",
+  "acAiBotFailed": "Contact saved, but the AI bot could not be enabled."
 }

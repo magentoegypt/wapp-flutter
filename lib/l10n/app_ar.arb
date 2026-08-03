@@ -927,5 +927,22 @@
         "type": "String"
       }
     }
-  }
+  },
+  "acLanguage": "اللغة",
+  "acLanguageHint": "تُستخدم لاختيار لغة القالب",
+  "acLanguagePlaceholder": "en، ar، fr",
+  "acCustomFields": "تفاصيل إضافية",
+  "acFieldRequired": "هذا الحقل مطلوب.",
+  "acSelectValue": "اختر قيمة",
+  "acDateTimeHint": "YYYY-MM-DD HH:MM",
+  "acSectionContact": "جهة الاتصال",
+  "acSectionOther": "معلومات أخرى",
+  "acInitialsNote": "تُشتق الأحرف الأولى من الاسم",
+  "acPhoneNumber": "رقم الهاتف",
+  "acLastNameRequired": "أدخل اسم العائلة.",
+  "acMulti": "متعدد",
+  "acSelectGroups": "اختر المجموعات",
+  "acAiBot": "تفعيل بوت الذكاء الاصطناعي",
+  "acAiBotHint": "يرد تلقائياً على جهة الاتصال حتى يرد أحد الموظفين",
+  "acAiBotFailed": "تم حفظ جهة الاتصال، لكن تعذّر تفعيل البوت."
 }

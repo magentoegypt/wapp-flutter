@@ -111,13 +111,14 @@ class Contact {
 /// doesn't fan out to four endpoints on open.
 class ContactMeta {
   const ContactMeta({
-    this.groups = const <NamedRef>[],
+    this.groups = const <GroupRef>[],
     this.labels = const <NamedRef>[],
     this.countries = const <CountryRef>[],
     this.customFields = const <CustomField>[],
   });
 
-  final List<NamedRef> groups;
+  /// Carries both identifiers — see [GroupRef] for why that is not redundant.
+  final List<GroupRef> groups;
   final List<NamedRef> labels;
 
   /// 252 rows, carrying their dialling codes — see [CountryRef] for why the
@@ -169,6 +170,36 @@ class NamedRef {
   const NamedRef({required this.id, required this.name});
 
   final String id;
+  final String name;
+}
+
+/// A contact group, which needs **both** of its identifiers.
+///
+/// The API is not consistent about which one it wants, and the inconsistency is
+/// invisible from the client because every endpoint accepts the string and then
+/// simply matches nothing:
+///
+///   * `contact_groups` on contact create/update is resolved with
+///     `whereIn('_id', …)` — **numeric id**.
+///   * `POST /contacts/{uid}/groups/{groupUid}/remove` and the campaign
+///     audience take the **uid**.
+///
+/// Sending a uid where an id is wanted silently assigns no groups. On *update*
+/// it is worse than silent: the engine computes the removal set as
+/// `array_diff(existingIds, sentValues)`, so a list of uids matches none of the
+/// existing ids and every group the contact had is dropped.
+///
+/// Keeping both here means the call site picks deliberately rather than
+/// inheriting whichever one [NamedRef] happened to prefer.
+class GroupRef {
+  const GroupRef({required this.uid, required this.id, required this.name});
+
+  /// For the remove endpoint and the campaign audience.
+  final String uid;
+
+  /// For `contact_groups` on create and update.
+  final String id;
+
   final String name;
 }
 

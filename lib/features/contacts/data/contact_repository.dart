@@ -32,6 +32,7 @@ abstract interface class ContactRepository {
     String? city,
     String? tags,
     List<String> groupIds,
+    Map<String, String> customFields,
   });
 
   /// Partial update — unsent fields are preserved server-side, so a screen may
@@ -148,6 +149,7 @@ class ContactRepositoryImpl implements ContactRepository {
     String? city,
     String? tags,
     List<String> groupIds = const <String>[],
+    Map<String, String> customFields = const <String, String>{},
   }) async {
     // Optional strings are omitted when blank rather than sent as "". `email`
     // is validated as `nullable|email`, so an empty string is not "no email" to
@@ -165,6 +167,7 @@ class ContactRepositoryImpl implements ContactRepository {
         city: city,
         tags: tags,
         groupIds: groupIds,
+        customFields: customFields,
       ),
     );
     return contactFromJson(_record(body, 'contact'));
@@ -251,6 +254,25 @@ List<CustomField> _sharedCustomFields(dynamic raw) {
   }).where((CustomField f) => f.uid.isNotEmpty).toList();
 }
 
+/// Contact groups, keeping both identifiers.
+///
+/// `/contacts/meta` returns `{uid, id, title}` for each. The shared ref helper
+/// prefers `uid`, and `contact_groups` on create/update is matched by numeric
+/// `_id` — so routing groups through it assigned nothing, and on update removed
+/// everything. See [GroupRef].
+List<GroupRef> _sharedGroups(dynamic raw) {
+  if (raw is! List) return const <GroupRef>[];
+  return raw
+      .whereType<Map<String, dynamic>>()
+      .map((Map<String, dynamic> e) => GroupRef(
+            uid: (e['uid'] ?? '').toString(),
+            id: (e['id'] ?? '').toString(),
+            name: (e['title'] ?? e['name'] ?? '').toString(),
+          ))
+      .where((GroupRef g) => g.id.isNotEmpty || g.uid.isNotEmpty)
+      .toList();
+}
+
 List<NamedRef> _sharedRefs(dynamic raw) {
   if (raw is! List) return const <NamedRef>[];
   return raw
@@ -305,6 +327,7 @@ Map<String, dynamic> buildCreateBody({
   String? city,
   String? tags,
   List<String> groupIds = const <String>[],
+  Map<String, String> customFields = const <String, String>{},
 }) {
   bool has(String? v) => v != null && v.isNotEmpty;
 
@@ -317,7 +340,14 @@ Map<String, dynamic> buildCreateBody({
     if (has(languageCode)) 'language_code': languageCode,
     if (has(city)) 'contact_city': city,
     if (has(tags)) 'contact_tags': tags,
+    // Numeric group ids, not uids — the engine resolves these with
+    // whereIn('_id', …). See GroupRef.
     if (groupIds.isNotEmpty) 'contact_groups': groupIds,
+    // Keyed by field uid: custom_input_fields[<uid>] = value. The create path
+    // does consume these — `processContactCreate` reads them and writes the
+    // values — so a workspace with required custom fields can be filled in
+    // properly from the app rather than left to be completed in the console.
+    if (customFields.isNotEmpty) 'custom_input_fields': customFields,
   };
 }
 
@@ -327,7 +357,7 @@ Map<String, dynamic> buildCreateBody({
 /// none, which is why the Add-contact country field was left out rather than
 /// shipped against an empty list.
 ContactMeta contactMetaFromJson(Map<String, dynamic> j) => ContactMeta(
-      groups: _sharedRefs(j['groups']),
+      groups: _sharedGroups(j['groups']),
       labels: _sharedRefs(j['labels']),
       countries: _sharedCountries(j['countries']),
       customFields: _sharedCustomFields(j['customFields'] ?? j['custom_fields']),
