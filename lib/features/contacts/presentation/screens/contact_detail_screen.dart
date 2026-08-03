@@ -363,8 +363,21 @@ class _ContactOverflow extends ConsumerWidget {
 
     return PopupMenuButton<String>(
       icon: const Icon(Icons.more_vert, color: Colors.white),
-      onSelected: (_) => _confirmDelete(context, ref, l10n),
+      // Was `(_) => delete`, which fired the destructive action for whatever
+      // was picked. With a second entry that would have deleted the contact
+      // when the user chose Edit.
+      onSelected: (String value) {
+        if (value == 'edit') {
+          context.push(AppRoutes.contactEdit(contact!.uid));
+          return;
+        }
+        _confirmDelete(context, ref, l10n);
+      },
       itemBuilder: (BuildContext _) => <PopupMenuEntry<String>>[
+        PopupMenuItem<String>(
+          value: 'edit',
+          child: Text(l10n.actionEdit),
+        ),
         PopupMenuItem<String>(
           value: 'delete',
           child: Text(

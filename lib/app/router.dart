@@ -38,7 +38,7 @@ import '../features/quick_replies/presentation/screens/quick_reply_editor_screen
 import '../features/search/presentation/screens/search_screen.dart';
 import '../features/account/presentation/screens/profile_screen.dart';
 import '../features/auth/presentation/auth_controller.dart';
-import '../features/contacts/presentation/screens/add_contact_screen.dart';
+import '../features/contacts/presentation/screens/contact_form_screen.dart';
 import '../features/contacts/presentation/screens/contact_detail_screen.dart';
 import '../features/contacts/presentation/screens/contacts_screen.dart';
 import '../features/auth/presentation/screens/forgot_password_screen.dart';
@@ -351,7 +351,15 @@ final Provider<GoRouter> routerProvider = Provider<GoRouter>((Ref ref) {
       GoRoute(
         path: AppRoutes.contactNew,
         parentNavigatorKey: _rootKey,
-        builder: (_, __) => const AddContactScreen(),
+        builder: (_, __) => const ContactFormScreen(),
+      ),
+      // Declared before `/contacts/:uid` so the literal `edit` segment is not
+      // matched as a contact uid.
+      GoRoute(
+        path: '/contacts/:uid/edit',
+        parentNavigatorKey: _rootKey,
+        builder: (_, GoRouterState s) =>
+            ContactFormScreen(uid: s.pathParameters['uid']!),
       ),
       GoRoute(
         path: '/contacts/:uid',

@@ -48,7 +48,7 @@ abstract interface class ContactRepository {
     String? email,
     String? languageCode,
     String? city,
-    List<String>? tags,
+    String? tags,
     List<String>? groupIds,
     bool? enableAiBot,
     Map<String, String>? customFields,
@@ -181,7 +181,7 @@ class ContactRepositoryImpl implements ContactRepository {
     String? email,
     String? languageCode,
     String? city,
-    List<String>? tags,
+    String? tags,
     List<String>? groupIds,
     bool? enableAiBot,
     Map<String, String>? customFields,
@@ -197,6 +197,9 @@ class ContactRepositoryImpl implements ContactRepository {
       if (email != null) 'email': email,
       if (languageCode != null) 'language_code': languageCode,
       if (city != null) 'contact_city': city,
+      // A comma-separated STRING, not a list: the endpoint validates
+      // `contact_tags` as `nullable|string|max:500`, so an array 422s before
+      // syncContactTags — which would happily have split a string — ever runs.
       if (tags != null) 'contact_tags': tags,
       if (groupIds != null) 'contact_groups': groupIds,
       // The one camelCase key in an otherwise snake_case body.

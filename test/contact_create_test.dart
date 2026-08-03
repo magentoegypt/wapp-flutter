@@ -226,4 +226,19 @@ void main() {
           isEmpty);
     });
   });
+
+  group('edit payload', () {
+    test('tags go as a comma string, never as a list', () {
+      // `contact_tags` is validated `nullable|string|max:500`. An array 422s
+      // before syncContactTags — which would happily have split a string —
+      // ever runs.
+      final Map<String, dynamic> body = buildCreateBody(
+        firstName: 'Amira',
+        phoneNumber: '201002345678',
+        tags: <String>['vip', 'wholesale'].join(','),
+      );
+      expect(body['contact_tags'], 'vip,wholesale');
+      expect(body['contact_tags'], isA<String>());
+    });
+  });
 }

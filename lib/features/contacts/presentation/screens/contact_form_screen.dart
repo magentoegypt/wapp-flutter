@@ -40,14 +40,19 @@ import '../../domain/contact.dart';
 ///    from the field's name, and the API does not enforce it — `store()`
 ///    forwards custom values unvalidated. The client is the only thing keeping
 ///    those columns populated.
-class AddContactScreen extends ConsumerStatefulWidget {
-  const AddContactScreen({super.key});
+class ContactFormScreen extends ConsumerStatefulWidget {
+  const ContactFormScreen({this.uid, super.key});
+
+  /// The contact being edited. Null creates a new one.
+  final String? uid;
+
+  bool get isEdit => uid != null;
 
   @override
-  ConsumerState<AddContactScreen> createState() => _AddContactScreenState();
+  ConsumerState<ContactFormScreen> createState() => _ContactFormScreenState();
 }
 
-class _AddContactScreenState extends ConsumerState<AddContactScreen> {
+class _ContactFormScreenState extends ConsumerState<ContactFormScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _firstName = TextEditingController();
   final TextEditingController _lastName = TextEditingController();
@@ -81,6 +86,75 @@ class _AddContactScreenState extends ConsumerState<AddContactScreen> {
   final Map<String, TextEditingController> _customText =
       <String, TextEditingController>{};
   final Map<String, String> _customChoice = <String, String>{};
+
+  /// Edit mode fills the form from the contact exactly once. Re-seeding on
+  /// every rebuild would fight the user for the cursor, and the providers here
+  /// are autoDispose so a rebuild is not rare.
+  bool _seeded = false;
+
+  /// The phone as it exists. `wa_id` is the conversation key and the update
+  /// endpoint does not accept `phone_number` at all, so in edit mode the field
+  /// is shown read-only rather than offered and silently ignored.
+  String _existingPhone = '';
+
+  /// Fills the form from the loaded contact, resolving its groups to the
+  /// numeric ids the update endpoint needs.
+  ///
+  /// The contact's own payload lists groups as `{uid, title}` with **no
+  /// numeric id**, while `contact_groups` is matched on `_id`. The two are
+  /// joined here through `/contacts/meta`, which is the only place carrying
+  /// both. A group that cannot be resolved is dropped rather than sent as a
+  /// uid — sending one would not merely fail to match, it would make the
+  /// server treat that group as removed.
+  void _seed(Contact c, ContactMeta meta) {
+    if (_seeded) return;
+    _seeded = true;
+
+    final List<String> parts = c.name.trim().split(RegExp(r'\s+'));
+    _firstName.text = parts.isNotEmpty ? parts.first : '';
+    _lastName.text = parts.length > 1 ? parts.sublist(1).join(' ') : '';
+    _email.text = c.email ?? '';
+    _city.text = c.city ?? '';
+    _language.text = c.language ?? '';
+    _existingPhone = c.phone;
+    _tags
+      ..clear()
+      ..addAll(c.labels);
+
+    for (final NamedRef g in c.groups) {
+      for (final GroupRef m in meta.groups) {
+        if (m.uid == g.id || m.id == g.id) {
+          _groupIds.add(m.id);
+          break;
+        }
+      }
+    }
+
+    // Country arrives as a display name, not an id — match it back to the
+    // list so the dropdown opens on the value the contact already has.
+    final String country = (c.countryCode ?? '').trim().toLowerCase();
+    if (country.isNotEmpty) {
+      for (final CountryRef ref in meta.countries) {
+        if (ref.name.toLowerCase() == country ||
+            ref.isoCode.toLowerCase() == country) {
+          _countryId = ref.id;
+          break;
+        }
+      }
+    }
+
+    for (final ContactCustomValue v in c.customFields) {
+      final CustomField? def = meta.customFields
+          .cast<CustomField?>()
+          .firstWhere((CustomField? f) => f?.uid == v.fieldUid, orElse: () => null);
+      if (def == null) continue;
+      if (def.isDropdown) {
+        _customChoice[def.uid] = v.value;
+      } else {
+        _customText.putIfAbsent(def.uid, TextEditingController.new).text = v.value;
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -139,6 +213,10 @@ class _AddContactScreenState extends ConsumerState<AddContactScreen> {
     });
 
     try {
+      if (widget.isEdit) {
+        await _saveEdit();
+        return;
+      }
       final Contact created = await ref.read(contactRepositoryProvider).create(
             firstName: _firstName.text.trim(),
             lastName: _lastName.text.trim(),
@@ -181,6 +259,45 @@ class _AddContactScreenState extends ConsumerState<AddContactScreen> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  /// Saves an edit.
+  ///
+  /// **Every field is sent on every save, including the ones the user did not
+  /// touch.** That is not laziness — three of them are destructive when
+  /// omitted, and each fails silently:
+  ///
+  ///  * `contact_city` — `processContactUpdate()` calls
+  ///    `storeContactContext()`, which rewrites the `__data` blob from
+  ///    `$inputData['contact_city'] ?? ''` and stores null when it is absent.
+  ///    Unlike first name, email, language and country, the controller does
+  ///    **not** seed it from the current row. Renaming a contact would
+  ///    therefore erase their city.
+  ///  * `contact_tags` — `syncContactTags(..., replaceExisting: true)`, so an
+  ///    omitted value clears every tag.
+  ///  * `contact_groups` — removals are derived as
+  ///    `array_diff(existingIds, sent)`, so anything not resent is unfiled.
+  ///
+  /// `enableAiBot` is deliberately **not** sent. The contact payload does not
+  /// expose the current state, so the form cannot show it truthfully; omitting
+  /// the key makes the controller preserve whatever is set, whereas sending a
+  /// toggle that defaulted to off would silently disable the bot.
+  Future<void> _saveEdit() async {
+    await ref.read(contactRepositoryProvider).update(
+          widget.uid!,
+          firstName: _firstName.text.trim(),
+          lastName: _lastName.text.trim(),
+          email: _email.text.trim(),
+          languageCode: _language.text.trim(),
+          city: _city.text.trim(),
+          tags: _tags.join(','),
+          groupIds: _groupIds.toList(),
+          customFields: _customValues(),
+        );
+
+    ref.invalidate(contactListProvider);
+    ref.invalidate(contactDetailProvider(widget.uid!));
+    if (mounted) context.pop();
   }
 
   /// Mirrors the server's `numeric|min_digits:9|doesnt_start_with:+,0`.
@@ -328,6 +445,14 @@ class _AddContactScreenState extends ConsumerState<AddContactScreen> {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final AsyncValue<ContactMeta> meta = ref.watch(contactMetaProvider);
 
+    // Edit mode needs both the contact and the metadata before it can fill the
+    // form — the groups and the country only resolve against the meta lists.
+    if (widget.isEdit) {
+      final Contact? c = ref.watch(contactDetailProvider(widget.uid!)).valueOrNull;
+      final ContactMeta? m = meta.valueOrNull;
+      if (c != null && m != null) _seed(c, m);
+    }
+
     final String displayName =
         <String>[_firstName.text.trim(), _lastName.text.trim()]
             .where((String s) => s.isNotEmpty)
@@ -335,7 +460,7 @@ class _AddContactScreenState extends ConsumerState<AddContactScreen> {
 
     return Scaffold(
       appBar: AppHeader.back(
-        title: l10n.acTitle,
+        title: widget.isEdit ? l10n.acEditTitle : l10n.acTitle,
         // Cancel replaces the back arrow: this is a modal, and an arrow implies
         // you can return to something rather than discard what you typed.
         leading: TextButton(
@@ -481,6 +606,23 @@ class _AddContactScreenState extends ConsumerState<AddContactScreen> {
                 ),
               ),
 
+              // `wa_id` is the conversation key and `PUT /contacts/{uid}` does
+              // not accept `phone_number` at all, so in edit mode the number is
+              // shown rather than offered. An editable box here would take a
+              // change, save cleanly, and leave the number untouched.
+              if (widget.isEdit)
+                _Field(
+                  label: l10n.acPhoneNumber,
+                  footnote: l10n.acPhoneNotEditable,
+                  child: InputDecorator(
+                    decoration: _box(),
+                    child: Text(
+                      _existingPhone,
+                      style: TextStyle(color: AppColor.inkMuted),
+                    ),
+                  ),
+                )
+              else
               _Field(
                 label: l10n.acPhoneNumber,
                 required: true,

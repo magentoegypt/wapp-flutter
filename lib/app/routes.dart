@@ -97,6 +97,11 @@ abstract final class AppRoutes {
   static String callActive(String uid) => '/calls/$uid/active';
   static String callEnded(String uid) => '/calls/$uid/ended';
   static String contact(String uid) => '/contacts/$uid';
+
+  /// Edit an existing contact — the same form as [contactNew], prefilled.
+  /// The phone is read-only there: `PUT /contacts/{uid}` does not accept
+  /// `phone_number`, so an editable box would take a change and discard it.
+  static String contactEdit(String uid) => '/contacts/$uid/edit';
   static String quickReply(String uid) => '/quick-replies/$uid';
   static String campaign(String uid) => '/campaigns/$uid';
   static String agent(String uid) => '/agents/$uid';
