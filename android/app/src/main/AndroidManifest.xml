@@ -4,6 +4,14 @@
          speaker during a call, and BLUETOOTH_CONNECT is what makes a headset
          work on Android 12+. No CAMERA entry on purpose — these are voice
          calls, and asking for the camera would be an unexplained prompt. -->
+    <!-- Required for every network call the app makes.
+         Flutter's own debug/ and profile/ manifests declare INTERNET so hot
+         reload can talk to the tool, which means a debug build has it and a
+         RELEASE build does not unless it is declared here. Leaving it out is
+         invisible in development and total in production: no socket opens, so
+         every request fails as a connection error and the app can only say
+         "No connection" — on a device with working wifi. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
