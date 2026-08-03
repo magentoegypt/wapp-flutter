@@ -1169,5 +1169,8 @@
   "ciChangeAssignee": "Change",
   "notesViewAll": "View all",
   "cdAddTagTitle": "Add a tag",
-  "cdAddTagUnsafe": "Couldn't load this contact's groups — tag not added, so nothing was changed."
+  "cdAddTagUnsafe": "Couldn't load this contact's groups — tag not added, so nothing was changed.",
+  "cdTagsTitle": "Tags",
+  "cdNewTag": "New tag",
+  "cdNoTagsYet": "No tags in this workspace yet — type one below."
 }
