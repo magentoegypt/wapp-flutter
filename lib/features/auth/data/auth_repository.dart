@@ -144,9 +144,7 @@ Session sessionFromJson(Map<String, dynamic> json) {
       name: (user['name'] as String?) ?? '',
       email: (user['email'] as String?) ?? '',
       role: (user['role'] as String?) ?? 'agent',
-      permissions: ((user['permissions'] as List<dynamic>?) ?? const <dynamic>[])
-          .map((dynamic e) => e.toString())
-          .toList(),
+      permissions: _permissions(user['permissions']),
     ),
     vendor: Vendor(
       uid: (vendor['uid'] as String?) ?? '',
@@ -155,6 +153,38 @@ Session sessionFromJson(Map<String, dynamic> json) {
       status: (vendor['status'] as num?)?.toInt() ?? 1,
     ),
   );
+}
+
+/// Normalises the permission block to the list of granted keys.
+///
+/// The API sends a **map** — `{"messaging": "allow", "manage_ads": "deny", …}`
+/// — not a list. Casting it to `List` threw a `TypeError` that was not a
+/// [Failure], so it escaped the login controller with its busy flag still set
+/// and left the sign-in button spinning forever (CL037-TC13).
+///
+/// A list is still accepted: `/me` and older builds send one, and an owner
+/// comes back with an empty collection either way.
+List<String> _permissions(dynamic raw) {
+  if (raw is List) {
+    return raw.map((dynamic e) => e.toString()).toList();
+  }
+  if (raw is Map) {
+    return <String>[
+      for (final MapEntry<dynamic, dynamic> e in raw.entries)
+        // Anything that is not an explicit "deny" — `true`, `1`, `"allow"` —
+        // counts as granted, so a backend that switches to booleans keeps
+        // working.
+        if (_granted(e.value)) e.key.toString(),
+    ];
+  }
+  return const <String>[];
+}
+
+bool _granted(dynamic value) {
+  if (value is bool) return value;
+  if (value is num) return value != 0;
+  final String v = value.toString().toLowerCase();
+  return v == 'allow' || v == 'true' || v == '1' || v == 'yes';
 }
 
 final authRepositoryProvider = Provider<AuthRepository>((Ref ref) {

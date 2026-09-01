@@ -104,6 +104,17 @@ class AuthController extends Notifier<AuthState> {
     } on Failure catch (e) {
       state = state.copyWith(busy: false, failure: e);
       return false;
+    } catch (error, stack) {
+      // Catch **everything**, for the same reason `_restore` does. Anything
+      // that is not a Failure — a cast error on an unexpected login envelope,
+      // a keychain PlatformException while storing the token — used to escape
+      // this method with `busy` still true, which disables the button and
+      // leaves its spinner turning for good: the screen looks like it is
+      // signing in forever, with no error and no way to retry.
+      debugPrint('[auth] login failed: $error');
+      debugPrintStack(stackTrace: stack, maxFrames: 8);
+      state = state.copyWith(busy: false, failure: const ServerFailure());
+      return false;
     }
   }
 
