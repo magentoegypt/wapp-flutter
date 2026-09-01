@@ -59,6 +59,13 @@ class AuthRepositoryImpl implements AuthRepository {
     await _api.post(
       '/auth/forgot-password',
       body: <String, dynamic>{'email': email},
+      // Its own budget rather than the client's 20s JSON default. The endpoint
+      // is meant to answer immediately — it hands the mail off to run after
+      // the response — but a build talking to an API that has not picked that
+      // up yet should degrade to a slow success, not the hard "server took too
+      // long" error QA filmed (CL037-TC14). Same per-call hook the media and
+      // contact-import uploads use.
+      timeout: const Duration(seconds: 45),
     );
   }
 

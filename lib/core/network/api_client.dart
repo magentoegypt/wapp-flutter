@@ -215,6 +215,14 @@ class ApiClient {
         return ForbiddenFailure(serverMessage ?? 'You do not have access to this.');
       case 404:
         return NotFoundFailure(serverMessage ?? 'Not found.');
+      case 429:
+        // Without this case a throttle fell through to `default` and was shown
+        // as "Request failed (429).", burying a message the server had already
+        // written for the user — the password-reset endpoint says how many
+        // seconds are left. Surfaced verbatim (CL037-TC14).
+        return serverMessage == null
+            ? const RateLimitFailure()
+            : RateLimitFailure(serverMessage);
       case 422:
         return ValidationFailure(
           serverMessage ?? 'Please check the highlighted fields.',

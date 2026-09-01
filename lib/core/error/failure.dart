@@ -61,6 +61,19 @@ class PlanLimitFailure extends Failure {
   final String? module;
 }
 
+/// 429 — refused by a throttle, not by anything being wrong.
+///
+/// Deliberately not a [ServerFailure]: that one is documented as covering
+/// "anything else that isn't actionable by the user", and waiting is exactly
+/// an action the user can take. The server's own message names how long, so it
+/// is carried through rather than replaced — a generic "try again later"
+/// would throw away the number of seconds.
+class RateLimitFailure extends Failure {
+  const RateLimitFailure([
+    super.message = 'Too many attempts. Please wait a moment and try again.',
+  ]);
+}
+
 /// 404.
 class NotFoundFailure extends Failure {
   const NotFoundFailure([super.message = 'Not found.']);
