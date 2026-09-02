@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../config/app_config.dart';
@@ -174,6 +175,7 @@ class ApiClient {
   }
 
   Failure _fromDioException(DioException e) {
+    _logTransport(e);
     return switch (e.type) {
       // Reached the server, no answer in time. Distinct from being offline:
       // telling someone to check their network when the network is fine sends
@@ -184,6 +186,32 @@ class ApiClient {
       DioExceptionType.connectionError => const NetworkFailure(),
       _ => const ServerFailure(),
     };
+  }
+
+  /// One line per transport failure, because the [Failure] the user sees says
+  /// nothing a developer can act on.
+  ///
+  /// Every type that is not a timeout or a disconnect collapses into a bare
+  /// [ServerFailure] — "Something went wrong on our end." That is the right
+  /// thing to *show*; it is useless to debug from. A field report of "nothing
+  /// works" then costs a device, a rebuild and a guess to tell a 5xx from a
+  /// rejected certificate. This is the line that answers it.
+  ///
+  /// Kept out of `kDebugMode`: a release build in a tester's hands is exactly
+  /// where it earns its keep, and `adb logcat` is how anyone reads it.
+  ///
+  /// **Only the shape of the failure — never its content.** The path, not the
+  /// full URI (a query string carries search terms and ids); no headers, which
+  /// is where the bearer token lives; no request body, which on this very
+  /// client would mean printing someone's password to the system log.
+  void _logTransport(DioException e) {
+    final RequestOptions o = e.requestOptions;
+    final int? status = e.response?.statusCode;
+    debugPrint(
+      '[api] ${e.type.name} ${o.method} ${o.path}'
+      '${status == null ? '' : ' status=$status'}'
+      '${e.message == null ? '' : ' — ${e.message}'}',
+    );
   }
 
   Future<Failure> _fromStatus(int status, dynamic body) async {
