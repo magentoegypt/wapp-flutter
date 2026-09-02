@@ -1,10 +1,20 @@
 import 'package:flutter/material.dart';
 
-/// Design tokens. [brand] was corrected from the handoff's `#2BAC32` to
-/// `#00BF63` — the fill colour of the real product logo
-/// (wapp.magento2.click/imgs/logo-short.svg) — with [brandDeep] and
-/// [brandWash] rederived at the same hue (151°) to keep contrast behaviour
-/// unchanged.
+/// Design tokens. [brand] is `#2BAC32` — the green the Figma frames actually
+/// draw, with [brandDeep] and [brandWash] rederived at that hue (123°) so the
+/// contrast behaviour they encode still holds.
+///
+/// This reverses the correction recorded in `4036732`, which had followed the
+/// product logo's own fill (`/imgs/logo-short.svg`, `#00BF63`) over the Figma
+/// variable on the handoff's authority: "this document and the Figma file
+/// disagree on purpose." The logo still disagrees. The frames win because they
+/// are what QA tests against, and CL037-TC17 failed on exactly this: the
+/// shipping mint read as "very different from the UI" beside a leaf-green
+/// design. Measured off `docs/frames/` — 26,399 header pixels across twelve
+/// frames sample #2BAD31, which is this value inside webp's rounding.
+///
+/// If the logo is ever re-exported to match, delete this paragraph rather than
+/// flipping the constant a third time.
 ///
 /// Two rules travel with this palette and are worth restating at the call site:
 ///
@@ -15,19 +25,15 @@ import 'package:flutter/material.dart';
 ///    at body sizes; use [brandDeep] for any green text or icon on a light
 ///    ground, and reserve [brand] for fills.
 abstract final class AppColor {
-  /// #00BF63 — the shipping product logo's own fill.
-  ///
-  /// The Figma variable collection says `#2BAC32`, and so does the header's
-  /// export, but `/imgs/logo-short.svg` fills with this. The handoff settles
-  /// it in favour of the logo and records that the Figma variable still needs
-  /// updating: "this document and the Figma file disagree on purpose."
-  ///
-  /// It briefly shipped as #2BAC32. Reverted — [brandDeep] and [brandWash]
-  /// were derived at this hue, so the AA-on-white behaviour they encode only
-  /// holds against this value.
-  static const Color brand = Color(0xFF00BF63);
-  static const Color brandDeep = Color(0xFF00703A); // ~6.2:1 on white
-  static const Color brandWash = Color(0xFFEBFAF3);
+  /// #2BAC32 — the Figma frames' header green.
+  static const Color brand = Color(0xFF2BAC32);
+
+  /// Rederived at [brand]'s hue and saturation (123°, 60%). 6.28:1 on white,
+  /// against the 6.22:1 the #00703A it replaces carried — so every green text
+  /// and icon site keeps the contrast it was signed off with.
+  static const Color brandDeep = Color(0xFF1C6F20);
+
+  static const Color brandWash = Color(0xFFEBFAEC);
 
   // Dark-mode grounds. These were repeated as raw literals across eight call
   // sites in seven files, so a dark-theme tweak meant hunting hex. They are

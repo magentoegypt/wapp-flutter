@@ -101,7 +101,7 @@ flutter_launcher_icons:
     generate: true
     image_path: "tool/branding/icon_legacy.png"
     background_color: "#ffffff"
-    theme_color: "#00bf63"
+    theme_color: "#2bac32"
   windows:
     generate: true
     image_path: "tool/branding/icon_legacy.png"
@@ -126,11 +126,11 @@ flutter_launcher_icons:
 # Regenerate with:
 #   dart run flutter_native_splash:create
 flutter_native_splash:
-  color: "#00bf63"
+  color: "#2bac32"
   image: tool/branding/splash_legacy.png
   android: true
   ios: true
   web: false
   android_12:
-    color: "#00bf63"
+    color: "#2bac32"
     image: tool/branding/splash_a12.png
