@@ -1,11 +1,17 @@
 name: iOS Ad Hoc to Loadly
 
-# Manual and tag-triggered only, unlike the Android pipeline which also checks
-# every push to main. An iOS build needs a macOS runner and takes far longer,
-# and analyze/test are platform-independent so the Android job already covers
-# them on every push. Add `push: branches: [main]` here if you want iOS-specific
-# compile breaks caught earlier — `flutter build ios --no-codesign` does that
-# without any secrets.
+# Publishes on every push to main, alongside the Android pipeline, so testers
+# get both platforms from the same commit rather than whichever was remembered.
+#
+# This ran manual-and-tag-only, on the reasoning that a macOS runner is slow and
+# that analyze/test are platform-independent so Android already covered them.
+# Both still hold — this job costs ~7 minutes of macOS runner against Android's
+# ~6 of ubuntu, and it does no checking Android has not already done. What it
+# buys is that an iOS tester is never a release behind an Android one.
+#
+# Unlike Android this job has no check-only mode: every trigger it has publishes.
+# If that ever needs to change, gate the Loadly upload step the way the Android
+# pipeline gates its own.
 on:
   workflow_dispatch:
     inputs:
@@ -19,6 +25,7 @@ on:
         type: string
         default: ''
   push:
+    branches: [main]
     tags: ['v*']
 
 concurrency:
@@ -329,12 +336,25 @@ jobs:
         env:
           LOADLY_API_KEY: ${{ secrets.LOADLY_API_KEY }}
           IPA: ${{ steps.ipa.outputs.path }}
-          NOTES: ${{ inputs.notes || github.ref_name }}
+          NOTES: ${{ inputs.notes }}
+          # Same reasoning as the Android pipeline: a push carries no notes, and
+          # `main` on the install page tells a tester nothing.
+          COMMIT_SUBJECT: ${{ github.event.head_commit.message }}
+          REF_NAME: ${{ github.ref_name }}
           SHA: ${{ github.sha }}
           DEVICES: ${{ steps.signing.outputs.devices }}
         run: |
           set -euo pipefail
-          DESC="${NOTES:-} (${SHA:0:7}, build ${{ steps.version.outputs.code }})"
+          # First line of the subject only. Deliberately not `| head -1`:
+          # this step runs under `set -o pipefail`, where a truncating pipe
+          # invites a SIGPIPE failure, and every commit message here is
+          # multi-line. `read` takes the first line without a pipe at all.
+          DESC_NOTES="${NOTES:-}"
+          if [ -z "$DESC_NOTES" ]; then
+            IFS= read -r DESC_NOTES <<< "${COMMIT_SUBJECT:-}" || true
+          fi
+          [ -n "$DESC_NOTES" ] || DESC_NOTES="$REF_NAME"
+          DESC="$DESC_NOTES (${SHA:0:7}, build ${{ steps.version.outputs.code }})"
           # Loadly shows this on the install page. Ad Hoc installs fail with an
           # unexplained "Unable to Install" on any device not in the profile, so
           # the constraint belongs where the tester will see it.

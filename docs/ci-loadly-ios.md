@@ -3,8 +3,10 @@
 [`.github/workflows/publish-ios-loadly.yml`](../.github/workflows/publish-ios-loadly.yml)
 builds a signed **Ad Hoc** `.ipa` on a macOS runner and uploads it to Loadly.
 
-Run it from **Actions → iOS Ad Hoc to Loadly → Run workflow**, or push a `v*` tag (which
-publishes both platforms).
+It runs on every push to `main`, the same as the Android pipeline, so the two platforms stay
+on the same commit. You can also run it from **Actions → iOS Ad Hoc to Loadly → Run
+workflow** to choose a flavor and release notes, or push a `v*` tag to set the version
+string from the tag. Every one of those publishes — this pipeline has no check-only mode.
 
 > **The one rule that governs everything.** Ad Hoc builds install **only on devices whose
 > UDID was registered in the provisioning profile before the build was signed**. Any other

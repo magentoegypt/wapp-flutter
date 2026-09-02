@@ -4,20 +4,34 @@
 signed release APK and uploads it to [Loadly](https://loadly.io), which returns an install
 link testers can open on their phone.
 
-It runs in two modes, so the build that gets checked is the same build that gets shipped:
+Every trigger publishes, so the build that gets checked is always the build that gets
+shipped:
 
 | Trigger | What happens |
 | --- | --- |
-| **Push to `main`** | analyze, test, build the release APK, inspect it. **Nothing is uploaded.** |
-| **Actions tab → Run workflow** | all of the above, then publish to Loadly |
-| **Push a `v*` tag** | all of the above, then publish — with `versionName` taken from the tag |
+| **Push to `main`** | analyze, test, build the release APK, inspect it, publish to Loadly |
+| **Actions tab → Run workflow** | the same, with a flavor and release notes you choose |
+| **Push a `v*` tag** | the same, with `versionName` taken from the tag |
 
-Publishing on every push to `main` would put builds in front of testers that were never
-meant to be tried, and burn a `versionCode` each time — so the upload stays deliberate.
+This used to hold the upload back: `main` was checked, and publishing was a deliberate
+second action. The argument for that was real — every push now puts a build in front of
+testers whether or not it was meant to be tried, and burns a `versionCode` doing it. It was
+changed anyway, because the failure it caused was worse: fixes sat verified-but-unshipped
+until somebody remembered to press the button, and Android and iOS drifted apart depending
+on which was remembered.
 
-Check runs on `main` do not need the signing secrets. Without them the build falls back to
-the debug key and says so; the run still catches a broken build, which is what it is for,
-and the signing key is not decrypted on every push.
+Two things follow, and they are the price:
+
+- **Anything on `main` is something testers will get.** A commit that should not reach them
+  cannot go on `main`.
+- **The signing secrets are now needed on every push**, not just on deliberate publishes.
+  There is no longer a mode that falls back to the debug key silently; without
+  `ANDROID_KEYSTORE_BASE64` the run fails and says so, unless the manual **Publish even
+  without a signing key** checkbox is used.
+
+Release notes come from the commit subject on a push, or from the `notes` input on a manual
+run. Testers see that on the Loadly install page, so the subject line is doing double duty
+now — write it for them as well as for the log.
 
 Publishing normally requires them. The **Publish even without a signing key** checkbox on
 the manual run overrides that, for getting a build in front of someone before a keystore
@@ -143,15 +157,16 @@ uploads once, deliberately.
 This pipeline is **Android only, and APK only**. It does not build an AAB, which is what the
 Play Store requires.
 
-iOS has its own pipeline — see [Publishing iOS (Ad Hoc) to Loadly](ci-loadly-ios.md). Note
-that a `v*` tag triggers **both** workflows, which run in parallel with separate concurrency
-groups. Their build numbers are not the same: `github.run_number` counts per workflow file,
-so Android's `versionCode` and iOS's `CFBundleVersion` use the same formula but drift apart.
+iOS has its own pipeline — see [Publishing iOS (Ad Hoc) to Loadly](ci-loadly-ios.md). Both
+workflows now answer to the same triggers — a push to `main` or a `v*` tag — and run in
+parallel with separate concurrency groups, so testers get both platforms from one commit.
+Their build numbers are not the same: `github.run_number` counts per workflow file, so
+Android's `versionCode` and iOS's `CFBundleVersion` use the same formula but drift apart.
 That's harmless — the two stores and Loadly treat them independently.
 
-`flutter analyze` and `flutter test` run on every push to `main` as well as on every
+`flutter analyze` and `flutter test` run on every push to `main`, which is also every
 publish. There is no pull-request check workflow yet, so a PR is not verified until its
-commits land on `main`.
+commits land on `main` — and now landing on `main` also ships it.
 
 ## What the pipeline does
 

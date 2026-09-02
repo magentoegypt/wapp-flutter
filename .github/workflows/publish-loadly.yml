@@ -1,13 +1,20 @@
 name: Android CI and Loadly publish
 
-# Two modes in one pipeline, so the build that gets checked is the same build
-# that gets shipped:
+# One mode: everything that reaches main reaches testers.
 #
-#   push to main  -> analyze, test, build and verify. Nothing is uploaded.
-#   manual / v tag -> all of the above, then publish to Loadly.
+#   push to main / manual / v tag -> analyze, test, build, verify, publish.
 #
-# Publishing on every push to main would put a build in front of testers for
-# changes never meant to be tried, and burn a versionCode each time.
+# This pipeline used to check main and publish only on demand, on the reasoning
+# that publishing every push puts builds in front of testers for changes never
+# meant to be tried, and burns a versionCode each time. That trade was made
+# deliberately in the other direction: the cost is real but the delay was worse,
+# because a fix sat verified-but-unshipped until someone remembered to press the
+# button. Two consequences to keep in mind rather than rediscover:
+#
+#   - versionCode is run_number + offset, so it still only ever climbs. Nothing
+#     breaks, but the numbers advance faster than releases do.
+#   - Every push replaces the build testers see. If you need a commit on main
+#     that testers should NOT get, it has to go somewhere other than main.
 on:
   workflow_dispatch:
     inputs:
@@ -37,13 +44,13 @@ on:
     tags: ['v*']
 
 concurrency:
-  # Publishes share one group and are never cancelled — two racing uploads could
-  # hand testers an older build as the newest link. Check runs are per-ref and
-  # do cancel, since a superseded commit's result is of no interest.
-  group: >-
-    loadly-${{ (github.event_name == 'workflow_dispatch' || github.ref_type == 'tag')
-      && 'publish' || github.ref }}
-  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' && github.ref_type != 'tag' }}
+  # Every run publishes now, so every run shares one group and none is
+  # cancellable. The old split — per-ref, cancel-in-progress for check runs —
+  # cannot survive main pushes becoming publishes: cancelling one mid-upload is
+  # how testers end up with an older build sitting at the newest link. Pushes in
+  # quick succession queue instead, and the last one wins, which is the intent.
+  group: loadly-publish
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -88,13 +95,19 @@ jobs:
           FLAVOR: ${{ github.event_name == 'push' && 'prod' || inputs.flavor }}
           EVENT: ${{ github.event_name }}
           REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
           set -euo pipefail
           test -f "config/${FLAVOR}.json" || { echo "::error::config/${FLAVOR}.json missing"; exit 1; }
           echo "flavor=${FLAVOR}" >> "$GITHUB_OUTPUT"
           echo "entrypoint=lib/main_${FLAVOR}.dart" >> "$GITHUB_OUTPUT"
 
-          if [ "$EVENT" = "workflow_dispatch" ] || [ "$REF_TYPE" = "tag" ]; then
+          # Every current trigger publishes. Spelled out per trigger rather
+          # than hardcoded true, so adding a branch to `on.push` later gives
+          # that branch a check run instead of silently shipping it.
+          if [ "$EVENT" = "workflow_dispatch" ] ||
+             [ "$REF_TYPE" = "tag" ] ||
+             { [ "$REF_TYPE" = "branch" ] && [ "$REF_NAME" = "main" ]; }; then
             PUBLISH=true
           else
             PUBLISH=false
@@ -282,12 +295,25 @@ jobs:
         env:
           LOADLY_API_KEY: ${{ secrets.LOADLY_API_KEY }}
           APK: ${{ steps.apk.outputs.path }}
-          NOTES: ${{ inputs.notes || github.ref_name }}
+          NOTES: ${{ inputs.notes }}
+          # A push has no notes input, and `main` on every install page tells a
+          # tester nothing. The commit subject is what actually changed.
+          COMMIT_SUBJECT: ${{ github.event.head_commit.message }}
+          REF_NAME: ${{ github.ref_name }}
           SHA: ${{ github.sha }}
           SIGNED: ${{ steps.keystore.outputs.signed }}
         run: |
           set -euo pipefail
-          DESC="${NOTES:-} (${SHA:0:7}, build ${{ steps.version.outputs.code }})"
+          # First line of the subject only. Deliberately not `| head -1`:
+          # this step runs under `set -o pipefail`, where a truncating pipe
+          # invites a SIGPIPE failure, and every commit message here is
+          # multi-line. `read` takes the first line without a pipe at all.
+          DESC_NOTES="${NOTES:-}"
+          if [ -z "$DESC_NOTES" ]; then
+            IFS= read -r DESC_NOTES <<< "${COMMIT_SUBJECT:-}" || true
+          fi
+          [ -n "$DESC_NOTES" ] || DESC_NOTES="$REF_NAME"
+          DESC="$DESC_NOTES (${SHA:0:7}, build ${{ steps.version.outputs.code }})"
           # Loadly shows buildUpdateDescription to testers on the install page,
           # so the caveat belongs here, not only in the run log they never see.
           if [ "$SIGNED" != "true" ]; then
@@ -395,7 +421,7 @@ jobs:
             else
               echo "## Clickalize built and verified"
               echo
-              echo "Not published — pushes to main build and check only."
+              echo "Not published — this ref is built and checked only."
             fi
             echo
             echo "| | |"
