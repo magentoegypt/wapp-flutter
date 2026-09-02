@@ -486,10 +486,8 @@ class _ContactFormScreenState extends ConsumerState<ContactFormScreen> {
         // you can return to something rather than discard what you typed.
         leading: TextButton(
           onPressed: _saving ? null : () => context.pop(),
-          child: Text(
-            l10n.actionCancel,
-            style: const TextStyle(color: Colors.white),
-          ),
+          style: AppHeader.actionStyle,
+          child: Text(l10n.actionCancel),
         ),
         actions: <Widget>[
           _saving
@@ -506,12 +504,12 @@ class _ContactFormScreenState extends ConsumerState<ContactFormScreen> {
                 )
               : TextButton(
                   onPressed: _save,
+                  style: AppHeader.actionStyle,
                   child: Text(
                     l10n.actionSave,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    // Weight is the one thing Save keeps of its own: it is the
+                    // affirmative half of the pair.
+                    style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ),
         ],

@@ -36,6 +36,31 @@ abstract final class AppDimens {
   /// a few px of the frames.
   static const double headerBack = 56;
 
+  /// The tall variants' parts, measured off `docs/frames/` on the 390×844
+  /// frame (47pt status bar, confirmed against the frames' own clock band).
+  ///
+  /// Contacts, Campaigns, Agents and Search all draw a 181px band: the 47
+  /// inset `SafeArea` supplies, then these five, which sum to 132. Before
+  /// CL037-TC17 they summed to 122 with a 48px field — a header 16px shallower
+  /// than the frame wrapped around a field 8px taller than it, which is the
+  /// "size is different" half of that bug.
+  ///
+  /// The title-only root (More) drops the field and its gap: 68 of content.
+  static const double headerTopPad = 10;
+  static const double headerTitleLine = 34;
+  static const double headerTitleToField = 24;
+
+  /// The search field's own height. The frames measure 39–42 across the four
+  /// screens that carry one.
+  static const double headerField = 40;
+
+  /// Field bottom to the band's bottom edge. The frames measure 23.6.
+  static const double headerBottomPad = 24;
+
+  /// Dashboard's greeting band — an eyebrow over the signed-in name. 110 on
+  /// frame 38:1032, 47 of which is the status bar.
+  static const double headerGreeting = 61;
+
 
   /// Floating compose button, inset by [gutter] from both edges.
   static const double fab = 56;

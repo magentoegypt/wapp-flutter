@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/widgets/agent_avatar.dart';
 import '../../../../core/widgets/app_header.dart';
 import '../../../../core/widgets/app_list_tile.dart';
 import '../../../../core/widgets/async_value_view.dart';
@@ -13,7 +14,6 @@ import '../../../../core/widgets/initials_avatar.dart';
 import '../../../../core/widgets/section_label.dart';
 import '../../../../core/widgets/status_pill.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../../auth/presentation/auth_controller.dart';
 import '../../../campaigns/data/campaign_repository.dart';
 // campaignBadge lives next to the campaigns list so the two can never disagree
 // on which tone a lifecycle state gets; reusing it beats a second mapping here.
@@ -35,8 +35,6 @@ class SearchScreen extends ConsumerWidget {
     final SearchScope scope = ref.watch(searchScopeProvider);
     final AsyncValue<List<SearchResult>> results =
         ref.watch(searchResultsProvider);
-    final String agent =
-        ref.watch(authControllerProvider).session?.user.name ?? '';
 
     return Scaffold(
       appBar: AppHeader.search(
@@ -44,8 +42,7 @@ class SearchScreen extends ConsumerWidget {
         searchHint: l10n.inboxSearchHint,
         // Pushed route - without this there is no way back out.
         showBack: true,
-        trailing:
-            agent.isEmpty ? null : InitialsAvatar.onBrand(name: agent, size: 36),
+        trailing: const AgentAvatar(),
         onSearchChanged: (String q) =>
             ref.read(searchQueryProvider.notifier).state = q,
       ),

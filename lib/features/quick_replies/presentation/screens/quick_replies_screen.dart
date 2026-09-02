@@ -5,12 +5,11 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/routes.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_dimens.dart';
+import '../../../../core/widgets/agent_avatar.dart';
 import '../../../../core/widgets/app_header.dart';
 import '../../../../core/widgets/async_value_view.dart';
 import '../../../../core/widgets/filter_chip_bar.dart';
-import '../../../../core/widgets/initials_avatar.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../../auth/presentation/auth_controller.dart';
 import '../../data/quick_reply_repository.dart';
 
 /// The chip row's "everything" option. Not a category id, so it is namespaced
@@ -77,8 +76,6 @@ class _QuickRepliesScreenState extends ConsumerState<QuickRepliesScreen> {
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final AsyncValue<List<QuickReply>> rows = ref.watch(quickReplyListProvider);
-    final String agentName =
-        ref.watch(authControllerProvider).session?.user.name ?? '';
 
     return Scaffold(
       appBar: AppHeader.search(
@@ -89,9 +86,7 @@ class _QuickRepliesScreenState extends ConsumerState<QuickRepliesScreen> {
         onSearchChanged: (String q) => setState(() => _query = q),
         // Pushed from More, so the header has to carry the way back itself.
         showBack: true,
-        trailing: agentName.isEmpty
-            ? null
-            : InitialsAvatar.onBrand(name: agentName, size: 36),
+        trailing: const AgentAvatar(),
       ),
       floatingActionButton: FloatingActionButton(
         // Distinct hero tag. Inbox and Contacts are both kept alive by

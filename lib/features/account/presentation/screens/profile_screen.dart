@@ -189,9 +189,14 @@ class _ProfileHero extends StatelessWidget {
                 alignment: AlignmentDirectional.centerStart,
                 child: IconButton(
                   onPressed: () => Navigator.of(context).maybePop(),
-                  // Directional: points left in LTR, right in RTL.
-                  icon: const Icon(Icons.arrow_back),
+                  // Matching AppHeader's chevron exactly — same glyph, same
+                  // size, same touch box. Two back affordances that look
+                  // different is the same bug CL037-TC17 raised about the
+                  // header itself, one control smaller.
+                  icon: const Icon(Icons.chevron_left, size: 30),
                   color: Colors.white,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                   tooltip: MaterialLocalizations.of(context).backButtonTooltip,
                 ),
               ),

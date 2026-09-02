@@ -1,14 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_dimens.dart';
 
-/// The brand-green header, in the handoff's two variants.
+/// The brand-green header, in the frames' three variants.
 ///
-/// Both implement [PreferredSizeWidget] so they drop straight into
-/// `Scaffold.appBar`, and both declare the exact heights from the layout
-/// constants table — 96 for back-nav, 182 for title+search — rather than
-/// letting content size them.
+/// All implement [PreferredSizeWidget] so they drop straight into
+/// `Scaffold.appBar`, and all compose from one table of part metrics in
+/// [AppDimens] — so a band measures the same on every screen that uses the
+/// same variant, which is what CL037-TC17 failed on.
+///
+/// The parts are laid out in fixed-height boxes rather than left to size
+/// themselves, so what [preferredSize] declares is what the header actually
+/// draws. A declared height the content disagrees with is either dead green
+/// under the field or an overflow when the clear button appears; this header
+/// has shipped both.
 class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   /// Back-nav variant: leading back affordance, title, optional actions.
   const AppHeader.back({
@@ -26,7 +33,8 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
         onSearchTap = null,
         trailing = null,
         showBack = false,
-        _titleOnly = false;
+        _titleOnly = false,
+        _greeting = false;
 
   /// Large title with an optional trailing widget, and no search field.
   ///
@@ -48,7 +56,33 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
         onSearchChanged = null,
         onSearchTap = null,
         showBack = false,
-        _titleOnly = true;
+        _titleOnly = true,
+        _greeting = false;
+
+  /// Dashboard's greeting block: an eyebrow line over the signed-in name,
+  /// with the avatar trailing.
+  ///
+  /// This lived on Dashboard as a private widget with its own ground, its own
+  /// inset and a rounded bottom edge no other header had — and no other frame
+  /// draws. Folding it in is what makes "the same shape on every page" true
+  /// rather than aspirational.
+  const AppHeader.greeting({
+    required this.title,
+    required this.subtitle,
+    this.trailing,
+    super.key,
+  })  : subtitleTrailing = null,
+        avatar = null,
+        actions = null,
+        leading = null,
+        onBack = null,
+        onTitleTap = null,
+        searchHint = null,
+        onSearchChanged = null,
+        onSearchTap = null,
+        showBack = false,
+        _titleOnly = false,
+        _greeting = true;
 
   /// Title + search variant, used by the tab roots that own a list.
   ///
@@ -70,9 +104,11 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
         leading = null,
         onBack = null,
         onTitleTap = null,
-        _titleOnly = false;
+        _titleOnly = false,
+        _greeting = false;
 
   final bool _titleOnly;
+  final bool _greeting;
 
   final String title;
   final String? subtitle;
@@ -109,7 +145,20 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   /// agent's avatar here.
   final Widget? trailing;
 
+  /// White-on-green text action for the header's leading and action slots.
+  ///
+  /// The same Cancel/Save pair was rendering three ways — a shared
+  /// `TextButton.styleFrom` in the quick-reply editor, a bare white
+  /// `TextStyle` on contact form's Cancel, and that plus `w700` on its Save.
+  /// One style, so a header action looks like a header action everywhere.
+  static final ButtonStyle actionStyle = TextButton.styleFrom(
+    foregroundColor: Colors.white,
+    padding: const EdgeInsetsDirectional.symmetric(horizontal: 8),
+  );
+
   bool get _isSearch => searchHint != null;
+
+  bool get _isBack => !_isSearch && !_titleOnly && !_greeting;
 
   /// Whether the back variant centres its title.
   ///
@@ -119,29 +168,20 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   bool get _centreTitle =>
       avatar == null && subtitle == null && subtitleTrailing == null;
 
-  // Content metrics, so the header can be sized from what it contains rather
-  // than from a fixed box the content has to fit inside. The handoff's 182 was
-  // such a box: whatever the title, field and status-bar inset did not use
-  // became dead green under the field, and shrinking it to fit left so little
-  // slack that the clear button appearing overflowed the header mid-typing.
-  static const double _titleLine = 34;
-  static const double _fieldHeight = 48;
-  static const double _topPad = 8;
-  static const double _titleToField = 12;
-
-  /// Space between the search field and the header's bottom edge. The frames
-  /// measure 18-24 logical px across inbox, contacts and agents.
-  static const double _bottomPad = 20;
-
   @override
   Size get preferredSize {
+    if (_greeting) {
+      return const Size.fromHeight(AppDimens.headerGreeting);
+    }
     if (!_isSearch && !_titleOnly) {
       return const Size.fromHeight(AppDimens.headerBack);
     }
-    final double content = _topPad +
-        _titleLine +
-        (_isSearch ? _titleToField + _fieldHeight : 0) +
-        _bottomPad;
+    final double content = AppDimens.headerTopPad +
+        AppDimens.headerTitleLine +
+        (_isSearch
+            ? AppDimens.headerTitleToField + AppDimens.headerField
+            : 0) +
+        AppDimens.headerBottomPad;
     // Content only — no status-bar inset. Scaffold already grows the app bar
     // by the top padding, and the SafeArea inside applies it again to the
     // content, so adding it here counted it a third time: measured on device,
@@ -152,44 +192,119 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: AppColor.brand,
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          // Tighter than the app gutter (22). The back chevron and the overflow
-          // button carry their own 36dp touch targets, so the gutter stacked on
-          // top of that and pushed the glyphs a quarter-inch off each edge —
-          // the frame sits them close in.
-          padding: const EdgeInsetsDirectional.symmetric(
-            horizontal: AppDimens.headerGutter,
+    // The band is brand green on every screen, so the status bar sitting in it
+    // always needs light icons. Declared here rather than per screen: the only
+    // place that declared it was the call screen, so every other screen
+    // inherited whatever the previously visited route had left set.
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light.copyWith(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+      ),
+      child: Container(
+        color: AppColor.brand,
+        child: SafeArea(
+          bottom: false,
+          child: Padding(
+            // Two insets, because the frames draw two.
+            //
+            // A title is a text block and aligns to the app [AppDimens.gutter]
+            // like every other text block on the screen — measured at 23.6 on
+            // the dashboard, contacts, campaigns and more frames, and the
+            // search field's own edges at 23.6/23.0. The back variant is
+            // icon-led, and its chevron and overflow button carry 36dp touch
+            // targets, so the full gutter stacked on top of those pushes the
+            // glyphs a quarter-inch off each edge; the frames sit them close
+            // in at [AppDimens.headerGutter].
+            //
+            // This header used the icon inset for all three, so every tall
+            // title sat 10px further left than its frame — half of
+            // CL037-TC17's "different size and shape".
+            padding: EdgeInsetsDirectional.symmetric(
+              horizontal: _isBack ? AppDimens.headerGutter : AppDimens.gutter,
+            ),
+            child: _greeting
+                ? _buildGreeting(context)
+                : _titleOnly
+                    ? _buildTitleOnly(context)
+                    : _isSearch
+                        ? _buildSearch(context)
+                        : _buildBack(context),
           ),
-          child: _titleOnly
-              ? _buildTitleOnly(context)
-              : _isSearch
-                  ? _buildSearch(context)
-                  : _buildBack(context),
         ),
       ),
     );
   }
 
-  Widget _buildTitleOnly(BuildContext context) {
+  Widget _buildGreeting(BuildContext context) {
     return Row(
       children: <Widget>[
         Expanded(
-          child: Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-            ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                subtitle!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  color: Colors.white70,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 20,
+                  height: 1.15,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+            ],
           ),
         ),
+        // Outside the Expanded, so a long name truncates rather than pushing
+        // the avatar off the edge.
         if (trailing != null) trailing!,
+      ],
+    );
+  }
+
+  Widget _buildTitleOnly(BuildContext context) {
+    // Top-anchored on the same rhythm as the search variant rather than
+    // centred in whatever height is left over. Centring sat More's title ~7px
+    // lower than Contacts' for no reason a reader could see; the frames draw
+    // both the same distance below the status bar.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        const SizedBox(height: AppDimens.headerTopPad),
+        SizedBox(
+          height: AppDimens.headerTitleLine,
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              if (trailing != null) trailing!,
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -257,6 +372,11 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                             subtitle!,
                             maxLines: 1,
                             softWrap: false,
+                            // The FittedBox above scales this down to fit, but
+                            // only so far — past that a long presence line was
+                            // shrinking toward illegible instead of ending.
+                            // Ellipsis is the honest failure.
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontSize: 11.5,
                               color: Colors.white70,
@@ -289,40 +409,47 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        const SizedBox(height: 8),
-        Row(
-          children: <Widget>[
-            if (showBack) ...<Widget>[
-              IconButton(
-                onPressed: () => Navigator.of(context).maybePop(),
-                icon: const Icon(Icons.chevron_left, size: 30),
-                color: Colors.white,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-              ),
-              const SizedBox(width: 8),
-            ],
-            Expanded(
-              child: Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w700,
+        const SizedBox(height: AppDimens.headerTopPad),
+        SizedBox(
+          height: AppDimens.headerTitleLine,
+          child: Row(
+            children: <Widget>[
+              if (showBack) ...<Widget>[
+                IconButton(
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  icon: const Icon(Icons.chevron_left, size: 30),
                   color: Colors.white,
+                  padding: EdgeInsets.zero,
+                  constraints:
+                      const BoxConstraints(minWidth: 36, minHeight: 36),
+                  tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                ),
+                const SizedBox(width: 8),
+              ],
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
                 ),
               ),
-            ),
-            if (trailing != null) trailing!,
-          ],
+              if (trailing != null) trailing!,
+            ],
+          ),
         ),
-        const SizedBox(height: 12),
-        _SearchField(
-          hint: searchHint!,
-          onChanged: onSearchChanged,
-          onTap: onSearchTap,
+        const SizedBox(height: AppDimens.headerTitleToField),
+        SizedBox(
+          height: AppDimens.headerField,
+          child: _SearchField(
+            hint: searchHint!,
+            onChanged: onSearchChanged,
+            onTap: onSearchTap,
+          ),
         ),
       ],
     );
@@ -422,7 +549,8 @@ class _SearchFieldState extends State<_SearchField> {
           minWidth: 38,
           minHeight: 38,
         ),
-        contentPadding: const EdgeInsets.symmetric(vertical: 11),
+        // Vertical padding inside the fixed 40px box the header gives this.
+        contentPadding: const EdgeInsets.symmetric(vertical: 9),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppDimens.radiusCard),
           borderSide: BorderSide.none,

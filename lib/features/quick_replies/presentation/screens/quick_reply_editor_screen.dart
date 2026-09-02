@@ -237,7 +237,7 @@ class _QuickReplyEditorScreenState
         // gives the bottom slot to the destructive action instead.
         leading: TextButton(
           onPressed: _busy ? null : () => context.pop(),
-          style: _headerActionStyle,
+          style: AppHeader.actionStyle,
           child: Text(l10n.actionCancel),
         ),
         actions: <Widget>[
@@ -256,7 +256,7 @@ class _QuickReplyEditorScreenState
           else
             TextButton(
               onPressed: _save,
-              style: _headerActionStyle,
+              style: AppHeader.actionStyle,
               child: Text(l10n.actionSave),
             ),
         ],
@@ -363,12 +363,6 @@ class _QuickReplyEditorScreenState
     );
   }
 }
-
-/// White-on-green text action for the header slots.
-final ButtonStyle _headerActionStyle = TextButton.styleFrom(
-  foregroundColor: Colors.white,
-  padding: const EdgeInsetsDirectional.symmetric(horizontal: 8),
-);
 
 /// Tappable `+ {{token}}` chip that inserts a placeholder into the message.
 class _TokenChip extends StatelessWidget {
