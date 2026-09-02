@@ -118,8 +118,49 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
+  /// Ends the session on this device.
+  ///
+  /// The terminal state is unconditional. [AuthRepository.logout] clears the
+  /// stored token in its own `finally`, so by the time anything here can go
+  /// wrong the credential is already gone — and leaving `status` on `signedIn`
+  /// because the revoke call failed produced the worst state available: signed
+  /// in with no token, every request 401ing, and a Sign out row that looked
+  /// dead. QA filmed that as "you have to press it a lot" (CL037-TC16),
+  /// because each extra tap fired another concurrent revoke and whichever
+  /// landed first was the one that appeared to work.
   Future<void> logout() async {
-    await _repo.logout();
+    // One at a time, for the same reason [ScreenPoll] guards its tick: without
+    // this a slow network turns every impatient tap into another request.
+    if (state.busy) return;
+    state = state.copyWith(busy: true, clearFailure: true);
+    try {
+      await _repo.logout();
+    } catch (error, stack) {
+      // Swallowed on purpose. A failed revoke only means the token stays valid
+      // server-side until it expires; that is never a reason to keep someone
+      // signed in on the phone in front of them.
+      debugPrint('[auth] logout failed: $error');
+      debugPrintStack(stackTrace: stack, maxFrames: 8);
+    } finally {
+      // `const AuthState(...)` rather than copyWith: it clears `busy` and
+      // `failure` in the same assignment, so Login never opens carrying the
+      // banner from a sign-out that went wrong.
+      state = const AuthState(status: AuthStatus.signedOut);
+    }
+  }
+
+  /// The server rejected the stored token. [ApiClient] has already cleared it,
+  /// so this only has to move the app onto the signed-out surface.
+  ///
+  /// The callback behind this was declared and never wired, which meant a token
+  /// revoked from the web console cleared the keychain and then left the app on
+  /// whatever screen it was on, every request failing, until it was relaunched.
+  void expire() {
+    // Only a live session. `unknown` belongs to [_restore], which owns the
+    // minimum-splash floor and would have it cut short by a 401 on `/me`; and a
+    // 401 during sign-in is a wrong password, where this would wipe the
+    // `failure` the form is about to show.
+    if (state.status != AuthStatus.signedIn) return;
     state = const AuthState(status: AuthStatus.signedOut);
   }
 

@@ -114,7 +114,15 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<void> logout() async {
     try {
-      await _api.post('/auth/logout');
+      // POST first, clear second. Clearing the token up front would strip the
+      // Authorization header the request interceptor attaches, leaving Sanctum
+      // nothing to revoke — the token would stay live until it expired.
+      //
+      // Eight seconds rather than the client's 20s JSON default, through the
+      // same per-call hook forgotPassword uses. The controller signs out either
+      // way, so this only decides how long the row stays busy first; twenty
+      // seconds of that is what QA read as a dead button (CL037-TC16).
+      await _api.post('/auth/logout', timeout: const Duration(seconds: 8));
     } finally {
       await _tokens.clear();
     }

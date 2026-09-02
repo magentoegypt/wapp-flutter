@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../features/auth/presentation/auth_controller.dart';
 import '../config/app_config.dart';
 import '../error/failure.dart';
 import '../storage/secure_token_store.dart';
@@ -276,5 +277,17 @@ class ApiClient {
 }
 
 final apiClientProvider = Provider<ApiClient>((Ref ref) {
-  return ApiClient(ref.watch(secureTokenStoreProvider));
+  return ApiClient(
+    ref.watch(secureTokenStoreProvider),
+    // Resolved lazily inside the callback rather than out here:
+    // authRepositoryProvider watches this provider and AuthController reads
+    // that, so touching the controller at build time would close a dependency
+    // cycle. By the time a 401 can arrive, everything is built.
+    //
+    // Declaring [onUnauthenticated] and never passing it is how a token
+    // revoked from the web console used to clear the keychain and then strand
+    // the app on whatever screen it was on, failing every request. There is a
+    // test on this wiring, because nothing else fails when it goes missing.
+    onUnauthenticated: () => ref.read(authControllerProvider.notifier).expire(),
+  );
 });

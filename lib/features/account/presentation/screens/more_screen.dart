@@ -178,11 +178,62 @@ class MoreScreen extends ConsumerWidget {
               color: AppColor.danger,
             ),
             showChevron: false,
-            onTap: () => ref.read(authControllerProvider.notifier).logout(),
+            // Disabled while it runs, rather than silently ignoring the tap.
+            // An enabled row that does nothing for several seconds is exactly
+            // what QA read as a broken button (CL037-TC16); the controller
+            // guards re-entry as well, but the guard is invisible on its own.
+            onTap: auth.busy ? null : () => _confirmSignOut(context, ref),
+            trailing: auth.busy
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColor.danger,
+                    ),
+                  )
+                : null,
           ),
         ],
       ),
     );
+  }
+
+  /// Confirms before ending the session.
+  ///
+  /// Sign out used to fire straight from the row's `onTap`, so a mis-tap in the
+  /// ACCOUNT group ended the session outright. The cancel/confirm pair is what
+  /// CL037-TC16 checks for, and it is also the reason the row can afford to
+  /// stay busy for a few seconds afterwards: by then the user has said yes, so
+  /// a spinner reads as progress rather than as nothing happening.
+  Future<void> _confirmSignOut(BuildContext context, WidgetRef ref) async {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+
+    final bool ok = await showDialog<bool>(
+          context: context,
+          builder: (BuildContext c) => AlertDialog(
+            title: Text(l10n.moreSignOut),
+            content: Text(l10n.moreSignOutConfirm),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.of(c).pop(false),
+                child: Text(l10n.actionCancel),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(c).pop(true),
+                style: TextButton.styleFrom(foregroundColor: AppColor.danger),
+                child: Text(l10n.moreSignOut),
+              ),
+            ],
+          ),
+        ) ??
+        // Dismissed by the barrier or the system back button. Both are a
+        // cancel — defaulting a null to true would sign people out for
+        // tapping outside the dialog.
+        false;
+
+    if (!ok || !context.mounted) return;
+    await ref.read(authControllerProvider.notifier).logout();
   }
 }
 

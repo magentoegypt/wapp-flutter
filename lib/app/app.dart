@@ -7,6 +7,7 @@ import '../core/localization/locale_controller.dart';
 import '../features/auth/presentation/auth_controller.dart';
 import '../l10n/app_localizations.dart';
 import 'router.dart';
+import 'session_reset.dart';
 import 'theme/app_theme.dart';
 
 /// Root widget.
@@ -28,7 +29,17 @@ class ClickalizeApp extends ConsumerWidget {
     // splash forever. Watching here would rebuild the GoRouter itself and
     // discard navigation history, so listen and refresh instead.
     ref.listen<AuthState>(authControllerProvider, (AuthState? prev, AuthState next) {
-      if (prev?.status != next.status) router.refresh();
+      if (prev?.status == next.status) return;
+      // Only when a real session ends. A cold start with no stored token also
+      // lands on `signedOut`, by way of `unknown`, and there is nothing cached
+      // to clear on the way in.
+      if (prev?.status == AuthStatus.signedIn &&
+          next.status == AuthStatus.signedOut) {
+        clearSessionScopedState(ref);
+      }
+      // After the invalidation, so whatever the redirect builds next reads the
+      // cleared providers rather than repopulating them from the old session.
+      router.refresh();
     });
 
     return MaterialApp.router(

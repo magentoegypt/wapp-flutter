@@ -125,6 +125,7 @@
   "moreProfile": "Profile",
   "moreLanguage": "Language",
   "moreSignOut": "Sign out",
+  "moreSignOutConfirm": "Sign out of this device? You'll need your password to sign back in.",
   "searchPrompt": "Search your conversations",
   "searchMinChars": "Type at least two characters.",
   "searchNoMatches": "No matches",
